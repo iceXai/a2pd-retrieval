@@ -6,8 +6,13 @@
 
 # In[] 
 from abc import ABC, abstractmethod
+from datetime import datetime, timedelta
 
-import datetime
+import os
+import sys
+import requests
+
+import numpy as np
 
 
 # In[]
@@ -60,8 +65,12 @@ class Listing(ABC):
         self.start = start
         self.stop = stop
         
+        #set standard output
+        self.lstout = 'listing'
+        
         #set correct pathing
         self.initialize()
+        
     
     @abstractmethod
     def compile_file_listing(self):
@@ -96,24 +105,62 @@ class Listing(ABC):
         self.url = self.url[self.carrier]
         #set-up sensor data prefix (MOD/MYD)
         self.prefix = self.prefix[self.carrier]
+        #create listing directory if necessary
+        path = os.path.join(os.getcwd(), self.lstout)
+        if not os.path.isdir(path):
+            os.makedirs(path)
+            
+    def set_aoi(self, aoi: dict) -> None:
+        """
+        allows for setting the user specified AOIs for the listing process
+        """
+        self.aoi = aoi
         
-    def get_date_strings(self) -> list:
+    def _get_date_strings(self) -> list:
         """
         handles the splitting up of the datetime objects into single strings
         independent of the used carrier/sensor
         """
-        # generate year (yy), day (dd), month(mm), and day-of-year (jj) 
-        # strings for the covered range
-        dates = [self.start + datetime.timedelta(days = day_diff) \
+        # generate year (yy) and day-of-year (jj) strings for covered range
+        dates = [self.start + timedelta(days = day_diff) \
                  for day_diff in range(0, (self.stop - self.start).days+1)]
         
-        yy_str = [date.strftime('%Y') for date in dates]
-        jj_str = [date.strftime('%j') for date in dates]
-        dd_str = [date.strftime('%d') for date in dates]
-        mm_str = [date.strftime('%m') for date in dates]
+        date_str = [(date.strftime('%Y'), date.strftime('%j'))
+                    for date in dates]
         
-        return [yy_str, jj_str, dd_str, mm_str]
-        
+        return date_str
+    
+    @abstractmethod
+    def _set_current_url(self) -> None:
+        """
+        internal method to handle the setting of current urls to be used by 
+        various functions
+        """
+        pass
+    
+    @abstractmethod
+    def _set_current_url(self) -> None:
+        """
+        internal function to handle the retrieval of current urls
+        """
+        pass
+    
+    @abstractmethod
+    def _set_current_lfn(self) -> None:
+        """
+        internal method to handle the setting of the current listing file name
+        to be used by various functions
+        """
+        pass
+    
+    @abstractmethod
+    def _set_current_lfn(self) -> None:
+        """
+        internal function to handle the retrieval of the current listing file
+        name
+        """
+        pass
+    
     
 class ModisListing(Listing):
     """
@@ -127,10 +174,10 @@ class ModisListing(Listing):
         then on MXD02 server
         """
         #retrieve date strings for specified processing period
-        date_str = self.get_date_strings()
+        date_str = self._get_date_strings()
         
         #loop over all dates
-        for yy, jj, dd, mm in date_str:
+        for yy, jj in date_str:
             """
             (1) geoMeta: identify swaths in AOI's
             """
@@ -143,17 +190,21 @@ class ModisListing(Listing):
             #allocate list for swath meta information
             meta_swaths = []
             
+            #set current urls/listinf file names
+            self._set_current_url(yy, jj)
+            self._set_current_lfn(yy, jj)
+            
             #download individual mxd03 listing file
-            lfn, complete = self.get_mxd03_listing_file(yy, jj, dd, mm)
+            complete = self.get_mxd03_listing_file()
 
-            #continue in loop if no file can be found
+            #continue in loop if no file can be found or it already exists
             if not complete:
                 ##TODO
                 #log failures!
                 continue
 
             #process listing
-            tags, mxd03, meta = self.process_listing_file(lfn)
+            tags, mxd03, meta = self.process_mxd03_listing_file()
             #append to lists
             swath_search_tags.append(tags)
             mxd03_swaths.append(mxd03)
@@ -167,16 +218,21 @@ class ModisListing(Listing):
             mxd02_swaths = []
         
             #download individual mxd02 listing file
-            lfn, complete = self.get_mxd02_listing_file(yy, jj, dd, mm)
+            complete = self.get_mxd02_listing_file()
             
-            #continue in loop if no file can be found
+            #continue in loop if no file can be found or it already exists
             if not complete:
                 ##TODO
                 #log failures!
                 continue
             
-######
+            import pdb; pdb.set_trace()
             
+######
+            #process listing
+            mxd02 = self.process_mxd02_listing_file(lfn)            
+
+
             #process listing file if available  
             if os.path.isfile(os.path.join(self.lstout,listing_file_name)):
                 #open temporary file
@@ -221,70 +277,98 @@ class ModisListing(Listing):
                                                 meta_swaths[k]])   
             # self.swaths_to_download.extend(combined_swath_links)
             f.close()
-                
-                
+            
+    def _set_current_url(self, yy: str, jj: str) -> None:
+        #compile day and month of current date
+        d = datetime.strptime(f'{yy}-{jj}', "%Y-%j")
+        dd = d.strftime('%d')
+        mm = d.strftime('%m')
         
-                
-    def get_mxd03_listing_file(self, yy: str, jj: str,
-                               dd: str, mm: str) -> str,bool:
         #build url using the GeoMeta part and file name
         geometa_file_name = f'{self.prefix}03_{yy}-{mm}-{dd}.txt'
-        download_url = f'{self.url["meta"]}{yy}/{geometa_file_name}'
+        meta_url = f'{self.url["meta"]}{yy}/{geometa_file_name}'
+        mxd3_url = f'{self.url["mxd03"]}{yy}/{jj}/' 
+        mxd2_url = f'{self.url["mxd02"]}{yy}/{jj}/' 
+        
+        #set current urls
+        self.current_url = {'meta': meta_url,
+                            'mxd03': mxd3_url,
+                            'mxd02': mxd2_url
+                            }
+        
+    def _get_current_url(self, url_type: str) -> str:
+        return self.current_url[url_type]
+    
+    
+    def _set_current_lfn(self, yy: str, jj: str) -> None:
+        #set curreent listing file names
+        lfn_mxd03 = f'{self.carrier}_mxd03_listing_{yy}_{jj}.txt'
+        lfn_mxd02 = f'{self.carrier}_mxd02_listing_{yy}_{jj}.txt'
+        self.current_lfn = {'mxd03': lfn_mxd03,
+                            'mxd02': lfn_mxd02
+                            }
+        
+    def _get_current_lfn(self, lfn_type: str) -> str:
+        return self.current_lfn[lfn_type]
+        
+                
+    def get_mxd03_listing_file(self) -> bool:
+        #get url to download from
+        download_url = self._get_current_url('meta')
         
         #set name for listing file
-        listing_file_name = f'{self.carrier}_mxd03_listing_{yy}_{jj}.txt'
+        listing_file_name = self._get_current_lfn('mxd03')
         
         #check for file availability
-        if os.path.isfile(os.path.join('./listing',listing_file_name)):
+        if os.path.isfile(os.path.join(os.getcwd(),
+                                       self.lstout,
+                                       listing_file_name)):
             ##TODO
             #modify logging and status messages
-            print('['+str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
+            print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
                     '] - Skipped: MXD03 Listing file already exists!')
+                
+            #set status to False
+            process_complete = False
         else:
             #call download function
             process_complete = self.download_listing(download_url,
-                                                     listing_file_name,
-                                                     'MXD03'
-                                                     )
+                                                     listing_file_name)
         #return status
-        return listing_file_name, process_complete
+        return process_complete
     
-    def get_mxd02_listing_file(self, yy: str, jj: str,
-                               dd: str, mm: str) -> str,bool:
-        #build url
-        download_url = f'{self.url["mxd02"]}{yy}/{jj}/      
+    def get_mxd02_listing_file(self) -> bool:
+        #get url to download from
+        download_url = self._get_current_url('meta')      
         
         #set name for listing file
-        listing_file_name = f'{self.carrier}_mxd02_listing_{yy}_{jj}.txt'
+        listing_file_name = self._get_current_lfn('mxd02')
         
         #check for file availability
-        if os.path.isfile(os.path.join('./listing',listing_file_name)):
+        if os.path.isfile(os.path.join(os.getcwd(),
+                                       self.lstout,
+                                       listing_file_name)):
             ##TODO
             #modify logging and status messages
-            print('['+str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
+            print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
                     '] - Skipped: MXD02 Listing file already exists!')
+            
+            #set status to False
+            process_complete = False
         else:
             #call download function
             process_complete = self.download_listing(download_url,
-                                                     listing_file_name,
-                                                     'MXD02'
-                                                     )
+                                                     listing_file_name)
         #return status
-        return listing_file_name, process_complete
+        return process_complete
     
-    def process_mxd03_listing_file(self, lfn: str) -> list, list, list:
+    def process_mxd03_listing_file(self) -> (list, list, list):
         """
-        Parameters
-        ----------
-        lfn : str
-            listing_file_name
-
         Returns
         -------
         list, list, list
             lists on search tags, MXD03 swath information as well as meta data
             on the AOI overlaps.
-
         """
         #allocate search tags list to identify MXD02 swaths from MXD03 data
         tags = []
@@ -292,66 +376,97 @@ class ModisListing(Listing):
         mxd03 = []
         #allocate list for swath meta information
         meta = []
-            
-        #open temporary file
-        f = open(os.path.join('./listing',listing_file_name), 'rt')
-        data = f.readlines()
         
-        #listing file consists of various meta information w/ 
-        #data[0]:=hdf_file_name; data[9:12]:=RingLON; 
-        #data[13:16]:=RingLAT
-        current_file_links = [[line.split(',')[0],line.split(',')[9],
-                                line.split(',')[10],line.split(',')[11],
-                                line.split(',')[12],line.split(',')[13],
-                                line.split(',')[14],line.split(',')[15],
-                                line.split(',')[16]] for line in data[3:]]    
+        #read-in the listing file
+        lst = self._read_mxd03_listing_file(self._get_current_lfn('mxd03'))
         
-        #loop over entries and check for overlap with specified aoi's
-        for coordinates in current_file_links:
-            #check for overlap to exclude non-matching links from listing
-            overlap_aois = []
+        #loop over entries
+        for lst_entry in lst:
+            #check for overlap with specified aoi's
+            valid_aois, overlap_aois = self._validate_aoi_overlap(lst_entry)
             
-            #create polygon/bounding box from swath coordinates
-            lon = np.array([float(coordinates[1]),float(coordinates[2]),
-                            float(coordinates[3]),float(coordinates[4])])
-            lat = np.array([float(coordinates[5]),float(coordinates[6]),
-                            float(coordinates[7]),float(coordinates[8])])
+            #process in case of overlap
+            if valid_aois:
+                tgs, mxd, mt = self._get_processed_listing(lst_entry,
+                                                           overlap_aois)
                 
-            #create swath polyon
-            polygon_coordinates = [[lat[0],lon[0]],
-                                   [lat[3],lon[3]],
-                                   [lat[2],lon[2]],
-                                   [lat[1],lon[1]],
-                                   [lat[0],lon[0]]]
-            
-            #check for overlap of bounding box with predefined aoi polygons
-            for aoi in self.aoi:    
-                #set swath polygon
-                self.aoi[aoi].set_swath_polygon(polygon_coordinates)
-                
-                #check for overlap
-                overlap, frac = self.aoi[aoi].check_overlap_with_aoi()
-                if overlap and frac >= 5.0:
-                    overlap_aois.append([aoi,frac])
-            
-            if len(overlap_aois)>0:
-                #compile download link and append to swath/search list
-                hdf_file = coordinates[0]
-                hdf_split = hdf_file.split('.')
-                geoloc_file_url = f'{self.url["mxd03"]}{yy}/{jj}/{hdf_file}'
-                #compile meta output
-                aoi_list = [aoi for aoi,frc in overlap_aois]
-                frc_list = [frc for aoi,frc in overlap_aois]
-                #append to global lists
-                tags.append('.'.join(hdf_split[1:4]))
-                mxd03.append(geoloc_file_url)
-                meta.append([aoi_list,frc_list])
+                #append to lists
+                tags.append(tgs)
+                mxd03.append(mxd)
+                meta.append(mt)
         
-        #close file connection
-        f.close()
+        
         
         #return processed listing info
         return tags, mxd03, meta
+    
+    def _read_mxd03_listing_file(self, lfn: str) -> list:
+        #open listing file
+        with open(os.path.join(os.getcwd(), self.lstout, lfn), 'rt') as f:
+            data = f.readlines()
+         
+        #listing file consists of various meta information w/ 
+        #data[0]:=hdf_file_name; data[9:12]:=RingLON; 
+        #data[13:16]:=RingLAT
+        lst = [[line.split(',')[0],line.split(',')[9],
+                line.split(',')[10],line.split(',')[11],
+                line.split(',')[12],line.split(',')[13],
+                line.split(',')[14],line.split(',')[15],
+                line.split(',')[16]] for line in data[3:]]
+        
+        #return to caller
+        return lst
+    
+    def _validate_aoi_overlap(self, lst_entry: list) -> (bool, list):
+        #check for overlap to exclude non-matching links from listing
+        overlap_aois = []
+        
+        #create polygon/bounding box from swath coordinates
+        lon = np.array([float(lst_entry[1]),float(lst_entry[2]),
+                        float(lst_entry[3]),float(lst_entry[4])])
+        lat = np.array([float(lst_entry[5]),float(lst_entry[6]),
+                        float(lst_entry[7]),float(lst_entry[8])])
+            
+        #create swath polyon
+        polygon_coordinates = [[lat[0],lon[0]],
+                               [lat[3],lon[3]],
+                               [lat[2],lon[2]],
+                               [lat[1],lon[1]],
+                               [lat[0],lon[0]]]
+        
+        #check for overlap of bounding box with predefined aoi polygons
+        for aoi in self.aoi:    
+            #set swath polygon
+            self.aoi[aoi].set_swath_polygon(polygon_coordinates)
+            
+            #check for overlap
+            overlap, frac = self.aoi[aoi].check_overlap_with_aoi()
+            if overlap and frac >= 5.0:
+                overlap_aois.append([aoi,frac])
+        
+            #check status
+        if len(overlap_aois)>0:
+            valid = True
+        else:
+            valid = False
+        
+        #return
+        return valid, overlap_aois
+    
+    def _get_processed_listing(self, 
+                               lst_entry: list, 
+                               overlap_aois: list) -> (str, str, list):
+        #compile download link and append to swath/search list
+        hdf_file = lst_entry[0]
+        hdf_split = hdf_file.split('.')
+        
+        #compile meta output
+        aoi_list = [aoi for aoi,frc in overlap_aois]
+        frc_list = [frc for aoi,frc in overlap_aois]
+        
+        #return
+        return '.'.join(hdf_split[1:4]), hdf_file , [aoi_list,frc_list]
+        
                 
     def process_mxd02_listing_file(self,lfn: str) -> list:
         """
@@ -364,13 +479,67 @@ class ModisListing(Listing):
         -------
         list
             List of MXD02 swath download URL's
-
         """
         pass
                 
-    def download_listing(self):
-        pass
-    
+    def download_listing(self, url: str, lfn: str) -> bool:
+        """
+        Parameters
+        ----------
+        url : str
+            sensor/carrier specific download url
+        lfn : str
+            listing_file_name
+
+        Returns
+        -------
+        Bool :
+            download successful? True/False
+        """
+        #set counter and times [in seconds] for ftp/https retry in case 
+        #download fails
+        retry_count = 10
+        retry_sleep = 5
+
+        #get sensor type
+        stype = lfn.split('_')[1]
+        for retry in range(retry_count+1):
+            try:        
+                print(f'['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
+                       f'] - Retrieving {stype} listing file...')
+
+                #requests call
+                headers = {'Authorization': "Bearer {}".format(self.token)}
+                r = requests.get(url, headers=headers)
+
+                if r.status_code == 200:
+                    print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
+                            '] - Retrieval of file listing complete!')
+                    break
+                else:
+                    print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
+                            '] - Error with file listing retrieval... going to retry')
+                    raise
+            except:
+                #exception handling
+                if retry != range(retry_count+1)[-1]:
+                    #wait a moment
+                    time.sleep(retry_sleep)
+                    print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
+                            '] - Retry of file listing retrieval...')
+                    continue
+                else:
+                    print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
+                            '] ! Retrieval finally failed!')
+                    sys.exit()
+        
+        #save file conent
+        with open(os.path.join(os.getcwd(), self.lstout, lfn), 'wb+') as f:
+            f.write(r.content)
+        
+        #return status            
+        return True
+        
     def skip_existing_files(self):
         pass
     

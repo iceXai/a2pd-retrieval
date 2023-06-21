@@ -18,7 +18,8 @@ class AOI(object):
     """
     class to keep all necessary aoi specifications
     
-    TODO: this could probably use som refactoring and clean-up as well
+    TODO: this could probably use some refactoring and clean-up as well but 
+          for now keep as is
     """
     def __init__(self,aoi,n_cores,hemisphere):
         #store cores to use

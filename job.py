@@ -45,14 +45,18 @@ class RetrievalJob(object):
         None.
 
         """
+        #change the current working directory to the output directory
+        self.cfg.set_cwd()
+        
         #adds all necessary components to the current job
         self.io   = self.cfg.set_io()
         self.aoi  = self.cfg.set_aoi()
         self.meta = self.cfg.set_meta()
         self.lst  = self.cfg.set_listing()
         
-        #change the current working directory to the output directory
-        self.cfg.set_cwd()
+        #sets aoi in lsitign process
+        self.lst.set_aoi(self.aoi)
+        
         
     def run(self):
         pass

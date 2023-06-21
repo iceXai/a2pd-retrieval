@@ -21,7 +21,23 @@ print(job.cfg.config)
 
 print(job.lst.url)
 
+test = job.lst._get_date_strings()
+job.lst.compile_file_listing()
 
+
+
+
+
+# geometa_file_name = f'MOD03_2022-09-01.txt'
+# url = f'https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMeta/61/TERRA/2022/{geometa_file_name}'
+# token = job.cfg.get_token()
+# import requests
+# r = requests.get(url,headers={'Authorization': "Bearer {}".format(token)})
+# print(r.content)
+
+                           
+
+                           
 # In[]
 
 # class Process(ABC):
