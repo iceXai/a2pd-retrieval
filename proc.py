@@ -69,8 +69,9 @@ class Listing(ABC):
         self.lstout = 'listing'
         
         #set correct pathing
-        self.initialize()
-        
+        self._initialize()
+    
+    """ High-level (abstract) functions """
     
     @abstractmethod
     def compile_file_listing(self):
@@ -95,20 +96,6 @@ class Listing(ABC):
         restarted/continued job setup
         """
         pass
-    
-    def initialize(self) -> None:
-        """
-        specific initialization method to be called to set the corresponding 
-        urls and prefixes correctly
-        """
-        #set-up download url's
-        self.url = self.url[self.carrier]
-        #set-up sensor data prefix (MOD/MYD)
-        self.prefix = self.prefix[self.carrier]
-        #create listing directory if necessary
-        path = os.path.join(os.getcwd(), self.lstout)
-        if not os.path.isdir(path):
-            os.makedirs(path)
             
     def set_aoi(self, aoi: dict) -> None:
         """
@@ -116,19 +103,8 @@ class Listing(ABC):
         """
         self.aoi = aoi
         
-    def _get_date_strings(self) -> list:
-        """
-        handles the splitting up of the datetime objects into single strings
-        independent of the used carrier/sensor
-        """
-        # generate year (yy) and day-of-year (jj) strings for covered range
-        dates = [self.start + timedelta(days = day_diff) \
-                 for day_diff in range(0, (self.stop - self.start).days+1)]
         
-        date_str = [(date.strftime('%Y'), date.strftime('%j'))
-                    for date in dates]
-        
-        return date_str
+    """ Low-level (abstract) functions """
     
     @abstractmethod
     def _set_current_url(self) -> None:
@@ -139,7 +115,7 @@ class Listing(ABC):
         pass
     
     @abstractmethod
-    def _set_current_url(self) -> None:
+    def _get_current_url(self) -> None:
         """
         internal function to handle the retrieval of current urls
         """
@@ -154,13 +130,42 @@ class Listing(ABC):
         pass
     
     @abstractmethod
-    def _set_current_lfn(self) -> None:
+    def _get_current_lfn(self) -> None:
         """
         internal function to handle the retrieval of the current listing file
         name
         """
         pass
-    
+
+    def _initialize(self) -> None:
+        """
+        specific initialization method to be called to set the corresponding 
+        urls and prefixes correctly
+        """
+        #set-up download url's
+        self.url = self.url[self.carrier]
+        #set-up sensor data prefix (MOD/MYD)
+        self.prefix = self.prefix[self.carrier]
+        #create listing directory if necessary
+        path = os.path.join(os.getcwd(), self.lstout)
+        if not os.path.isdir(path):
+            os.makedirs(path)
+        
+    def _get_date_strings(self) -> list:
+        """
+        handles the splitting up of the datetime objects into single strings
+        independent of the used carrier/sensor
+        """
+        # generate year (yy) and day-of-year (jj) strings for covered range
+        dates = [self.start + timedelta(days = day_diff) \
+                 for day_diff in range(0, (self.stop - self.start).days+1)]
+        
+        date_str = [(date.strftime('%Y'), date.strftime('%j'))
+                    for date in dates]
+        
+        return date_str
+
+# In[]    
     
 class ModisListing(Listing):
     """
@@ -339,7 +344,7 @@ class ModisListing(Listing):
     
     def get_mxd02_listing_file(self) -> bool:
         #get url to download from
-        download_url = self._get_current_url('meta')      
+        download_url = self._get_current_url('mxd02')      
         
         #set name for listing file
         listing_file_name = self._get_current_lfn('mxd02')
@@ -468,7 +473,7 @@ class ModisListing(Listing):
         return '.'.join(hdf_split[1:4]), hdf_file , [aoi_list,frc_list]
         
                 
-    def process_mxd02_listing_file(self,lfn: str) -> list:
+    def process_mxd02_listing_file(self) -> list:
         """
         Parameters
         ----------
@@ -542,7 +547,9 @@ class ModisListing(Listing):
         
     def skip_existing_files(self):
         pass
-    
+
+# In[]
+
 class SlstrListing(Listing):
     """
     Sentinel3-A/B SLSTR listing process child class tailored to the 
@@ -559,6 +566,9 @@ class SlstrListing(Listing):
         pass           
             
     
+# In[]
+# In[]
+# In[]
     
 """
 Processing::FileDownload
@@ -571,6 +581,9 @@ class Download(object):
     def __init__(self):
         pass
     
+# In[]
+# In[]
+# In[]
     
 """
 Processing::Resampling to Grid
