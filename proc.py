@@ -175,25 +175,19 @@ class ModisListing(Listing):
         
     def compile_file_listing(self) -> None: 
         """
-        Run through all specified days and retrieve files first on geoMeta 
-        then on MXD02 server
+        Run through all specified days and retrieve file download url's
         """
+        #alloacte list for collecting
+        swaths = []
+        
         #retrieve date strings for specified processing period
         date_str = self._get_date_strings()
         
         #loop over all dates
         for yy, jj in date_str:
             """
-            (1) geoMeta: identify swaths in AOI's
+            (1) geoMeta/MXD03: identify swaths in AOI's
             """
-            
-            #allocate list for search tags to identify MXD02 swaths from 
-            #MXD03 data
-            swath_search_tags = []
-            #allocate list for MXD03 swath links
-            mxd03_swaths = []
-            #allocate list for swath meta information
-            meta_swaths = []
             
             #set current urls/listinf file names
             self._set_current_url(yy, jj)
@@ -210,10 +204,6 @@ class ModisListing(Listing):
 
             #process listing
             tags, mxd03, meta = self.process_mxd03_listing_file()
-            #append to lists
-            swath_search_tags.append(tags)
-            mxd03_swaths.append(mxd03)
-            meta_swaths.append(meta)
             
             """
             (2) MXD02: retrieve correct file links to these swaths
@@ -231,57 +221,23 @@ class ModisListing(Listing):
                 #log failures!
                 continue
             
-            import pdb; pdb.set_trace()
-            
-######
             #process listing
-            mxd02 = self.process_mxd02_listing_file(lfn)            
+            mxd02 = self.process_mxd02_listing_file(tags)
+            
+            """
+            (3) Compile combined/matched list of MXD03/MXD02 files to download
+            """
 
-
-            #process listing file if available  
-            if os.path.isfile(os.path.join(self.lstout,listing_file_name)):
-                #open temporary file
-                f = open(os.path.join(self.lstout,listing_file_name), 'rt')
-                data = f.readlines()
-
-                #create list of file links
-#                current_file_links = [url_to_download_from+line.split('"')[3].split('/')[-1] \
-#                                      for line in data if '<tr><td class="product-cell"><a href=' in line]
-#                current_file_links = [url_to_download_from+line.split('"')[3].split('/')[-1] \
-#                                      for line in data if '<a class="btn btn-default hide" href="' in line]
-                current_file_links = [url_to_download_from+line.split('"')[3].split('/')[-1] \
-                                      for line in data if '<a class="btn btn-default" href="' in line]
-
-                #only pick search-tag corresponding file links
-                mxd02_swaths = [link for link in current_file_links \
-                                if '.'.join(link.split('.')[5:8]) in swath_search_tags]
-
+            #combine and match MXD03 and MXD02 file urls
+            swath_combo = self.retrieve_swaths_to_download(mxd03,mxd02)
+    
+            #append to global list
+            for k in range(len(meta)):
+                swaths.append([swath_combo[k],meta[k]])
+                
+            #return
+            return swaths
         
-        ### TO BE PUT IN A THIRD FUNCTION THAT RETURNS THE OUTPUT SWATH LIST TO CALLER FUNCTION
-            #create combined list [[mxd03,mxd02],[mxd03,mxd02],...]
-            combined_swath_links = []
-            for current_mxd03 in mxd03_swaths:
-                #loop over all mxd03 swaths that were identified
-                date_mxd03 = '.'.join(current_mxd03.split('.')[5:7])
-                #find correct index in swaths based on MXD03
-                found_match = False
-                for current_mxd02 in mxd02_swaths:
-                    date_mxd02 = '.'.join(current_mxd02.split('.')[5:7])
-                    if date_mxd02 == date_mxd03:
-                        found_match = True
-                        break
-                #assign correct one and continue
-                if found_match:
-                    combined_swath_links.append([current_mxd03, current_mxd02])
-                else: 
-                    continue
-
-            #append to global list and close file connection
-            for k in range(len(meta_swaths)):
-                self.swaths_to_download.append([combined_swath_links[k],
-                                                meta_swaths[k]])   
-            # self.swaths_to_download.extend(combined_swath_links)
-            f.close()
             
     def _set_current_url(self, yy: str, jj: str) -> None:
         #compile day and month of current date
@@ -392,8 +348,8 @@ class ModisListing(Listing):
             
             #process in case of overlap
             if valid_aois:
-                tgs, mxd, mt = self._get_processed_listing(lst_entry,
-                                                           overlap_aois)
+                tgs, mxd, mt = self._get_processed_mxd03_listing(lst_entry,
+                                                                 overlap_aois)
                 
                 #append to lists
                 tags.append(tgs)
@@ -458,9 +414,9 @@ class ModisListing(Listing):
         #return
         return valid, overlap_aois
     
-    def _get_processed_listing(self, 
-                               lst_entry: list, 
-                               overlap_aois: list) -> (str, str, list):
+    def _get_processed_mxd03_listing(self, 
+                                     lst_entry: list, 
+                                     overlap_aois: list) -> (str, str, list):
         #compile download link and append to swath/search list
         hdf_file = lst_entry[0]
         hdf_split = hdf_file.split('.')
@@ -473,19 +429,90 @@ class ModisListing(Listing):
         return '.'.join(hdf_split[1:4]), hdf_file , [aoi_list,frc_list]
         
                 
-    def process_mxd02_listing_file(self) -> list:
+    def process_mxd02_listing_file(self, tags: list) -> list:
         """
         Parameters
         ----------
-        lfn : str
-            listing_file_name
+        tags : list
+            List of unique id tags per identified mxd03 file
 
         Returns
         -------
         list
             List of MXD02 swath download URL's
         """
-        pass
+        
+        #read-in the listing file
+        lst = self._read_mxd02_listing_file(self._get_current_lfn('mxd02'))
+        
+        #match it with mxd03 list
+        mxd02 = self._get_processed_mxd02_listing(lst, tags)
+
+        #return
+        return mxd02
+
+        
+    def _read_mxd02_listing_file(self, lfn: str) -> list:
+        #open listing file
+        with open(os.path.join(os.getcwd(), self.lstout, lfn), 'rt') as f:
+            data = f.readlines()
+        
+        #create list of file links    
+        lst = [line.split('"')[3].split('/')[-1] \
+                   for line in data \
+                       if '<a class="btn btn-default" href="' in line]
+        
+        #return to caller
+        return lst        
+     
+    
+    def _get_processed_mxd02_listing(self, lst: list, tags: list) -> list:
+        #only pick search-tag corresponding file links
+        return [lst_entry for lst_entry in lst \
+                if '.'.join(lst_entry.split('.')[1:4]) in tags]
+                    
+     
+    def retrieve_swaths_to_download(self, mxd03: list, mxd02: list) -> list:
+        """
+        Parameters
+        ----------
+        mxd03 : list
+            List of MXD02 swath download URL's.
+        mxd02 : list
+            List of MXD02 swath download URL's.
+
+        Returns
+        -------
+        list
+            Combined and matched list of MXD03/MXD02 download link pairs.
+        """
+        #create combined list [[mxd03,mxd02],[mxd03,mxd02],...]
+        combined_swath_urls = []
+        
+        #loop over all mxd03 swaths
+        for current_mxd03 in mxd03:
+            #loop over all mxd03 swaths that were identified
+            date_mxd03 = '.'.join(current_mxd03.split('.')[1:4])
+            
+            #find correct index in swaths based on MXD03
+            found_match = False
+            for current_mxd02 in mxd02:
+                date_mxd02 = '.'.join(current_mxd02.split('.')[1:4])
+                if date_mxd02 == date_mxd03:
+                    found_match = True
+                    break
+                
+            #assign correct one and continue
+            if found_match:
+                current_mxd03 = self._get_current_url('mxd03') + current_mxd03
+                current_mxd02 = self._get_current_url('mxd02') + current_mxd02
+                combined_swath_urls.append([current_mxd03, current_mxd02])
+            else: 
+                continue
+            
+        #return to caller
+        return combined_swath_urls
+        
                 
     def download_listing(self, url: str, lfn: str) -> bool:
         """

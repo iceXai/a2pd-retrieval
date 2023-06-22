@@ -21,8 +21,8 @@ print(job.cfg.config)
 
 print(job.lst.url)
 
-test = job.lst._get_date_strings()
-job.lst.compile_file_listing()
+#test = job.lst._get_date_strings()
+test = job.lst.compile_file_listing()
 
 
 
