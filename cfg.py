@@ -6,7 +6,7 @@
 # In[]
 from iotools import ModisIO, SlstrIO
 from meta import ModisMeta, SlstrMeta
-from proc import ModisListing, SlstrListing
+from listing import ModisListing, SlstrListing
 from aoi import AOI
 
 import yaml
@@ -31,7 +31,7 @@ class Configuration(object):
         self.proc_dict = {'modis': ModisListing,
                           'slstr': SlstrListing}
         #loads the yaml file and reads it content
-        with open('./cfg/config.yaml') as f:
+        with open(os.path.join(os.getcwd(), 'cfg', 'config.yaml')) as f:
             self.config = yaml.load(f,Loader=yaml.FullLoader)
     
     """ Configfile::Authentication """

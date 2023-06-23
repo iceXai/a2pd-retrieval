@@ -13,6 +13,7 @@ import sys
 import requests
 
 import numpy as np
+import polars as pl
 
 
 # In[]
@@ -531,6 +532,7 @@ class ModisListing(Listing):
         retry_count = 10
         retry_sleep = 5
 
+        #TODO get rid of this stype separation and put this function into the ABC
         #get sensor type
         stype = lfn.split('_')[1]
         for retry in range(retry_count+1):
@@ -571,6 +573,10 @@ class ModisListing(Listing):
         return True
         
     def skip_existing_files(self):
+        #TODO likely move this also to the ABC and rework the way the listign 
+        # is stored to something like pandas or polars instead of lists?
+        # [date_tag, url (mxd02/mxd03), aoi, covfrac]
+        # and store as csv?
         pass
 
 # In[]
