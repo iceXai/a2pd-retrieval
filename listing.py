@@ -39,7 +39,7 @@ class Listing(ABC):
                                      'nasa.gov/archive/allData/61/MOD03/',
                              'meta':'https://ladsweb.modaps.eosdis.'+\
                                     'nasa.gov/archive/geoMeta/61/TERRA/'
-                                         },
+                                    },
                     'aqua':{'mxd02':'https://ladsweb.modaps.eosdis.'+\
                                     'nasa.gov/archive/allData/61/MYD021KM/',
                             'mxd03':'https://ladsweb.modaps.eosdis.'+\
@@ -47,10 +47,24 @@ class Listing(ABC):
                             'meta':'https://ladsweb.modaps.eosdis.'+\
                                    'nasa.gov/archive/geoMeta/61/AQUA/'
                                    },
-                    's3a':'https://ladsweb.modaps.eosdis.nasa.gov/archive/'+\
-                          'allData/450/S3A_SL_1_RBT/',
-                    's3b':'https://ladsweb.modaps.eosdis.nasa.gov/archive/'+\
-                          'allData/450/S3B_SL_1_RBT/'
+                    's3a':{'slstr': 'https://ladsweb.modaps.eosdis.'+\
+                                    'nasa.gov/archive/allData/450/'+\
+                                    'S3A_SL_1_RBT/',
+                           'olci': 'https://ladsweb.modaps.eosdis.'+\
+                                    'nasa.gov/archive/allData/450/'+\
+                                    'S3A_OL_1_EFR/',
+                           'meta': 'https://ladsweb.modaps.eosdis.'+\
+                                    'nasa.gov/archive/geoMetaSentinel3/450/'
+                                }
+                    's3b':{'slstr': 'https://ladsweb.modaps.eosdis.'+\
+                                    'nasa.gov/archive/allData/450/'+\
+                                    'S3B_SL_1_RBT/',
+                           'olci': 'https://ladsweb.modaps.eosdis.'+\
+                                    'nasa.gov/archive/allData/450/'+\
+                                    'S3B_OL_1_EFR/',
+                           'meta': 'https://ladsweb.modaps.eosdis.'+\
+                                    'nasa.gov/archive/geoMetaSentinel3/450/'
+                                }
                           }
         
         #common dict of prefixes
@@ -597,3 +611,21 @@ class SlstrListing(Listing):
         pass           
  
     
+
+# In[]
+
+class OlciListing(Listing):
+    """
+    Sentinel3-A/B OLCI listing process child class tailored to the 
+    sensor-specific processing
+    """
+            
+    def compile_file_listing(self):
+        pass
+        
+    def download_listing(self):
+        pass
+    
+    def skip_existing_files(self):
+        pass           
+ 
