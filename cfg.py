@@ -12,6 +12,7 @@ from aoi import AOI
 import yaml
 import datetime
 import os
+import importlib
 
 
 # In[]
@@ -21,18 +22,15 @@ Configuration
 
 class Configuration(object):
     def __init__(self):
-        #set initial variables/dicts
-        self.io_dict = {'modis': ModisIO,
-                        'slstr': SlstrIO
-                        }
-        self.meta_dict = {'modis': ModisMeta,
-                          'slstr': SlstrMeta
-                          }
-        self.proc_dict = {'modis': ModisListing,
-                          'slstr': SlstrListing}
         #loads the yaml file and reads it content
         with open(os.path.join(os.getcwd(), 'cfg', 'config.yaml')) as f:
             self.config = yaml.load(f,Loader=yaml.FullLoader)
+            
+    """Helper Functions"""
+    def get_class(self, module_name: str, class_name: str) -> object:
+        module = importlib.import_module(module_name)
+        return getattr(module, class_name)
+
     
     """ Configfile::Authentication """
     def get_token(self) -> str:
@@ -102,26 +100,44 @@ class Configuration(object):
     """ Configfile::Processing Modules """    
     def do_resampling(self) -> bool:
         #returns the status whether to resample the data or not
-        return self.config['processing']['resampling']
+        return self.config['processing']['resampling']['apply']
     
     def do_file_listing(self) -> bool:
         #returns the status of the file listing retrieval
-        return self.config['processing']['listing']
+        return self.config['processing']['listing']['apply']
     
     def do_swath_download(self) -> bool:
         #returns the status of the actual file retrieval
-        return self.config['processing']['download']
+        return self.config['processing']['download']['apply']
+
+    def get_resampling_class(self) -> object:
+        #returns the specified resampling class
+        class_name = self.config['processing']['resampling']['name']
+    
+    def get_listing_class(self) -> object:
+        #returns the specified listing class
+        class_name = self.config['processing']['listing']['name']
+        module_name = 'listing'
+        return self.get_class(module_name, class_name)
+    
+    def get_download_class(self) -> object:
+        #returns the specified download class
+        class_name = self.config['processing']['download']['name']
     
     
     """ Job::I/O """
     def set_io(self) -> None:
         #sets the io tools correponding to the sensor/carrier
-        return self.io_dict[self.get_sensor()]()
+        class_name = self.get_sensor().capitalize() + 'IO'
+        module_name = 'iotools'
+        return self.get_class(module_name, class_name)
     
     """ Job::Metadata """
     def set_meta(self) -> None:
-        #sets the io tools correponding to the sensor/carrier
-        return self.meta_dict[self.get_sensor()]()
+        #sets the meta information correponding to the sensor/carrier
+        class_name = self.get_sensor().capitalize() + 'Meta'
+        module_name = 'meta'
+        return self.get_class(module_name, class_name)
     
     """ Job::Listing """
     def set_listing(self) -> None:
@@ -131,7 +147,7 @@ class Configuration(object):
         carrier = self.get_carrier()
         start = self.get_start_date()
         stop = self.get_stop_date()
-        return self.proc_dict[self.get_sensor()](token, carrier, start, stop)
+        return self.get_listing_class()(token, carrier, start, stop)
 
     """ Job::CWD """
     def set_cwd(self) -> None:

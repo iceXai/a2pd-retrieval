@@ -1,8 +1,8 @@
 # Configuration File for the MODIS/SLSTR/OLCI file retrieval wrapper
 meta:
-    # meta information on sensor/carrier [MODIS/SLSTR; terra/aqua/s3a/s3b], hemisphere [north/south], 
-    # aois [as python list, e.g., [berkner, brunt, dibble]] and number of processing cores [1..n] 
-    # to be used
+    # meta information on sensor/carrier [MODIS/SLSTR/OLCI/VIIRS; terra/aqua/s3a/s3b], 
+    # hemisphere [north/south], aois [as python list, e.g., [berkner, brunt, dibble]],
+    # and number of processing cores [1..n] to be used
     sensor: MODIS
     carrier: terra
     hemisphere: south
@@ -24,6 +24,12 @@ date:
 
 processing:
     # processing modules to be used and loaded for the job [True/False]
-    listing: True
-    download: True
-    resampling: True
+    listing: 
+        name: ModisListing
+        apply: True
+    download: 
+        name: ModisDownnload
+        apply: True
+    resampling: 
+        name: Resampling
+        apply: True
