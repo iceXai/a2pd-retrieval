@@ -55,7 +55,7 @@ class Listing(ABC):
                                     'S3A_OL_1_EFR/',
                            'meta': 'https://ladsweb.modaps.eosdis.'+\
                                     'nasa.gov/archive/geoMetaSentinel3/450/'
-                                }
+                                },
                     's3b':{'slstr': 'https://ladsweb.modaps.eosdis.'+\
                                     'nasa.gov/archive/allData/450/'+\
                                     'S3B_SL_1_RBT/',
