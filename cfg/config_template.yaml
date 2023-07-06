@@ -14,7 +14,7 @@ output:
     
 authentication:
     # LAADS authentication token
-    token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJBUFMgT0F1dGgyIEF1dGhlbnRpY2F0b3IiLCJpYXQiOjE2ODg1NzkwMjMsIm5iZiI6MTY4ODU3OTAyMywiZXhwIjoxNzA0MTMxMDIzLCJ1aWQiOiJzcGF1bDExODQiLCJlbWFpbF9hZGRyZXNzIjoic3RlcGhhbi5wYXVsQGF3aS5kZSIsInRva2VuQ3JlYXRvciI6InNwYXVsMTE4NCJ9.95ETGa97zgqbcRAblKNGCr81gpJnf19rNT0tdJVG5VM
+    token: 
 
 date:
     # start and end date of the processing [yyyy-mm-dd]
