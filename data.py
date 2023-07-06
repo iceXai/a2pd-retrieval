@@ -6,8 +6,28 @@
 
 # In[] 
 
+import pandas as pd
+
 
 # In[]
+
+
+class ListingData(object):
+    """
+    Contaienr class for all file-listing-related data and its handling through
+    other classes using pandas dataframes
+    """
+    def __init__(self):
+        self.lst = pd.DataFrame()
+        
+    def add_to_listing(self, df: pd.DataFrame) -> None:
+        self.lst = pd.concat([self.lst, df])
+        self.lst = self.lst.reset_index().drop('index', axis=1)
+
+    def get_listing(self) -> pd.DataFrame():
+        return self.lst
+    
+    
 
 
 class Data(object):
