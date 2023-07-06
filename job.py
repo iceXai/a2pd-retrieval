@@ -54,7 +54,7 @@ class RetrievalJob(object):
         self.meta = self.cfg.set_meta()
         self.lst  = self.cfg.set_listing()
         
-        #sets aoi in lsitign process
+        #sets aoi in listing process
         self.lst.set_aoi(self.aoi)
         
         
