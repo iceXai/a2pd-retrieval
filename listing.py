@@ -8,12 +8,15 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 
+from proc import ModisListingProcessor
+from data import ListingData
+
 import os
 import sys
 import requests
 
 import numpy as np
-import polars as pl
+import pandas as pd
 
 
 # In[]
@@ -185,7 +188,44 @@ class ModisListing(Listing):
     Terra/Aqua MODIS listing process child class tailored to the 
     sensor-specific processing
     """
+    
+    def test(self):
+        #set processor
+        processor = ModisListingProcessor()
+        processor.set_carrier(self.carrier)
+        processor.set_token(self.token)
+        processor.set_aoi(self.aoi)
+        processor.set_url()
         
+        #set data container
+        listing = ListingData()
+        
+        #retrieve date strings for specified processing period
+        date_str = self._get_date_strings()
+        
+        #loop over all dates
+        for yy, jj in date_str:            
+            #set current urls/listing file names
+            processor.set_current_url(yy, jj)
+            processor.set_current_lfn(yy, jj)
+                
+            #get mxd03 listing file
+            download_complete = processor.get_listing_file('meta', 'mxd03')
+            
+            #continue with next date in case no file can be found or 
+            #it already exists
+            if not download_complete:
+                ##TODO
+                #log failures!
+                continue
+            
+            #process listing
+            lst = processor.process_mxd03_listing_file()
+            
+            #add to listing data
+            listing.add_to_listing(lst)
+    
+    
     def compile_file_listing(self) -> None: 
         """
         Run through all specified days and retrieve file download url's
@@ -344,6 +384,8 @@ class ModisListing(Listing):
             lists on search tags, MXD03 swath information as well as meta data
             on the AOI overlaps.
         """
+        df = pd.DataFrame()
+        
         #allocate search tags list to identify MXD02 swaths from MXD03 data
         tags = []
         #allocate list for MXD03 swath links
@@ -437,7 +479,7 @@ class ModisListing(Listing):
         #compile meta output
         aoi_list = [aoi for aoi,frc in overlap_aois]
         frc_list = [frc for aoi,frc in overlap_aois]
-        
+        import pdb; pdb.set_trace()
         #return
         return '.'.join(hdf_split[1:4]), hdf_file , [aoi_list,frc_list]
         
