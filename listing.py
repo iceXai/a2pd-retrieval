@@ -146,6 +146,9 @@ class ModisListing(Listing):
         #set data container
         listing = ListingData()
         
+        #set listing io handler
+        #lstio = ModisListingIO()
+        
         #retrieve date strings for specified processing period
         date_str = self._get_date_strings()
         
@@ -168,6 +171,7 @@ class ModisListing(Listing):
             
             #process listing
             lst = processor.process_mxd03_listing_file()
+            
             """ Compile list of matched MXD02 swaths """
             #get the mxd02 listign file
             download_complete = processor.get_listing_file('mxd02', 'mxd02')
@@ -184,6 +188,13 @@ class ModisListing(Listing):
             
             #add to listing data
             listing.add_to_listing(lst)
+            
+            #TODO rethink the process of how to handle already exisiting files
+            # as well ass the download failures... store csv's per day via 
+            # iotools ListingIO() with specific Modis Version by yy/jj if it 
+            # already exists and in that case load it and add it to the listing
+            # otherwise dow the normal download stuff and processign to add it 
+            # to the listing AND REMOVE THE TXT FILES afterwards?!?
             
         
     def skip_existing_files(self):
