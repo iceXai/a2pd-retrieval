@@ -51,10 +51,6 @@ class Configuration(object):
         #returns specified hemisphere
         return self.config['meta']['hemisphere'].lower()
     
-    def get_ncores(self) -> int:
-        #returns number of cores to be used for resampling
-        return self.config['meta']['n_cores']
-    
     
     """ Configfile::Output """
     def get_output_path(self) -> str:
@@ -86,13 +82,11 @@ class Configuration(object):
         #sets the aoi definitions based on the specified aoi's
         aoi_dict = {}
         aoi_specified = self.get_aoi()
-        n_cores = self.get_ncores()
         hemisphere = self.get_hemisphere()
         
         for aoi in aoi_specified:
             aoi = aoi.lower()
             aoi_dict[aoi] = AOI(aoi = aoi, 
-                                n_cores = n_cores, 
                                 hemisphere = hemisphere)
         return aoi_dict
     
