@@ -21,7 +21,7 @@ import sys
 
 class ModisListingProcessor(object):
     def __init__(self):
-        #define sensor specifics
+        #define sensor specific download url's
         self.url = {'terra':{'mxd02':'https://ladsweb.modaps.eosdis.'+\
                                      'nasa.gov/archive/allData/61/MOD021KM/',
                              'mxd03':'https://ladsweb.modaps.eosdis.'+\
@@ -38,25 +38,36 @@ class ModisListingProcessor(object):
                                    }
                         }
         
+        #file prefixes
         self.prefix = {'terra': 'MOD',
                        'aqua': 'MYD'
                        }
         
+        #output directory
         self.lstout = 'listing'
+        
+        #create listing directory if necessary
+        path = os.path.join(os.getcwd(), self.lstout)
+        if not os.path.isdir(path):
+            os.makedirs(path)
         
     """ High-level functions """
     def set_carrier(self, carrier: str) -> None:
         self.carrier = carrier
+  
         
     def set_token(self, token: str) -> None:
         self.token = token
+
         
     def set_aoi(self, aoi: dict) -> None:
         self.aoi = aoi
+
         
     def set_url(self) -> None:
         self.url = self.url[self.carrier]
         self.prefix = self.prefix[self.carrier]
+
 
     def set_current_url(self, yy: str, jj: str) -> None:
         #compile day and month of current date
@@ -90,6 +101,7 @@ class ModisListingProcessor(object):
         
     def get_current_lfn(self, lfn_type: str) -> str:
         return self.current_lfn[lfn_type]
+
     
     def get_listing_file(self, url_type: str, lfn_type: str) -> bool:
         """
@@ -167,6 +179,28 @@ class ModisListingProcessor(object):
         #return processed listing info
         return df.reset_index().drop('index', axis=1)
     
+
+    def process_mxd02_listing_file(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Parameters
+        ----------
+        df : pd.DataFrame
+            pandas DataFrame containing the already retrieved MXD03 
+            geolocation informartion
+
+        Returns
+        -------
+        pd.DataFrame :
+            Updated pandas DataFrame containing additional MXD02 information
+        """
+        
+        
+        #read-in the listing file
+        lst = self._read_mxd02_listing_file(self.get_current_lfn('mxd02'))
+        
+        #match it with mxd03 list and return
+        return self._get_processed_mxd02_listing(lst, df)
+
 
     def download_listing(self, url: str, lfn: str) -> bool:
         """
@@ -297,8 +331,36 @@ class ModisListingProcessor(object):
         return '.'.join(hdf_split[1:4]), hdf_file , [aoi_list,frc_list]
         
                 
+    def _read_mxd02_listing_file(self, lfn: str) -> list:
+        #open listing file
+        with open(os.path.join(os.getcwd(), self.lstout, lfn), 'rt') as f:
+            data = f.readlines()
+
+        #create list of file links 
+        SEARCH_STR = '<a class="btn btn-default" href="/archive/allData/'
+        lst = [line.split('"')[3].split('/')[-1] \
+               for line in data if SEARCH_STR in line]
+
+        #return to caller
+        return lst        
+     
     
-    
+    def _get_processed_mxd02_listing(self,
+                                     lst: list,
+                                     df: pd.DataFrame) -> pd.DataFrame:
+                #create search tags for mxd02
+        tags = ['.'.join(lst_entry.split('.')[1:4]) for lst_entry in lst]
+        
+        #compile df
+        df_to_join = pd.DataFrame({'tag': tags,
+                                   'url_mxd02': self.get_current_url('mxd02'),
+                                   'mxd02': lst})
+        
+        #join them on tags and rearrange them
+        df = df.join(df_to_join.set_index('tag'), on='tag')
+        df.drop('tag', axis=1, inplace=True)
+        return df[['url_mxd03', 'mxd03', 'url_mxd02', 'mxd02', 'aoi', 'frac']]
+       
 
 # In[]
 # In[]
