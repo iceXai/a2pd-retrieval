@@ -12,6 +12,8 @@ from osgeo import ogr
 from osgeo import osr
 from osgeo import gdal
 
+#from pyproj import CRS
+
 
 # In[]
 class AOI(object):
@@ -21,9 +23,7 @@ class AOI(object):
     TODO: this could probably use some refactoring and clean-up as well but 
           for now keep as is
     """
-    def __init__(self,aoi,n_cores,hemisphere):
-        #store cores to use
-        self.n_cores         = n_cores
+    def __init__(self,aoi,hemisphere):
         #store hemisphere to use
         self.hemisphere      = hemisphere
         #transformations/projections for overlap check
@@ -101,7 +101,7 @@ class AOI(object):
             area_id     = 'atkabay'
             description = 'Antarctic Atka-Bay Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 222
             height      = 111
             area_extent = (-11.0,-71.0,-5.0,-70.0)
@@ -109,7 +109,7 @@ class AOI(object):
             area_id     = 'berkner'
             description = 'Antarctic Berkner Island Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 510
             height      = 390
             area_extent = (-50.0,-78.5,-30.0,-75.0)
@@ -117,7 +117,7 @@ class AOI(object):
             area_id     = 'brunt'
             description = 'Antarctic Brunt Ice Shelf Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 460
             height      = 445
             area_extent = (-34.0,-77.0,-18.0,-73.0)
@@ -125,7 +125,7 @@ class AOI(object):
             area_id     = 'weddell'
             description = 'Antarctic Southern Weddell Sea Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 1290
             height      = 1060
             area_extent = (-66.0,-78.5,-18.0,-69.0)
@@ -133,7 +133,7 @@ class AOI(object):
             area_id     = 'terranovabay'
             description = 'Antarctic Terra Nova Bay Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 560
             height      = 300
             area_extent = (160.0,-77.5,170.0,-72.5)
@@ -141,7 +141,7 @@ class AOI(object):
             area_id     = 'ross'
             description = 'Antarctic Ross Sea Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 530
             height      = 195
             area_extent = (-180.,-78.75,-158,-77.0)
@@ -149,7 +149,7 @@ class AOI(object):
             area_id     = 'ross'
             description = 'Antarctic Ross Sea Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 490
             height      = 190
             area_extent = (160.,-78.2,180,-76.5)
@@ -157,7 +157,7 @@ class AOI(object):
             area_id     = 'prydzbay'
             description = 'Antarctic Prydz Bay Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 1300
             height      = 556
             area_extent = (60.0,-70.0,90.0,-65.0)
@@ -165,7 +165,7 @@ class AOI(object):
             area_id     = 'capedarnley'
             description = 'Antarctic Cape Darnley Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 435
             height      = 445
             area_extent = (65.0,-70.0,75.0,-66.0)
@@ -173,7 +173,7 @@ class AOI(object):
             area_id     = 'barrier'
             description = 'Antarctic West Ice Shelf (Barrier) Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 652
             height      = 556
             area_extent = (75.0,-70.0,90.0,-65.0)
@@ -181,7 +181,7 @@ class AOI(object):
             area_id     = 'mertz'
             description = 'Antarctic Mertz Glacier Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 435
             height      = 278
             area_extent = (140.0,-68.0,150.0,-65.5)
@@ -189,7 +189,7 @@ class AOI(object):
             area_id     = 'vincennesbay'
             description = 'Antarctic Vincennes Bay Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 266
             height      = 334
             area_extent = (126.0,-68.0,132.0,-65.0)
@@ -197,7 +197,7 @@ class AOI(object):
             area_id     = 'amundsen'
             description = 'Antarctic Amundsen Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 260
             height      = 334
             area_extent = (-116.0,-75.0,-108.0,-72.0)
@@ -205,7 +205,7 @@ class AOI(object):
             area_id     = 'greater-amundsen'
             description = 'Antarctic Greater Amundsen Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 520
             height      = 390
             area_extent = (-116.0,-75.5,-100.0,-72.0)
@@ -213,7 +213,7 @@ class AOI(object):
             area_id     = 'getz-west'
             description = 'Antarctic Western Getz Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 368
             height      = 222
             area_extent = (-135.0,-75.0,-123.0,-73.0)
@@ -221,7 +221,7 @@ class AOI(object):
             area_id     = 'getz-east'
             description = 'Antarctic Eastern Getz Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 306
             height      = 222
             area_extent = (-120.0,-75.0,-110.0,-73.0)
@@ -229,7 +229,7 @@ class AOI(object):
             area_id     = 'dibble'
             description = 'Antarctic Dibble Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 272
             height      = 222
             area_extent = (132.0,-67.0,138.0,-65.0)
@@ -237,7 +237,7 @@ class AOI(object):
             area_id     = 'dalton'
             description = 'Antarctic Dalton Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 716
             height      = 278
             area_extent = (112.0,-67.5,128.0,-65.0)         
@@ -245,7 +245,7 @@ class AOI(object):
             area_id     = 'shackleton'
             description = 'Antarctic Shackleton Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 448
             height      = 390
             area_extent = (90.0,-67.5,100.0,-64.0)
@@ -253,7 +253,7 @@ class AOI(object):
             area_id     = 'ronne'
             description = 'Antarctic Ronne Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 540
             height      = 490
             area_extent = (-64.0,-78.0,-45.0,-73.6)
@@ -261,7 +261,7 @@ class AOI(object):
             area_id     = 'thwaites'
             description = 'Antarctic Thwaites Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 208
             height      = 156
             area_extent = (-111.0,-75.5,-104.0,-74.1)
@@ -269,7 +269,7 @@ class AOI(object):
             area_id     = 'pineisland'
             description = 'Antarctic PineIsland Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 174
             height      = 390
             area_extent = (-105.5,-75.5,-100.0,-72.0)
@@ -277,7 +277,7 @@ class AOI(object):
             area_id     = 'larsen-b'
             description = 'Antarctic Larsen-B Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 256
             height      = 156
             area_extent = (-62.5,-66.2,-57.0,-64.8)
@@ -285,7 +285,7 @@ class AOI(object):
             area_id     = 'larsen-c'
             description = 'Antarctic Larsen-C Grid'
             proj_id     = 'lonlat'
-            projection  = '+proj=longlat +ellps=WGS84 +datum=WGS84'
+            projection  = f'EPSG:{self.prj_epsg_source}'
             width       = 320
             height      = 334
             area_extent = (-65.5,-69.0,-58.0,-66.0)          
@@ -293,10 +293,9 @@ class AOI(object):
             raise Exception('Unrecognized AOI-tag specified!')
     
         #create area definition
-        self.grid = pr.geometry.AreaDefinition(area_id,description,proj_id,\
-                                               projection,width,height,\
-                                               area_extent,\
-                                               nprocs=self.n_cores)
+        self.grid = pr.geometry.AreaDefinition(area_id,description,proj_id,
+                                                projection,width,height,
+                                                area_extent)
             
         #store polygon and grid specs
         self.polygon = self.create_aoi_poly()
