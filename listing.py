@@ -8,6 +8,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 
+#from iotools import ModisListingIO
 from proc import ModisListingProcessor
 from data import ListingData
 
@@ -32,8 +33,23 @@ class Listing(ABC):
                  token: str,
                  carrier: str,
                  start: datetime.date,
-                 stop: datetime.date
+                 stop: datetime.date,
+                 out: str
                  ):
+        """
+        Parameters
+        ----------
+        token : str
+            DESCRIPTION.
+        carrier : str
+            DESCRIPTION.
+        start : datetime.date
+            DESCRIPTION.
+        stop : datetime.date
+            DESCRIPTION.
+        out : str
+            DESCRIPTION.
+        """
         
         # #common dict of url's
         # self.url = {'terra':{'mxd02':'https://ladsweb.modaps.eosdis.'+\
@@ -80,9 +96,7 @@ class Listing(ABC):
         self.carrier = carrier
         self.start = start
         self.stop = stop
-        
-        #set standard output
-        self.lstout = 'listing'
+        self.out = out
 
     
     """ High-level (abstract) functions """
@@ -141,6 +155,7 @@ class ModisListing(Listing):
         processor.set_carrier(self.carrier)
         processor.set_token(self.token)
         processor.set_aoi(self.aoi)
+        processor.set_output_path(self.out)
         processor.set_url()
         
         #set data container
@@ -198,6 +213,7 @@ class ModisListing(Listing):
             
         
     def skip_existing_files(self):
+        #handling only the completely processed h5 data!!!!
         #TODO likely move this also to the ABC and rework the way the listign 
         # is stored to something like pandas or polars instead of lists?
         # [date_tag, url (mxd02/mxd03), aoi, covfrac]

@@ -45,9 +45,6 @@ class RetrievalJob(object):
         None.
 
         """
-        #change the current working directory to the output directory
-        self.cfg.set_cwd()
-        
         #adds all necessary components to the current job
         self.io   = self.cfg.set_io()
         self.aoi  = self.cfg.set_aoi()

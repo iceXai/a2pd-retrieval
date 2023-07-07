@@ -43,14 +43,6 @@ class ModisListingProcessor(object):
                        'aqua': 'MYD'
                        }
         
-        #output directory
-        self.lstout = 'listing'
-        
-        #create listing directory if necessary
-        path = os.path.join(os.getcwd(), self.lstout)
-        if not os.path.isdir(path):
-            os.makedirs(path)
-        
     """ High-level functions """
     def set_carrier(self, carrier: str) -> None:
         self.carrier = carrier
@@ -67,6 +59,16 @@ class ModisListingProcessor(object):
     def set_url(self) -> None:
         self.url = self.url[self.carrier]
         self.prefix = self.prefix[self.carrier]
+        
+    def set_output_path(self, path: str) -> None:
+        #output directory
+        LISTING_FOLDER = 'listing'
+        
+        #create listing directory if necessary
+        path = os.path.join(path, LISTING_FOLDER)
+        if not os.path.isdir(path):
+            os.makedirs(path)   
+        self.lstout = path
 
 
     def set_current_url(self, yy: str, jj: str) -> None:
@@ -95,8 +97,10 @@ class ModisListingProcessor(object):
         #set curreent listing file names
         lfn_mxd03 = f'{self.carrier}_mxd03_listing_{yy}_{jj}.txt'
         lfn_mxd02 = f'{self.carrier}_mxd02_listing_{yy}_{jj}.txt'
+        lfn_final = f'{self.carrier}_modis_listing_{yy}_{jj}.txt'
         self.current_lfn = {'mxd03': lfn_mxd03,
-                            'mxd02': lfn_mxd02
+                            'mxd02': lfn_mxd02,
+                            'final': lfn_final
                             }
         
     def get_current_lfn(self, lfn_type: str) -> str:
@@ -127,8 +131,7 @@ class ModisListingProcessor(object):
         listing_file_name = self.get_current_lfn(lfn_type)
         
         #check for file availability
-        if os.path.isfile(os.path.join(os.getcwd(),
-                                       self.lstout,
+        if os.path.isfile(os.path.join(self.lstout,
                                        listing_file_name)):
             ##TODO
             #modify logging and status messages
@@ -255,7 +258,7 @@ class ModisListingProcessor(object):
                     sys.exit()
         
         #save file conent
-        with open(os.path.join(os.getcwd(), self.lstout, lfn), 'wb+') as f:
+        with open(os.path.join(self.lstout, lfn), 'wb+') as f:
             f.write(r.content)
         
         #return status            
@@ -265,7 +268,7 @@ class ModisListingProcessor(object):
     """ Low-level functions """
     def _read_mxd03_listing_file(self, lfn: str) -> list:
         #open listing file
-        with open(os.path.join(os.getcwd(), self.lstout, lfn), 'rt') as f:
+        with open(os.path.join(self.lstout, lfn), 'rt') as f:
             data = f.readlines()
          
         #listing file consists of various meta information w/ 
@@ -333,7 +336,7 @@ class ModisListingProcessor(object):
                 
     def _read_mxd02_listing_file(self, lfn: str) -> list:
         #open listing file
-        with open(os.path.join(os.getcwd(), self.lstout, lfn), 'rt') as f:
+        with open(os.path.join(self.lstout, lfn), 'rt') as f:
             data = f.readlines()
 
         #create list of file links 

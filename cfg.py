@@ -126,12 +126,14 @@ class Configuration(object):
         module_name = 'iotools'
         return self.get_class(module_name, class_name)
     
+    
     """ Job::Metadata """
     def set_meta(self) -> None:
         #sets the meta information correponding to the sensor/carrier
         class_name = self.get_sensor().capitalize() + 'Meta'
         module_name = 'meta'
         return self.get_class(module_name, class_name)
+    
     
     """ Job::Listing """
     def set_listing(self) -> None:
@@ -141,11 +143,8 @@ class Configuration(object):
         carrier = self.get_carrier()
         start = self.get_start_date()
         stop = self.get_stop_date()
-        return self.get_listing_class()(token, carrier, start, stop)
+        out = self.get_output_path()
+        return self.get_listing_class()(token, carrier, start, stop, out)
 
-    """ Job::CWD """
-    def set_cwd(self) -> None:
-        #sets the io tools correponding to the sensor/carrier
-        os.chdir(self.get_output_path())
-      
+
     #[...] more necessary getters/setters
