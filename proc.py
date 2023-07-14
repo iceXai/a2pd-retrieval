@@ -9,6 +9,9 @@
 
 from datetime import datetime, timedelta
 
+from iotools import ListingIO
+from data import ListingData
+
 import pandas as pd
 import numpy as np
 
@@ -43,6 +46,7 @@ class ModisListingProcessor(object):
                        'aqua': 'MYD'
                        }
         
+        
     """ High-level functions """
     def set_carrier(self, carrier: str) -> None:
         self.carrier = carrier
@@ -60,6 +64,7 @@ class ModisListingProcessor(object):
         self.url = self.url[self.carrier]
         self.prefix = self.prefix[self.carrier]
         
+        
     def set_output_path(self, path: str) -> None:
         #output directory
         LISTING_FOLDER = 'listing'
@@ -69,6 +74,16 @@ class ModisListingProcessor(object):
         if not os.path.isdir(path):
             os.makedirs(path)   
         self.lstout = path
+        
+        
+    def initialize_listing_data(self) -> None:
+        #initiate listing data container
+        self.listing = ListingData()
+        
+        
+    def initialize_listing_io(self) -> None:
+        #initiate i/o handler
+        self.io = ListingIO(self.lstout)
 
 
     def set_current_url(self, yy: str, jj: str) -> None:

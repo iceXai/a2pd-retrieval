@@ -8,9 +8,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 
-#from iotools import ModisListingIO
 from proc import ModisListingProcessor
-from data import ListingData
 
 import os
 import sys
@@ -40,15 +38,16 @@ class Listing(ABC):
         Parameters
         ----------
         token : str
-            DESCRIPTION.
+            LAADS authentication token for the download (to be generated at 
+            https://ladsweb.modaps.eosdis.nasa.gov/)
         carrier : str
-            DESCRIPTION.
+            Carrier satellite for the specified sensor (e.g., Terra/S3A...)
         start : datetime.date
-            DESCRIPTION.
+            Start date of the files to be downloaded
         stop : datetime.date
-            DESCRIPTION.
+            End date of the files to be downloaded
         out : str
-            DESCRIPTION.
+            Output directory path
         """
         
         # #common dict of url's
@@ -157,12 +156,8 @@ class ModisListing(Listing):
         processor.set_aoi(self.aoi)
         processor.set_output_path(self.out)
         processor.set_url()
-        
-        #set data container
-        listing = ListingData()
-        
-        #set listing io handler
-        #lstio = ModisListingIO()
+        processor.initialize_listing_data()
+        processor.initialize_listing_io()
         
         #retrieve date strings for specified processing period
         date_str = self._get_date_strings()
@@ -202,7 +197,11 @@ class ModisListing(Listing):
             lst = processor.process_mxd02_listing_file(lst)
             
             #add to listing data
-            listing.add_to_listing(lst)
+            processor.listing.add_to_listing(lst)
+
+            #output listing csv file and clear txt ones
+            #import pdb; pdb.set_trace()
+            #processor.io.set_listing_file_name(processor.get_current_lfn('final'))
             
             #TODO rethink the process of how to handle already exisiting files
             # as well ass the download failures... store csv's per day via 

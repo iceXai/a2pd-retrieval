@@ -9,11 +9,28 @@ from abc import ABC, abstractmethod
 from pyhdf.SD import SD, SDC
 
 import h5py
+import os
+
 import netCDF4 as nc
 import numpy as np
 import pyresample as pr
+import pandas as pd
 
 
+
+# In[]
+class ListingIO(object):
+    def __init__(self, out: str):
+        self.OUTPUT_PATH = out
+        
+    def set_listing_file_name(self, lfn: str) -> None:
+        self.path = os.path.join(self.OUTPUT_PATH, lfn)
+
+    def to_csv(self, df: pd.DataFrame) -> None:
+        df.to_csv(self.path)
+
+    def from_csv(self) -> pd.DataFrame:
+        return pd.read_csv(self.path)
 
 # In[]
 """

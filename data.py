@@ -21,12 +21,23 @@ class ListingData(object):
         self.lst = pd.DataFrame()
         
     def add_to_listing(self, df: pd.DataFrame) -> None:
+        #store current addition
+        self.set_current_listing(df)
+        #add to overall listing
         self.lst = pd.concat([self.lst, df])
         self.lst = self.lst.reset_index().drop('index', axis=1)
+        
+    def set_current_listing(self, df: pd.DataFrame) -> None:
+        self.tmp = df
 
     def get_listing(self) -> pd.DataFrame():
         return self.lst
     
+    def get_current_listing(self) -> pd.DataFrame():
+        return self.tmp
+    
+    def add_from_csv(self, df: pd.DataFrame) -> None:
+        pass
     
 
 
