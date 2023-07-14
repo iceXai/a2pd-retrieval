@@ -220,64 +220,40 @@ class ModisListingProcessor(object):
         return self._get_processed_mxd02_listing(lst, df)
 
 
-    def download_listing(self, url: str, lfn: str) -> bool:
+    def download_listing(self, url: str) -> bool:
         """
         Parameters
         ----------
         url : str
             sensor/carrier specific download url
-        lfn : str
-            listing_file_name
 
         Returns
         -------
         Bool :
             download successful? True/False
         """
-        #set counter and times [in seconds] for ftp/https retry in case 
-        #download fails
-        retry_count = 10
-        retry_sleep = 5
 
-        #TODO get rid of this stype separation and put this function into the ABC
-        #get sensor type
-        stype = lfn.split('_')[1]
-        for retry in range(retry_count+1):
-            try:        
-                print(f'['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
-                       f'] - Retrieving {stype} listing file...')
+        #TODO put this function into the ABC ?!
+     
+        print(f'['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
+               f'] - Retrieving {stype} listing file...')
 
-                #requests call
-                headers = {'Authorization': "Bearer {}".format(self.token)}
-                r = requests.get(url, headers=headers)
+        #requests call
+        headers = {'Authorization': "Bearer {}".format(self.token)}
+        r = requests.get(url, headers=headers)
 
-                if r.status_code == 200:
-                    print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
-                            '] - Retrieval of file listing complete!')
-                    break
-                else:
-                    print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
-                            '] - Error with file listing retrieval... going to retry')
-                    raise
-            except:
-                #exception handling
-                if retry != range(retry_count+1)[-1]:
-                    #wait a moment
-                    time.sleep(retry_sleep)
-                    print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
-                            '] - Retry of file listing retrieval...')
-                    continue
-                else:
-                    print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
-                            '] ! Retrieval finally failed!')
-                    sys.exit()
+        if r.status_code == 200:
+            print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
+                  '] - Retrieval of file listing complete!')
+            
+            self.temporary_listing = r.content
+            
+            return True
+        else:
+            print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
+                  '] - Error with file listing retrieval!')
         
-        #save file conent
-        with open(os.path.join(self.lstout, lfn), 'wb+') as f:
-            f.write(r.content)
-        
-        #return status            
-        return True
+            return False
     
 
     """ Low-level functions """
