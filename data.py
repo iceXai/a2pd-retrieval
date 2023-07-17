@@ -36,9 +36,6 @@ class ListingData(object):
     def get_current_listing(self) -> pd.DataFrame():
         return self.tmp
     
-    def add_from_csv(self, df: pd.DataFrame) -> None:
-        pass
-    
 
 
 class Data(object):
