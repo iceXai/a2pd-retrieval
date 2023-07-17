@@ -48,6 +48,8 @@ class ModisListingProcessor(object):
         
         
     """ High-level functions """
+    
+    """ Getters/Setters for Processor Setup """
     def set_carrier(self, carrier: str) -> None:
         self.carrier = carrier
   
@@ -86,6 +88,7 @@ class ModisListingProcessor(object):
         self.io = ListingIO(self.lstout)
 
 
+    """ URL/Listing File Name Management """
     def set_current_url(self, yy: str, jj: str) -> None:
         #compile day and month of current date
         d = datetime.strptime(f'{yy}-{jj}', "%Y-%j")
@@ -116,7 +119,7 @@ class ModisListingProcessor(object):
     def get_current_lfn(self) -> str:
         return self.current_lfn
     
-    
+    """ Listing Procedure """
     def check_for_existing_listing(self) -> bool:
         path = os.path.join(self.lstout, self.get_current_lfn())
         return os.path.isfile(path)
@@ -220,7 +223,7 @@ class ModisListingProcessor(object):
         
             return False
         
-        
+    """ I/O Management """    
     def save_listing(self) -> None:
         self.io.set_listing_file_name(self.get_current_lfn())
         self.io.to_csv(self.listing.get_listing())
