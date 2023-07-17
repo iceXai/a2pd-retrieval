@@ -114,9 +114,11 @@ class Configuration(object):
         module_name = 'listing'
         return self.get_class(module_name, class_name)
     
-    def get_download_class(self) -> object:
+    def get_retrieval_class(self) -> object:
         #returns the specified download class
-        class_name = self.config['processing']['download']['name']
+        class_name = self.config['processing']['retrieval']['name']
+        module_name = 'retrieval'
+        return self.get_class(module_name, class_name)
     
     
     """ Job::I/O """
