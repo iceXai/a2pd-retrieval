@@ -109,28 +109,25 @@ class ModisListingProcessor(object):
     
     
     def set_current_lfn(self, yy: str, jj: str) -> None:
-        #set curreent listing file names
-        lfn_mxd03 = f'{self.carrier}_mxd03_listing_{yy}_{jj}.txt'
-        lfn_mxd02 = f'{self.carrier}_mxd02_listing_{yy}_{jj}.txt'
-        lfn_final = f'{self.carrier}_modis_listing_{yy}_{jj}.txt'
-        self.current_lfn = {'mxd03': lfn_mxd03,
-                            'mxd02': lfn_mxd02,
-                            'final': lfn_final
-                            }
-        
-    def get_current_lfn(self, lfn_type: str) -> str:
-        return self.current_lfn[lfn_type]
-
+        #set curreent listing file name
+        self.current_lfn = f'{self.carrier}_modis_listing_{yy}_{jj}.csv'
     
-    def get_listing_file(self, url_type: str, lfn_type: str) -> bool:
+        
+    def get_current_lfn(self) -> str:
+        return self.current_lfn
+    
+    
+    def check_for_existing_listing(self) -> bool:
+        path = os.path.join(self.lstout, self.get_current_lfn())
+        return os.path.isfile(path)
+    
+    
+    def get_listing_file(self, url_type: str) -> bool:
         """
         Parameters
         ----------
         url_type : str
             Type of url to be retrieved; according to the url dict, i.e.,
-            'meta', 'mxd03', and 'mxd02'
-        lfn_type : str
-            Type of listing file name to be set for the file retrieval, i.e.,
             'meta', 'mxd03', and 'mxd02'
 
         Returns
@@ -142,43 +139,25 @@ class ModisListingProcessor(object):
         #get url to download from
         download_url = self.get_current_url(url_type)
         
-        #set name for listing file
-        listing_file_name = self.get_current_lfn(lfn_type)
-        
-        #check for file availability
-        if os.path.isfile(os.path.join(self.lstout,
-                                       listing_file_name)):
-            ##TODO
-            #modify logging and status messages
-            print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
-                    f'] - Skipped: {lfn_type.upper()} Listing file already exists!')
-                
-            #set status to False
-            process_complete = False
-        else:
+        try:
             #call download function
-            process_complete = self.download_listing(download_url,
-                                                     listing_file_name)
-        #return status
-        return process_complete
+            status = self.download_listing(download_url)
+                    
+            #return status
+            return status
+        except:
+            #TODO needs improvemenet
+            return False
+
 
     
-    def process_mxd03_listing_file(self) -> pd.DataFrame:
-        """
-        Returns
-        -------
-        pd.DataFrame
-            pandas dataframe with search tags, MXD03 url/swath information
-            as well as meta data on the AOI and overlaps fraction
-        """
-        
+    def process_mxd03_listing_file(self) -> None:
+        #parse listing
         df = pd.DataFrame()
-        
-        #read-in the listing file
-        lst = self._read_mxd03_listing_file(self.get_current_lfn('mxd03'))
+        self._parse_mxd03_listing()
         
         #loop over entries
-        for lst_entry in lst:
+        for lst_entry in self.mxd03:
             #check for overlap with specified aoi's
             valid_aois, overlap_aois = self._validate_aoi_overlap(lst_entry)
             
@@ -194,30 +173,16 @@ class ModisListingProcessor(object):
                 #append to df
                 df = pd.concat([df, pd.DataFrame(mxd03_dict)])
             
-        #return processed listing info
-        return df.reset_index().drop('index', axis=1)
+        #update listing
+        self.mxd03 = df.reset_index().drop('index', axis=1)
     
 
-    def process_mxd02_listing_file(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Parameters
-        ----------
-        df : pd.DataFrame
-            pandas DataFrame containing the already retrieved MXD03 
-            geolocation informartion
-
-        Returns
-        -------
-        pd.DataFrame :
-            Updated pandas DataFrame containing additional MXD02 information
-        """
+    def process_mxd02_listing_file(self) -> None:
+        #parse listing
+        self._parse_mxd02_listing()
         
-        
-        #read-in the listing file
-        lst = self._read_mxd02_listing_file(self.get_current_lfn('mxd02'))
-        
-        #match it with mxd03 list and return
-        return self._get_processed_mxd02_listing(lst, df)
+        #match it with mxd03 list
+        self._get_processed_mxd02_listing()
 
 
     def download_listing(self, url: str) -> bool:
@@ -236,7 +201,7 @@ class ModisListingProcessor(object):
         #TODO put this function into the ABC ?!
      
         print(f'['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
-               f'] - Retrieving {stype} listing file...')
+               f'] - Retrieving listing file...')
 
         #requests call
         headers = {'Authorization': "Bearer {}".format(self.token)}
@@ -246,7 +211,7 @@ class ModisListingProcessor(object):
             print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
                   '] - Retrieval of file listing complete!')
             
-            self.temporary_listing = r.content
+            self.temporary_listing = self._parse_byte_listing(r.content)
             
             return True
         else:
@@ -254,14 +219,24 @@ class ModisListingProcessor(object):
                   '] - Error with file listing retrieval!')
         
             return False
+        
+        
+    def save_listing(self) -> None:
+        self.io.set_listing_file_name(self.get_current_lfn())
+        self.io.to_csv(self.listing.get_listing())
+        
+        
+    def load_listing(self) -> None:
+        self.io.set_listing_file_name(self.get_current_lfn())
+        self.listing.add_to_listing(self.io.from_csv())
     
 
     """ Low-level functions """
-    def _read_mxd03_listing_file(self, lfn: str) -> list:
-        #open listing file
-        with open(os.path.join(self.lstout, lfn), 'rt') as f:
-            data = f.readlines()
-         
+    def _parse_byte_listing(self, byte_listing) -> list:
+        return byte_listing.decode('UTF-8').split('\n')
+    
+    
+    def _parse_mxd03_listing(self) -> None:         
         #listing file consists of various meta information w/ 
         #data[0]:=hdf_file_name; data[9:12]:=RingLON; 
         #data[13:16]:=RingLAT
@@ -269,10 +244,10 @@ class ModisListingProcessor(object):
                 line.split(',')[10],line.split(',')[11],
                 line.split(',')[12],line.split(',')[13],
                 line.split(',')[14],line.split(',')[15],
-                line.split(',')[16]] for line in data[3:]]
+                line.split(',')[16]] for line in self.temporary_listing[3:-1]]
         
-        #return to caller
-        return lst
+        #update temporary listing
+        self.mxd03 = lst
     
     def _validate_aoi_overlap(self, lst_entry: list) -> (bool, list):
         #check for overlap to exclude non-matching links from listing
@@ -325,35 +300,32 @@ class ModisListingProcessor(object):
         return '.'.join(hdf_split[1:4]), hdf_file , [aoi_list,frc_list]
         
                 
-    def _read_mxd02_listing_file(self, lfn: str) -> list:
-        #open listing file
-        with open(os.path.join(self.lstout, lfn), 'rt') as f:
-            data = f.readlines()
-
+    def _parse_mxd02_listing(self) -> None:
         #create list of file links 
         SEARCH_STR = '<a class="btn btn-default" href="/archive/allData/'
         lst = [line.split('"')[3].split('/')[-1] \
-               for line in data if SEARCH_STR in line]
+               for line in self.temporary_listing if SEARCH_STR in line]
 
-        #return to caller
-        return lst        
+        #update temporary listing
+        self.mxd02 = lst       
      
     
-    def _get_processed_mxd02_listing(self,
-                                     lst: list,
-                                     df: pd.DataFrame) -> pd.DataFrame:
-                #create search tags for mxd02
-        tags = ['.'.join(lst_entry.split('.')[1:4]) for lst_entry in lst]
+    def _get_processed_mxd02_listing(self) -> None:
+        #create search tags for mxd02
+        tags = ['.'.join(lst_entry.split('.')[1:4])
+                for lst_entry in self.mxd02]
         
         #compile df
         df_to_join = pd.DataFrame({'tag': tags,
                                    'url_mxd02': self.get_current_url('mxd02'),
-                                   'mxd02': lst})
+                                   'mxd02': self.mxd02})
         
         #join them on tags and rearrange them
-        df = df.join(df_to_join.set_index('tag'), on='tag')
+        df = self.mxd03.join(df_to_join.set_index('tag'), on='tag')
         df.drop('tag', axis=1, inplace=True)
-        return df[['url_mxd03', 'mxd03', 'url_mxd02', 'mxd02', 'aoi', 'frac']]
+        df = df[['url_mxd03', 'mxd03', 'url_mxd02', 'mxd02', 'aoi', 'frac']]
+        #store in data container
+        self.listing.add_to_listing(df)
        
 
 # In[]

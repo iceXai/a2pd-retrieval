@@ -163,52 +163,47 @@ class ModisListing(Listing):
         date_str = self._get_date_strings()
         
         #loop over all dates
-        for yy, jj in date_str:            
-            """ geoMeta/MXD03: identify swaths in AOI's """
+        for yy, jj in date_str: 
             #set current urls/listing file names
             processor.set_current_url(yy, jj)
             processor.set_current_lfn(yy, jj)
-                
-            #get mxd03 listing file
-            download_complete = processor.get_listing_file('meta', 'mxd03')
+
+            # check whether listing for specified date already exists
+            LISTING_EXISTS = processor.check_for_existing_listing()
+            if LISTING_EXISTS:
+                processor.load_listing()
+                continue
             
+            """ geoMeta/MXD03: identify swaths in AOI's """                
+            #get mxd03 listing file
+            DOWNLOAD_COMPLETED = processor.get_listing_file('meta')
+
             #continue with next date in case no file can be found or 
             #it already exists
-            if not download_complete:
+            if not DOWNLOAD_COMPLETED:
                 ##TODO
                 #log failures!
                 continue
             
             #process listing
-            lst = processor.process_mxd03_listing_file()
-            
+            processor.process_mxd03_listing_file()
+
             """ Compile list of matched MXD02 swaths """
             #get the mxd02 listign file
-            download_complete = processor.get_listing_file('mxd02', 'mxd02')
+            DOWNLOAD_COMPLETED = processor.get_listing_file('mxd02')
 
             #continue with next date in case no file can be found or 
             #it already exists
-            if not download_complete:
+            if not DOWNLOAD_COMPLETED:
                 ##TODO
                 #log failures!
                 continue
             
             #further process listing; adding MXD02 file names by matching
-            lst = processor.process_mxd02_listing_file(lst)
+            processor.process_mxd02_listing_file()
             
-            #add to listing data
-            processor.listing.add_to_listing(lst)
-
-            #output listing csv file and clear txt ones
-            #import pdb; pdb.set_trace()
-            #processor.io.set_listing_file_name(processor.get_current_lfn('final'))
-            
-            #TODO rethink the process of how to handle already exisiting files
-            # as well ass the download failures... store csv's per day via 
-            # iotools ListingIO() with specific Modis Version by yy/jj if it 
-            # already exists and in that case load it and add it to the listing
-            # otherwise dow the normal download stuff and processign to add it 
-            # to the listing AND REMOVE THE TXT FILES afterwards?!?
+            #output listing csv file
+            processor.save_listing()
             
         
     def skip_existing_files(self):
