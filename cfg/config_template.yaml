@@ -25,7 +25,6 @@ processing:
     # processing modules to be used and loaded for the job [True/False]
     listing: 
         name: ModisListing
-        apply: True
     download: 
         name: ModisDownnload
         apply: True
