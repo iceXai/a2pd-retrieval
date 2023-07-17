@@ -56,6 +56,18 @@ class RetrievalJob(object):
         
         
     def run(self):
-        pass
+        """
+        Executes the built retrieval job
+
+        Returns
+        -------
+        None.
+
+        """
+        #compiles the listing
+        job.lst.compile_file_listing()
+        
+        
+        
 
     
