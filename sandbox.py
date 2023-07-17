@@ -1,6 +1,5 @@
 
 # In[]
-
 from job import RetrievalJob
 
 # In[]
@@ -19,13 +18,9 @@ print(job.aoi['berkner'].get_aoi_grid())
 
 print(job.cfg.config)
 
-print(job.lst.url)
-
 #test = job.lst._get_date_strings()
+
 test = job.lst.compile_file_listing()
-
-
-
 
 
 # geometa_file_name = f'MOD03_2022-09-01.txt'
