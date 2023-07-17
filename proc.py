@@ -3,8 +3,6 @@
 @author: Dr. Stephan Paul (AWI/iceXai; stephan.paul@awi.de)
 """
 
-
-
 # In[] 
 
 from datetime import datetime, timedelta
@@ -337,15 +335,30 @@ class ModisListingProcessor(object):
 
 
 """
-Processing::FileDownload
+Processing::File Download
 """
-class Download(object):
+class Retrieval(object):
     """
     Handles the actual download process of the identified swaths from the 
     file listing process
     """
     def __init__(self):
         pass
+    
+# In[]
+# In[]
+# In[]
+
+"""
+Processing:Swath Handling
+"""
+class Swath(object):
+    """
+    Handles the downloaded swath 
+    """
+    def __init__(self):
+        pass
+
     
 # In[]
 # In[]

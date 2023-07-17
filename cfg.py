@@ -145,6 +145,19 @@ class Configuration(object):
         stop = self.get_stop_date()
         out = self.get_output_path()
         return self.get_listing_class()(token, carrier, start, stop, out)
+    
+    """ Job::Retrieval """
+    def set_retrieval(self) -> None:
+        #sets the correct retrieval processor corresponding to the
+        #sensor/carrier
+        pass
+    
+    """ Job::Resampling """
+    def set_resampling(self) -> None:
+        #adds the resample processor
+        pass
+    
+    
 
 
     #[...] more necessary getters/setters

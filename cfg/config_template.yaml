@@ -25,8 +25,8 @@ processing:
     # processing modules to be used and loaded for the job [True/False]
     listing: 
         name: ModisListing
-    download: 
-        name: ModisDownnload
+    retrieval: 
+        name: ModisRetrieval
         apply: True
     resampling: 
         name: Resampling
