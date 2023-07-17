@@ -230,6 +230,9 @@ class ModisListingProcessor(object):
     def load_listing(self) -> None:
         self.io.set_listing_file_name(self.get_current_lfn())
         self.listing.add_to_listing(self.io.from_csv())
+        
+    def get_listing(self) -> pd.DataFrame:
+        return self.listing.get_listing()
     
 
     """ Low-level functions """

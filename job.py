@@ -65,7 +65,7 @@ class RetrievalJob(object):
 
         """
         #compiles the listing
-        self.lst.compile_file_listing()
+        listing = self.lst.compile_file_listing()
         
         
         

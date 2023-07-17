@@ -101,15 +101,15 @@ class Listing(ABC):
     """ High-level (abstract) functions """
     
     @abstractmethod
-    def compile_file_listing(self):
+    def compile_file_listing(self) -> pd.DataFrame:
         """
         compiles the listing of all suitable swath files per sensor that needs 
-        to be retrieved from the server
+        to be retrieved from the server and returns it
         """
         pass
     
     @abstractmethod
-    def skip_existing_files(self):
+    def skip_existing_files(self) -> None:
         """
         handles the skipping of already downloaded files in a 
         restarted/continued job setup
@@ -122,7 +122,7 @@ class Listing(ABC):
         allows for setting the user specified AOIs for the listing process
         """
         self.aoi = aoi
-        
+                
         
     """ Low-level functions """
         
@@ -148,7 +148,7 @@ class ModisListing(Listing):
     sensor-specific processing
     """
     
-    def compile_file_listing(self):
+    def compile_file_listing(self) -> pd.DataFrame:
         #set processor
         processor = ModisListingProcessor()
         processor.set_carrier(self.carrier)
@@ -205,8 +205,11 @@ class ModisListing(Listing):
             #output listing csv file
             processor.save_listing()
             
+        #returns the completed listing to the caller
+        return processor.get_listing()
+            
         
-    def skip_existing_files(self):
+    def skip_existing_files(self) -> None:
         #handling only the completely processed h5 data!!!!
         #TODO likely move this also to the ABC and rework the way the listign 
         # is stored to something like pandas or polars instead of lists?
