@@ -148,6 +148,7 @@ class ModisListing(Listing):
     Terra/Aqua MODIS listing child class tailored to the 
     sensor-specific processing
     """
+    
     def setup_listing_processor(self) -> None:
         #set processor
         self.proc = ModisListingProcessor()

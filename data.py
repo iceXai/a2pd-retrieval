@@ -38,10 +38,10 @@ class ListingData(object):
     
 
 
-class Data(object):
+class SwathData(object):
     """
-    Handles all data-related tasks and stores it in this centralized place, 
-    i.e., swaths, swath data, resampled data
+    Container for all data-related tasks and its handling through other 
+    classes, i.e., swath data, resampled data
     """
     def __init__(self):
         #will store the list of swaths to be downloaded

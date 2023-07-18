@@ -20,6 +20,9 @@ import pandas as pd
 
 # In[]
 class ListingIO(object):
+    """
+    Class for all listing-related I/O
+    """
     def __init__(self, out: str):
         self.OUTPUT_PATH = out
         
@@ -31,6 +34,24 @@ class ListingIO(object):
 
     def from_csv(self) -> pd.DataFrame:
         return pd.read_csv(self.path)
+
+# In[]
+class SwathIO(ABC):
+    """
+    Parentclass for all swath-related I/O
+    """
+    def __init__(self, out: str):
+        self.OUTPUT_PATH = out
+
+
+class ModisSwathIO(SwathIO):
+    """
+    Childclass for all MODIS swath-related I/O
+    """
+    pass
+
+
+
 
 # In[]
 """

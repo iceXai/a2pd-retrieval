@@ -7,8 +7,8 @@
 
 from datetime import datetime, timedelta
 
-from iotools import ListingIO
-from data import ListingData
+from iotools import ListingIO, ModisSwathIO
+from data import ListingData, SwathData
 
 import pandas as pd
 import numpy as np
@@ -350,21 +350,46 @@ class ModisRetrievalProcessor(object):
     def __init__(self):
         pass
     
+    """ High-level functions """
+    
+    """ Getters/Setters for Processor Setup """
+    def set_token(self, token: str) -> None:
+        self.token = token
+        
+        
+    def set_output_path(self, path: str) -> None:
+        self.out = path
+        
+        
+    def initialize_swath_data(self) -> None:
+        #initiate swath data container
+        self.swath = SwathData()
+        
+        
+    def initialize_swath_io(self) -> None:
+        #initiate i/o handler
+        self.io = ModisSwathIO(self.out)
+        
+        
+    """ Retrieval procedure """
+    def parse_swath_listing(self) -> pd.DataFrame:
+        import pdb; pdb.set_trace()
+    
+    def check_for_existing_swaths(self) -> None:
+        #TODO check out folder for files contained in self.lst and shorten 
+        #     self.lst accordingly
+        pass
+
+
+
+
+
     
     
 # In[]
 # In[]
 # In[]
 
-"""
-Processing:Swath Handling
-"""
-class Swath(object):
-    """
-    Handles the downloaded swath 
-    """
-    def __init__(self):
-        pass
 
     
 # In[]

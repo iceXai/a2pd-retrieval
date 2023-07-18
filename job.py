@@ -52,10 +52,6 @@ class RetrievalJob(object):
         #sets aoi in listing process
         self.lst.set_aoi(self.cfg.set_aoi())
         
-        #sets io/meta information for the retrieval process
-        self.ret.set_io(self.cfg.set_io())
-        self.ret.set_meta(self.cfg.set_meta())
-        
         
     def run(self):
         """
@@ -66,14 +62,15 @@ class RetrievalJob(object):
         None.
 
         """
-        #setup and  the listing processor to compile the file listing
+        #setup and run the listing processor to compile the file listing
         self.lst.setup_listing_processor()
         listing = self.lst.compile_file_listing()
         
-        #pass along listign information to retrieval processor
+        #pass along listing information to retrieval processor
         self.ret.set_listing(listing)
         
-        #run the retrieval processor
+        #setup and run the retrieval processor
+        self.ret.setup_retrieval_processor()
         self.ret.download_and_process_swaths()
         
         

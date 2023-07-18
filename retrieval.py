@@ -8,7 +8,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 
-#from proc import ModisRetrievalProcessor
+from proc import ModisRetrievalProcessor
 
 import os
 import sys
@@ -121,29 +121,30 @@ class ModisRetrieval(Retrieval):
     Terra/Aqua MODIS retrieval child class tailored to the 
     sensor-specific processing
     """
-    
-    def set_meta(self, meta: object) -> None:
-        self.meta = meta
-    
-    
-    def set_io(self, io: object) -> None:
-        self.io = io
-    
-    
-    def set_resampling(self, resampling: object) -> None:
-        self.resampling = resampling
         
-        
-    """ Handling functions """
     def setup_retrieval_processor(self) -> None:
-        pass
+        self.proc = ModisRetrievalProcessor()
+        # self.proc.set_swaths_to_download(self.swaths_to_download)
+        self.proc.set_token(self.token)
+        self.proc.set_output_path(self.out)
+        self.proc.initialize_swath_data()
+        self.proc.initialize_swath_io()
     
     
     def download_and_process_swaths(self) -> None:
+        #parse swath listing to mitigate multiple downloads of the same 
+        #file due to several AOIs being specified
+        self.proc.parse_swath_listing()
+        
+        #loop over all files in listing
+        for swath_entry in self.swaths_to_download:
+            self.proc.get_swath_file(swath_entry)
+        
+        
         #download swath
-        url = self.swaths_to_download['url_mxd03'][0]
-        swath = self.swaths_to_download['mxd03'][0]
-        DOWNLOAD_COMPLETED = self.download_swath(url, swath)
+        # url = self.swaths_to_download['url_mxd03'][0]
+        # swath = self.swaths_to_download['mxd03'][0]
+        # DOWNLOAD_COMPLETED = self.download_swath(url, swath)
         
         #continue with next date in case no file can be found or 
         #it already exists
