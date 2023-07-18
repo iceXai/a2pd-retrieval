@@ -358,7 +358,17 @@ class ModisRetrievalProcessor(object):
         
         
     def set_output_path(self, path: str) -> None:
+        #output directory
+        RAW_FOLDER = 'tmp'
+        
+        #set output directory
         self.out = path
+        
+        #create raw output temporary directory if necessary
+        path = os.path.join(path, RAW_FOLDER)
+        if not os.path.isdir(path):
+            os.makedirs(path)   
+        self.rawout = path
         
         
     def initialize_swath_data(self) -> None:
@@ -372,14 +382,74 @@ class ModisRetrievalProcessor(object):
         
         
     """ Retrieval procedure """
-    def parse_swath_listing(self) -> pd.DataFrame:
-        import pdb; pdb.set_trace()
+    def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
+        mxd03 = df['url_mxd03'].astype(str) + df['mxd03'].astype(str)
+        mxd02 = df['url_mxd02'].astype(str) + df['mxd02'].astype(str)
+        return pd.DataFrame({'mxd03': mxd03.unique(),
+                             'mxd02': mxd02.unique()})
+
     
-    def check_for_existing_swaths(self) -> None:
+    def check_for_existing_swaths(self, lst: pd.DataFrame) -> pd.DataFrame:
+        """
+        Parameters
+        ----------
+        lst : pd.DataFrame
+            swath listing to be handeled by the processor
+        
+        Returns
+        -------
+        pd.DataFrame :
+            shortened listing in case o existing files
+        """
         #TODO check out folder for files contained in self.lst and shorten 
         #     self.lst accordingly
         pass
 
+
+    def get_swath_files(self, mxd03_swath: str, mxd02_swath: str) -> None:
+        #TODO this needs some error/exception handling
+        #call download function
+        status_mxd03 = self.download_swath(mxd03_swath)
+        status_mxd02 = self.download_swath(mxd02_swath)
+        return status_mxd03, status_mxd02
+    
+    
+    def download_swath(self, url: str) -> bool:
+        """
+        Parameters
+        ----------
+        url : str
+            sensor/carrier specific download url
+        
+        Returns
+        -------
+        Bool :
+            download successful? True/False
+        """
+        #solely the swath file name
+        swath = url.split('/')[-1]
+        
+        #status
+        print(f'['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
+               f'] - Retrieving {swath}...')
+
+        #requests call
+        headers = {'Authorization': "Bearer {}".format(self.token)}
+        r = requests.get(url, headers=headers)
+
+        if r.status_code == 200:
+            print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
+                  '] - Retrieval of swath complete!')
+            #store downloaded swath
+            with open(os.path.join(self.out, swath), "wb") as f:
+                f.write(r.content)
+            
+            return True
+        else:
+            print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
+                  '] - Error with swath retrieval!')
+        
+            return False
 
 
 
