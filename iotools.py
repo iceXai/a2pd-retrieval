@@ -27,7 +27,7 @@ class ListingIO(object):
         self.path = os.path.join(self.OUTPUT_PATH, lfn)
 
     def to_csv(self, df: pd.DataFrame) -> None:
-        df.to_csv(self.path)
+        df.to_csv(self.path, index=False)
 
     def from_csv(self) -> pd.DataFrame:
         return pd.read_csv(self.path)
