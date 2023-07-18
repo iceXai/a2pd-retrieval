@@ -26,7 +26,7 @@ processing:
     listing: 
         name: ModisListing
     retrieval: 
-        name: ModisRetrieval
+        name: Retrieval
         apply: True
     resampling: 
         name: Resampling

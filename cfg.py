@@ -96,10 +96,6 @@ class Configuration(object):
         #returns the status whether to resample the data or not
         return self.config['processing']['resampling']['apply']
     
-    def do_file_listing(self) -> bool:
-        #returns the status of the file listing retrieval
-        return self.config['processing']['listing']['apply']
-    
     def do_swath_download(self) -> bool:
         #returns the status of the actual file retrieval
         return self.config['processing']['download']['apply']
@@ -152,7 +148,9 @@ class Configuration(object):
     def set_retrieval(self) -> None:
         #sets the correct retrieval processor corresponding to the
         #sensor/carrier
-        pass
+        token = self.get_token()
+        out = self.get_output_path()
+        return self.get_retrieval_class()(token, out)
     
     """ Job::Resampling """
     def set_resampling(self) -> None:
