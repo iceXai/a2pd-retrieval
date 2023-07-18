@@ -46,13 +46,15 @@ class RetrievalJob(object):
 
         """
         #adds all necessary components to the current job
-        self.io   = self.cfg.set_io()
-        self.aoi  = self.cfg.set_aoi()
-        self.meta = self.cfg.set_meta()
         self.lst  = self.cfg.set_listing()
+        self.ret  = self.cfg.set_retrieval()
         
         #sets aoi in listing process
-        self.lst.set_aoi(self.aoi)
+        self.lst.set_aoi(self.cfg.set_aoi())
+        
+        #sets io/meta information for the retrieval process
+        self.ret.set_io(self.cfg.set_io())
+        self.ret.set_meta(self.cfg.set_meta())
         
         
     def run(self):

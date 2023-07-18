@@ -20,7 +20,11 @@ print(job.cfg.config)
 
 #test = job.lst._get_date_strings()
 
-test = job.lst.compile_file_listing()
+listing = job.lst.compile_file_listing()
+
+url = listing['url_mxd03'][0]
+swath = listing['mxd03'][0]
+test = job.ret.download_swath(url, swath)
 
 
 # geometa_file_name = f'MOD03_2022-09-01.txt'

@@ -7,7 +7,7 @@
 # In[] 
 from datetime import datetime, timedelta
 
-from proc import ModisRetrievalProcessor
+#from proc import ModisRetrievalProcessor
 
 import os
 import sys
@@ -23,16 +23,19 @@ class Retrieval(object):
     """
     Abstract base class that handles the swath retrieval and post-processing 
     """
-    def __init__(self, token: str, df: pd.DataFrame):
+    def __init__(self, token: str, out: str):
         """
         Parameters
         ----------
         token : str
             LAADS authentication token for the download (to be generated at 
             https://ladsweb.modaps.eosdis.nasa.gov/)
+        out : str
+            Output directory path
         """
         #store arguements
         self.token = token
+        self.out = out
         
     
     """ Setup """
@@ -61,8 +64,41 @@ class Retrieval(object):
         
         
     """ High-level (abstract) functions """
-    def download_swath(self) -> None:
-        pass
+    def download_swath(self,url: str, swath: str) -> bool:
+        """
+        Parameters
+        ----------
+        url : str
+            sensor/carrier specific download url
+        swath : str
+            current swath name (also used for storing the file)
+
+        Returns
+        -------
+        Bool :
+            download successful? True/False
+        """
+     
+        print(f'['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
+               f'] - Retrieving {swath}...')
+
+        #requests call
+        headers = {'Authorization': "Bearer {}".format(self.token)}
+        r = requests.get(f'{url}{swath}', headers=headers)
+
+        if r.status_code == 200:
+            print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
+                  '] - Retrieval of swath complete!')
+            #store downloaded swath
+            with open(os.path.join(self.out, swath), "wb") as f:
+                f.write(r.content)
+            
+            return True
+        else:
+            print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
+                  '] - Error with swath retrieval!')
+        
+            return False
     
     
     def load_swath(self) -> None:
@@ -78,5 +114,9 @@ class Retrieval(object):
     
     
     def cleanup(self) -> None:
+        pass
+    
+    """ Handling function """
+    def run(self) -> None:
         pass
     
