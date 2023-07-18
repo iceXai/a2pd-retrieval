@@ -5,6 +5,7 @@
 
 
 # In[] 
+from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 
 #from proc import ModisRetrievalProcessor
@@ -19,7 +20,7 @@ import pandas as pd
 # In[]
 
 
-class Retrieval(object):
+class Retrieval(ABC):
     """
     Abstract base class that handles the swath retrieval and post-processing 
     """
@@ -38,19 +39,7 @@ class Retrieval(object):
         self.out = out
         
     
-    """ Setup """
-    def set_meta(self, meta: object) -> None:
-        self.meta = meta
-    
-    
-    def set_io(self, io: object) -> None:
-        self.io = io
-    
-    
-    def set_resampling(self, resampling: object) -> None:
-        self.resampling = resampling
-        
-    
+    """ Setup """    
     def set_listing(self, listing: pd.DataFrame) -> None:
         """
         Parameters
@@ -115,8 +104,51 @@ class Retrieval(object):
     
     def cleanup(self) -> None:
         pass
+
     
-    """ Handling function """
-    def run(self) -> None:
+    @abstractmethod
+    def setup_retrieval_processor(self) -> None:
         pass
+
+
+    @abstractmethod
+    def download_and_process_swaths(self) -> None:
+        pass
+
+
+class ModisRetrieval(Retrieval):
+    """
+    Terra/Aqua MODIS retrieval child class tailored to the 
+    sensor-specific processing
+    """
+    
+    def set_meta(self, meta: object) -> None:
+        self.meta = meta
+    
+    
+    def set_io(self, io: object) -> None:
+        self.io = io
+    
+    
+    def set_resampling(self, resampling: object) -> None:
+        self.resampling = resampling
+        
+        
+    """ Handling functions """
+    def setup_retrieval_processor(self) -> None:
+        pass
+    
+    
+    def download_and_process_swaths(self) -> None:
+        #download swath
+        url = self.swaths_to_download['url_mxd03'][0]
+        swath = self.swaths_to_download['mxd03'][0]
+        DOWNLOAD_COMPLETED = self.download_swath(url, swath)
+        
+        #continue with next date in case no file can be found or 
+        #it already exists
+        # if not DOWNLOAD_COMPLETED:
+        #     ##TODO
+        #     #log failures!
+        #     continue
     

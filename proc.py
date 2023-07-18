@@ -20,6 +20,8 @@ import sys
 
 # In[] 
 
+#TODO with implementation of more sensors this likely has some potential to 
+#     outsource common functions to a ListingProcessor() ABC
 class ModisListingProcessor(object):
     def __init__(self):
         #define sensor specific download url's
@@ -338,15 +340,17 @@ class ModisListingProcessor(object):
 
 
 """
-Processing::File Download
+Processing::Swath Download
 """
-class Retrieval(object):
+class ModisRetrievalProcessor(object):
     """
     Handles the actual download process of the identified swaths from the 
     file listing process
     """
     def __init__(self):
         pass
+    
+    
     
 # In[]
 # In[]

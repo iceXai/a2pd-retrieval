@@ -66,9 +66,15 @@ class RetrievalJob(object):
         None.
 
         """
-        #compiles the listing
+        #setup and  the listing processor to compile the file listing
+        self.lst.setup_listing_processor()
         listing = self.lst.compile_file_listing()
         
+        #pass along listign information to retrieval processor
+        self.ret.set_listing(listing)
+        
+        #run the retrieval processor
+        self.ret.download_and_process_swaths()
         
         
 

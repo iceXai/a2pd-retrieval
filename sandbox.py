@@ -13,19 +13,11 @@ print(job.cfg.get_sensor())
 print(job.cfg.get_carrier())
 print(job.cfg.get_token())
 
-print(job.aoi.keys)
-print(job.aoi['berkner'].get_aoi_grid())
-
 print(job.cfg.config)
 
 #test = job.lst._get_date_strings()
 
-listing = job.lst.compile_file_listing()
-
-url = listing['url_mxd03'][0]
-swath = listing['mxd03'][0]
-test = job.ret.download_swath(url, swath)
-
+job.run()
 
 # geometa_file_name = f'MOD03_2022-09-01.txt'
 # url = f'https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMeta/61/TERRA/2022/{geometa_file_name}'
