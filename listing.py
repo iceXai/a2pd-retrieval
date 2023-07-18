@@ -171,7 +171,7 @@ class ModisListing(Listing):
             self.proc.set_current_url(yy, jj)
             self.proc.set_current_lfn(yy, jj)
 
-            # check whether listing for specified date already exists
+            #check whether listing for specified date already exists
             LISTING_EXISTS = self.proc.check_for_existing_listing()
             if LISTING_EXISTS:
                 self.proc.load_listing()
@@ -181,8 +181,7 @@ class ModisListing(Listing):
             #get mxd03 listing file
             DOWNLOAD_COMPLETED = self.proc.get_listing_file('meta')
 
-            #continue with next date in case no file can be found or 
-            #it already exists
+            #continue with next date in case something went wrong
             if not DOWNLOAD_COMPLETED:
                 ##TODO
                 #log failures!
@@ -195,8 +194,7 @@ class ModisListing(Listing):
             #get the mxd02 listign file
             DOWNLOAD_COMPLETED = self.proc.get_listing_file('mxd02')
 
-            #continue with next date in case no file can be found or 
-            #it already exists
+            #continue with next date in case something went wrong
             if not DOWNLOAD_COMPLETED:
                 ##TODO
                 #log failures!
