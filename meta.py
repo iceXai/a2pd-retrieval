@@ -42,7 +42,7 @@ class Meta(ABC):
         pass
 
     
-class ModisMeta(Meta):
+class ModisSwathMeta(Meta):
     """
     Terra/Aqua MODIS meta information child class tailored to the 
     sensor-specific data processing
