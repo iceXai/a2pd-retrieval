@@ -401,16 +401,45 @@ class ModisRetrievalProcessor(object):
         pd.DataFrame :
             shortened listing in case o existing files
         """
-        #TODO check out folder for files contained in self.lst and shorten 
-        #     self.lst accordingly
+        #TODO still needs implementation iof the processed files but needs 
+        #     file names function first
+        #     the current implementation of downloaded file sis actually not 
+        #     necessary and shall be handeled otherwise
+        
+        # #scan directories for already processed/loaded swath files
+        # processed_files = [f.name for f in os.scandir(self.out) 
+        #                    if f.is_file()]
+        # downloaded_files = [f.name for f in os.scandir(self.rawout) 
+        #                     if f.is_file()]
+        # #reduce to file names
+        # df = pd.DataFrame({'mxd03': [e.split('/')[-1] 
+        #                              for e in lst['mxd03'].values],
+        #                    'mxd02': [e.split('/')[-1] 
+        #                              for e in lst['mxd02'].values]
+        #                    })
+        # #return (reduced) DataFrame
+        # return lst[~df.isin(downloaded_files)].dropna()
         pass
-
+    
 
     def get_swath_files(self, mxd03_swath: str, mxd02_swath: str) -> None:
         #TODO this needs some error/exception handling
-        #call download function
-        status_mxd03 = self.download_swath(mxd03_swath)
-        status_mxd02 = self.download_swath(mxd02_swath)
+        
+        #retieve list of currently temporarily stored/downloaded files
+        downloaded_files = [f.name for f in os.scandir(self.rawout) 
+                            if f.is_file()]
+        #only download in case do not already exist
+        MXD03_EXISTS = mxd03_swath.split('/')[-1] in downloaded_files
+        if not MXD03_EXISTS:
+            status_mxd03 = self.download_swath(mxd03_swath)
+        else:
+            status_mxd03 = True
+        MXD02_EXISTS = mxd02_swath.split('/')[-1] in downloaded_files
+        if not MXD02_EXISTS:
+            status_mxd02 = self.download_swath(mxd02_swath)
+        else:
+            status_mxd02 = True
+            
         return status_mxd03, status_mxd02
     
     

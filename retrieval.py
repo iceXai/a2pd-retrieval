@@ -100,7 +100,7 @@ class ModisRetrieval(Retrieval):
         self.swaths = self.proc.parse_swath_listing(self.listing)
 
         #check for previously or already downloaded and processed files
-        self.swaths = self.proc.check_for_existing_swaths(self.swaths)
+        # self.swaths = self.proc.check_for_existing_swaths(self.swaths)
 
         #loop over all swath listing entries
         for mxd03, mxd02 in self.swaths.itertuples(index=False):          
@@ -112,6 +112,8 @@ class ModisRetrieval(Retrieval):
                 ##TODO
                 #log failures!
                 continue
+            
+            import pdb; pdb.set_trace()
         
         
         #download swath
