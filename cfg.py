@@ -117,20 +117,20 @@ class Configuration(object):
         return self.get_class(module_name, class_name)
     
     
-    """ Job::I/O """
-    def set_io(self) -> None:
-        #sets the io tools correponding to the sensor/carrier
-        class_name = self.get_sensor().capitalize() + 'IO'
-        module_name = 'iotools'
-        return self.get_class(module_name, class_name)
+    # """ Job::I/O """
+    # def set_io(self) -> None:
+    #     #sets the io tools correponding to the sensor/carrier
+    #     class_name = self.get_sensor().capitalize() + 'IO'
+    #     module_name = 'iotools'
+    #     return self.get_class(module_name, class_name)
     
     
-    """ Job::Metadata """
-    def set_meta(self) -> None:
-        #sets the meta information correponding to the sensor/carrier
-        class_name = self.get_sensor().capitalize() + 'Meta'
-        module_name = 'meta'
-        return self.get_class(module_name, class_name)
+    # """ Job::Metadata """
+    # def set_meta(self) -> None:
+    #     #sets the meta information correponding to the sensor/carrier
+    #     class_name = self.get_sensor().capitalize() + 'Meta'
+    #     module_name = 'meta'
+    #     return self.get_class(module_name, class_name)
     
     
     """ Job::Listing """
