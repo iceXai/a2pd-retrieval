@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 
 from iotools import ListingIO, ModisSwathIO
 from data import ListingData, SwathData
+from meta import ModisSwathMeta
 
 import pandas as pd
 import numpy as np
@@ -380,6 +381,10 @@ class ModisRetrievalProcessor(object):
         #initiate i/o handler
         self.io = ModisSwathIO(self.out)
         
+        
+    def initialize_swath_meta(self) -> None:
+        #initiate i/o handler
+        self.io = ModisMeta()
         
     """ Retrieval procedure """
     def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:

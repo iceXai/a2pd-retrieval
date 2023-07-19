@@ -92,6 +92,7 @@ class ModisRetrieval(Retrieval):
         self.proc.set_output_path(self.out)
         self.proc.initialize_swath_data()
         self.proc.initialize_swath_io()
+        self.proc.initialize_swath_meta()
     
     
     def download_and_process_swaths(self) -> None:
@@ -114,17 +115,19 @@ class ModisRetrieval(Retrieval):
                 continue
             
             import pdb; pdb.set_trace()
-        
-        
-        #download swath
-        # url = self.swaths_to_download['url_mxd03'][0]
-        # swath = self.swaths_to_download['mxd03'][0]
-        # DOWNLOAD_COMPLETED = self.download_swath(url, swath)
-        
-        #continue with next date in case no file can be found or 
-        #it already exists
-        # if not DOWNLOAD_COMPLETED:
-        #     ##TODO
-        #     #log failures!
-        #     continue
+            
+            #load swath data
+            
+            
+            #resample swath data if specified
+            
+            
+            #save swath data to h5 format
+            
+            
+            #clean-up afterwards
+            
+            
+
+
     
