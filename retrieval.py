@@ -55,7 +55,22 @@ class Retrieval(ABC):
 ####################    
     
     def load_swath(self) -> None:
-        pass
+        #loop through all downloaded variables and import corresponding file
+            for variable_dict_handle in self.vars_to_process.keys():
+                #retrieve content from dict
+                file_key, grp_key, var_key = self.vars_to_process[variable_dict_handle]
+
+                #open file link
+                if self.zipout is not None:
+                    self.load(os.path.join(self.zipout,file_key))
+                else:
+                    self.load(os.path.join(self.tmpout,file_key))
+                
+                #retrieve content from group/variable -> stored in data_dict
+                self.get_var(variable_dict_handle)
+                
+                #close file handle
+                self.close()
     
     
     def save_swath(self) -> None:
@@ -114,7 +129,9 @@ class ModisRetrieval(Retrieval):
                 #log failures!
                 continue
             
+            #update the processor meta data once for the currently used swaths
             import pdb; pdb.set_trace()
+            self.proc.update_meta_info((mxd03,mxd02))
             
             #load swath data
             

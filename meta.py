@@ -47,50 +47,77 @@ class ModisSwathMeta(Meta):
     Terra/Aqua MODIS meta information child class tailored to the 
     sensor-specific data processing
     """  
+    #TODO in the future outsource this into some yaml like file?
     
+    def __init__(self) -> None:
+        #set arbitrary starting values for the current way the MODIS variables
+        #to process data is implemented
+        self.set_vars_to_process()
+
     #define reference location file keys, corresponding to the vars_to_process 
     #dict below
     def get_location_ref(self) -> dict:
         return {'lat': 'lat',
                 'lon': 'lon'}
+        
+    def set_vars_to_process(self, swaths: tuple = (None, None)) -> None:
+        """
+        Parameters
+        ----------
+        swaths : tuple
+            Tuple of current swath names by order (mxd03, mxd02)
 
-    # define dictionary containing key with respective file key for the 
-    # zip dictionary/different swaths as well as the group/variable names,
-    # e.g., {var_key: [file, grp, var]}
+        Returns
+        -------
+        None
+            Updates the vars_to_process dict to feature the current swath 
+            names necessary for further processing.
+
+        Additional function necessary for the current state of MODIS data 
+        processing as two files are used the MXD03 and the MXD021KM data w
+        hich, however, are always different by name and cannot be stadted 
+        in advance as, e.g., for Sentinel3-A/B data
+        """
+
+        #vars_to_process dictionary containing key with respective file key 
+        #for the zip dictionary/different swaths as well as the group/variable
+        #names, e.g., {var_key: [file, grp, var]}
+        self.v2p = {'lat': [swaths[0], None, 'Latitude'],
+                    'lon': [swaths[0], None, 'Longitude'],
+                    'sat_zen': [swaths[0], None, 'SensorZenith'],
+                    'sat_azi': [swaths[0], None, 'SensorAzimuth'],
+                    'sol_zen': [swaths[0], None, 'SolarZenith'],
+                    'sol_azi': [swaths[0], None, 'SolarAzimuth'],
+                    #'ch01': [swaths[1], None, 'EV_250_Aggr1km_RefSB'],
+                    #'ch02': [swaths[1], None, 'EV_250_Aggr1km_RefSB'],
+                    #'ch03': [swaths[1], None, 'EV_500_Aggr1km_RefSB'],
+                    #'ch04': [swaths[1], None, 'EV_500_Aggr1km_RefSB'],
+                    #'ch05': [swaths[1], None, 'EV_500_Aggr1km_RefSB'],
+                    #'ch06': [swaths[1], None, 'EV_500_Aggr1km_RefSB'],
+                    #'ch07': [swaths[1], None, 'EV_500_Aggr1km_RefSB'],
+                    #'ch17': [swaths[1], None, 'EV_1KM_RefSB'],
+                    #'ch18': [swaths[1], None, 'EV_1KM_RefSB'],
+                    #'ch19': [swaths[1], None, 'EV_1KM_RefSB'],
+                    #'ch26': [swaths[1], None, 'EV_1KM_RefSB'],
+                    'ch20': [swaths[1], None, 'EV_1KM_Emissive'],
+                    #'ch21': [swaths[1], None, 'EV_1KM_Emissive'],
+                    #'ch22': [swaths[1], None, 'EV_1KM_Emissive'],
+                    #'ch23': [swaths[1], None, 'EV_1KM_Emissive'],
+                    #'ch24': [swaths[1], None, 'EV_1KM_Emissive'],
+                    'ch25': [swaths[1], None, 'EV_1KM_Emissive'],
+                    #'ch27': [swaths[1], None, 'EV_1KM_Emissive'],
+                    #'ch28': [swaths[1], None, 'EV_1KM_Emissive'],
+                    #'ch29': [swaths[1], None, 'EV_1KM_Emissive'],
+                    'ch31': [swaths[1], None, 'EV_1KM_Emissive'],
+                    'ch32': [swaths[1], None, 'EV_1KM_Emissive'],
+                    'ch33': [swaths[1], None, 'EV_1KM_Emissive'],
+                    #'ch34': [swaths[1], None, 'EV_1KM_Emissive'],
+                    #'ch35': [swaths[1], None, 'EV_1KM_Emissive'],
+                    #'ch36': [swaths[1], None, 'EV_1KM_Emissive']
+                    }
+    
     def get_vars_to_process(self) -> dict:
-        return {'lat': [swath[0], None, 'Latitude'],
-                'lon': [swath[0], None, 'Longitude'],
-                'sat_zen': [swath[0], None, 'SensorZenith'],
-                'sat_azi': [swath[0], None, 'SensorAzimuth'],
-                'sol_zen': [swath[0], None, 'SolarZenith'],
-                'sol_azi': [swath[0], None, 'SolarAzimuth'],
-                #'ch01': [swath[1], None, 'EV_250_Aggr1km_RefSB'],
-                #'ch02': [swath[1], None, 'EV_250_Aggr1km_RefSB'],
-                #'ch03': [swath[1], None, 'EV_500_Aggr1km_RefSB'],
-                #'ch04': [swath[1], None, 'EV_500_Aggr1km_RefSB'],
-                #'ch05': [swath[1], None, 'EV_500_Aggr1km_RefSB'],
-                #'ch06': [swath[1], None, 'EV_500_Aggr1km_RefSB'],
-                #'ch07': [swath[1], None, 'EV_500_Aggr1km_RefSB'],
-                #'ch17': [swath[1], None, 'EV_1KM_RefSB'],
-                #'ch18': [swath[1], None, 'EV_1KM_RefSB'],
-                #'ch19': [swath[1], None, 'EV_1KM_RefSB'],
-                #'ch26': [swath[1], None, 'EV_1KM_RefSB'],
-                'ch20': [swath[1], None, 'EV_1KM_Emissive'],
-                #'ch21': [swath[1], None, 'EV_1KM_Emissive'],
-                #'ch22': [swath[1], None, 'EV_1KM_Emissive'],
-                #'ch23': [swath[1], None, 'EV_1KM_Emissive'],
-                #'ch24': [swath[1], None, 'EV_1KM_Emissive'],
-                'ch25': [swath[1], None, 'EV_1KM_Emissive'],
-                #'ch27': [swath[1], None, 'EV_1KM_Emissive'],
-                #'ch28': [swath[1], None, 'EV_1KM_Emissive'],
-                #'ch29': [swath[1], None, 'EV_1KM_Emissive'],
-                'ch31': [swath[1], None, 'EV_1KM_Emissive'],
-                'ch32': [swath[1], None, 'EV_1KM_Emissive'],
-                'ch33': [swath[1], None, 'EV_1KM_Emissive'],
-                #'ch34': [swath[1], None, 'EV_1KM_Emissive'],
-                #'ch35': [swath[1], None, 'EV_1KM_Emissive'],
-                #'ch36': [swath[1], None, 'EV_1KM_Emissive']
-                }
+        return self.v2p
     
     # define dictionary containing the loaded variable names with corresponding
     # longitude/latitude grid reference for the resample process in case they 

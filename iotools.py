@@ -109,7 +109,7 @@ class ModisSwathIO(SwathIO):
     Childclass for all MODIS swath-related I/O
     """
     def load(self, path: str) -> None:
-        self.fh = SD(file_key,SDC.READ)
+        self.fh = SD(path,SDC.READ)
         
     def get_var(self, var: str, grp: str, meta: list) -> np.array:
         #select scientific data set (sds) and corresponding attributes

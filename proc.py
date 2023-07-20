@@ -484,6 +484,24 @@ class ModisRetrievalProcessor(object):
                   '] - Error with swath retrieval!')
         
             return False
+        
+    def update_meta_info(self, swaths: tuple) -> None:
+        """
+        Parameters
+        ----------
+        swaths : tuple(str,str)
+            Tuple of current swath urls by order (mxd03, mxd02) that will be 
+            reduced to swath names
+
+        Returns
+        -------
+        None
+            Updates the meta data information on the to be used files 
+            (mxd03 or mxd02) for the variable processing
+        """
+        mxd03 = swaths[0].split('/')[-1]
+        mxd02 = swaths[1].split('/')[-1]
+        self.meta.set_vars_to_process((mxd03, mxd02))
 
 
 
