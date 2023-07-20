@@ -384,7 +384,7 @@ class ModisRetrievalProcessor(object):
         
     def initialize_swath_meta(self) -> None:
         #initiate i/o handler
-        self.io = ModisMeta()
+        self.meta = ModisSwathMeta()
         
     """ Retrieval procedure """
     def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:

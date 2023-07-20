@@ -4,9 +4,6 @@
 """
 
 # In[]
-from iotools import ModisIO, SlstrIO
-from meta import ModisMeta, SlstrMeta
-from listing import ModisListing, SlstrListing
 from aoi import AOI
 
 import yaml
