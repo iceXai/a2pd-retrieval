@@ -379,6 +379,10 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         if not os.path.isdir(path):
             os.makedirs(path)   
         self.rawout = path
+        
+        
+    def set_aoi(self, aoi: dict) -> None:
+        self.aoi = aoi
 
         
     def set_current_variable(self, variable_key: str) -> None:
@@ -406,6 +410,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         
     def initialize_resampling(self) -> None:
         self.resampling = Resample()
+        self.resampling.set_aoi(self.aoi)
     
         
     """ Retrieval procedure """

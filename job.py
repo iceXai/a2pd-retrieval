@@ -55,8 +55,13 @@ class RetrievalJob(object):
         self.lst.setup_listing_processor()
         
         if self.cfg.do_swath_download():
-            #initialize and setup the correct retrieval module/processor
+            #initialize the correct retrieval module/processor
             self.ret = self.cfg.set_retrieval()
+            
+            #sets aoi in retrieval process
+            self.ret.set_aoi(self.cfg.compile_aoi_info())
+            
+            #setup the retrieval processor
             self.ret.setup_retrieval_processor()
         
         if self.cfg.do_resampling():

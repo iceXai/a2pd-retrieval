@@ -121,7 +121,11 @@ class Listing(ABC):
 
     def set_aoi(self, aoi: dict) -> None:
         """
-        allows for setting the user specified AOIs for the listing process
+        Parameters
+        ----------
+        aoi : dict
+            python dictionary containing all the aoi-based information for the 
+            resampling process by aoi tag
         """
         self.aoi = aoi
 
