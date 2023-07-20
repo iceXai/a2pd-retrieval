@@ -168,7 +168,7 @@ class ModisSwathIO(SwathIO):
     def set_var(self, var: str, grp: str) -> None:
         pass
         
-    def close(self, path: str) -> None:
+    def close(self) -> None:
         self.fh.end()
     
     def save(self, path: str) -> None:
@@ -186,8 +186,8 @@ class ModisSwathIO(SwathIO):
         
         #calculate and return brightness temperature
         #Tb = np.zeros(variable.shape).astype(np.float32)
-        Tb = h_planck * c_sol / (k_boltz * wavelength * 
-             np.log((2.0 * h_planck * c_sol**2 * wavelength**(-5)) / 
+        Tb = H_PLANCK * C_SOL / (K_BOLTZ * wavelength * 
+             np.log((2.0 * H_PLANCK * C_SOL**2 * wavelength**(-5)) / 
                     (variable * 10**6) + 1.0))
         return Tb
 

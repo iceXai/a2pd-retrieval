@@ -349,7 +349,7 @@ class ModisRetrievalProcessor(object):
     file listing process
     """
     def __init__(self):
-        pass
+        self.current_variable_key = None
     
     """ High-level functions """
     
@@ -370,6 +370,14 @@ class ModisRetrievalProcessor(object):
         if not os.path.isdir(path):
             os.makedirs(path)   
         self.rawout = path
+
+        
+    def set_current_variable(self, variable_key: str) -> None:
+        self.current_variable_key = variable_key
+        
+    
+    def get_current_variable(self) -> str:
+        return self.current_variable_key
         
         
     def initialize_swath_data(self) -> None:
@@ -503,8 +511,28 @@ class ModisRetrievalProcessor(object):
         mxd02 = swaths[1].split('/')[-1]
         self.meta.set_vars_to_process((mxd03, mxd02))
 
-
-
+    def get_variables(self) -> list:
+        return self.meta.get_vars_to_process()
+    
+    def get_channel_meta(self, key: str) -> list:
+        return 
+    
+    def open_swath(self, filename: str) -> None:
+        FILEPATH = os.path.join(self.rawout, filename)
+        self.io.load(FILEPATH)
+        
+    def load_variable(self, var: str, grp: str) -> None:
+        #get current variable key handle
+        key = self.get_current_variable()
+        #retrieve correspondign channel meta data
+        meta = self.meta.get_meta_dict_entry(key)
+        #retrieve the actual variable data from the swath
+        variable = self.io.get_var(var, grp, meta)
+        #store it to the data container using the same variable key handle
+        self.swath.add_to_data(key,variable)
+        
+    def close_swath(self) -> None:
+        self.io.close()
 
     
     

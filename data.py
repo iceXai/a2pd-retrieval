@@ -7,6 +7,7 @@
 # In[] 
 
 import pandas as pd
+import numpy as np
 
 
 # In[]
@@ -44,23 +45,21 @@ class SwathData(object):
     classes, i.e., swath data, resampled data
     """
     def __init__(self):
-        #will store the list of swaths to be downloaded
-        self.swaths_to_download = []
         #will store all loaded data from the swaths
-        self.data_dict = {}
+        self.data = {}
         #will store the finalized data per specified aoi
-        self.finalized_aoi_dict = {}
+        self.resampled_data = {}
         
-    def add_to_data_dict(self, var_key: str, var) -> None:
-        self.data_dict[var_key] = var 
+    def add_to_data(self, var_key: str, var: np.array) -> None:
+        self.data[var_key] = var 
         
-    def get_from_data_dict(self, var_key: str):
-        return self.data_dict[var_key]
+    def get_data(self, var_key: str):
+        return self.data[var_key]
         
-    def add_swaths(self, swaths_list: list) -> None:
-        self.swaths_to_download.extend(swaths_list)
+    def add_to_resampled_data(self, var_key: str, var: np.array) -> None:
+        self.resampled_data[var_key] = var 
         
-    def get_swaths_to_download(self) -> list:
-        return self.swaths_to_download
+    def get_resampled_data(self) -> list:
+        return self.resampled_data
     
     

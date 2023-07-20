@@ -50,28 +50,31 @@ class Retrieval(ABC):
             listing module
         """
         self.listing = listing
-        
 
-####################    
-    
+
+    """ Swath handling """
     def load_swath(self) -> None:
-        #loop through all downloaded variables and import corresponding file
-            for variable_dict_handle in self.vars_to_process.keys():
-                #retrieve content from dict
-                file_key, grp_key, var_key = self.vars_to_process[variable_dict_handle]
+        #loop through all downloaded variables and import corresponding 
+        #files/data
+        variables_to_process = self.proc.get_variables()
+        variables = variables_to_process.keys()
+        
+        for var in variables_to_process:
+            #retrieve content from dict
+            file_entry, grp_entry, var_entry = variables_to_process[var]
 
-                #open file link
-                if self.zipout is not None:
-                    self.load(os.path.join(self.zipout,file_key))
-                else:
-                    self.load(os.path.join(self.tmpout,file_key))
+            #open file link
+            self.proc.open_swath(file_entry)
                 
-                #retrieve content from group/variable -> stored in data_dict
-                self.get_var(variable_dict_handle)
-                
-                #close file handle
-                self.close()
-    
+            #set current variable key in processor
+            self.proc.set_current_variable(var)
+            
+            #retrieve content from group/variable
+            self.proc.load_variable(var_entry, grp_entry)
+            
+            #close file handle
+            self.proc.close_swath()
+
     
     def save_swath(self) -> None:
         pass
@@ -84,7 +87,8 @@ class Retrieval(ABC):
     def cleanup(self) -> None:
         pass
 
-    
+
+    """ Abstract high-level methods """
     @abstractmethod
     def setup_retrieval_processor(self) -> None:
         pass
@@ -130,11 +134,10 @@ class ModisRetrieval(Retrieval):
                 continue
             
             #update the processor meta data once for the currently used swaths
-            import pdb; pdb.set_trace()
             self.proc.update_meta_info((mxd03,mxd02))
-            
+
             #load swath data
-            
+            self.load_swath()            
             
             #resample swath data if specified
             

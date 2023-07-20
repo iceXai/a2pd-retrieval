@@ -34,7 +34,7 @@ class Meta(ABC):
         pass
     
     @abstractmethod
-    def get_meta_dict(self) -> dict:
+    def get_meta_dict_entry(self) -> dict:
         pass
     
     @abstractmethod
@@ -158,40 +158,41 @@ class ModisSwathMeta(Meta):
     # define dictionary containing key with respective file key for the 
     # meta information such as scale/offset etc., e.g.,
     # {var_key: [index, scale, offset, wavelength]}
-    def get_meta_dict(self) -> dict:
-        return {'lat': [None, None, None, None],
-                'lon': [None, None, None, None],
-                'sat_zen': [None, 'scale_factor', None, None],
-                'sat_azi': [None, 'scale_factor', None, None],
-                'sol_zen': [None, 'scale_factor', None, None],
-                'sol_azi': [None, 'scale_factor', None, None],
-                'ch01': [ 0, 'reflectance_scales', 'reflectance_offsets', None],
-                'ch02': [ 1, 'reflectance_scales', 'reflectance_offsets', None],
-                'ch03': [ 0, 'reflectance_scales', 'reflectance_offsets', None],
-                'ch04': [ 1, 'reflectance_scales', 'reflectance_offsets', None],
-                'ch05': [ 2, 'reflectance_scales', 'reflectance_offsets', None],
-                'ch06': [ 3, 'reflectance_scales', 'reflectance_offsets', None],
-                'ch07': [ 4, 'reflectance_scales', 'reflectance_offsets', None],
-                'ch17': [11, 'reflectance_scales', 'reflectance_offsets', None],
-                'ch18': [12, 'reflectance_scales', 'reflectance_offsets', None],
-                'ch19': [13, 'reflectance_scales', 'reflectance_offsets', None],
-                'ch26': [14, 'reflectance_scales', 'reflectance_offsets', None],
-                'ch20': [ 0, 'radiance_scales', 'radiance_offsets', 3.7500*10**-6],
-                'ch21': [ 1, 'radiance_scales', 'radiance_offsets', 3.9590*10**-6],
-                'ch22': [ 2, 'radiance_scales', 'radiance_offsets', 3.9590*10**-6],
-                'ch23': [ 3, 'radiance_scales', 'radiance_offsets', 4.0500*10**-6],
-                'ch24': [ 4, 'radiance_scales', 'radiance_offsets', 4.4655*10**-6],
-                'ch25': [ 5, 'radiance_scales', 'radiance_offsets', 4.5155*10**-6],
-                'ch27': [ 6, 'radiance_scales', 'radiance_offsets', 6.7150*10**-6],
-                'ch28': [ 7, 'radiance_scales', 'radiance_offsets', 7.3350*10**-6],
-                'ch29': [ 8, 'radiance_scales', 'radiance_offsets', 8.5500*10**-6],
-                'ch31': [10, 'radiance_scales', 'radiance_offsets',11.030*10**-6],
-                'ch32': [11, 'radiance_scales', 'radiance_offsets',12.020*10**-6],
-                'ch33': [12, 'radiance_scales', 'radiance_offsets',13.335*10**-6],
-                'ch34': [13, 'radiance_scales', 'radiance_offsets',13.635*10**-6],
-                'ch35': [14, 'radiance_scales', 'radiance_offsets',13.935*10**-6],
-                'ch36': [15, 'radiance_scales', 'radiance_offsets',14.235*10**-6]
-                }
+    def get_meta_dict_entry(self, key: str) -> list:
+        d = {'lat': [None, None, None, None],
+            'lon': [None, None, None, None],
+            'sat_zen': [None, 'scale_factor', None, None],
+            'sat_azi': [None, 'scale_factor', None, None],
+            'sol_zen': [None, 'scale_factor', None, None],
+            'sol_azi': [None, 'scale_factor', None, None],
+            'ch01': [ 0, 'reflectance_scales', 'reflectance_offsets', None],
+            'ch02': [ 1, 'reflectance_scales', 'reflectance_offsets', None],
+            'ch03': [ 0, 'reflectance_scales', 'reflectance_offsets', None],
+            'ch04': [ 1, 'reflectance_scales', 'reflectance_offsets', None],
+            'ch05': [ 2, 'reflectance_scales', 'reflectance_offsets', None],
+            'ch06': [ 3, 'reflectance_scales', 'reflectance_offsets', None],
+            'ch07': [ 4, 'reflectance_scales', 'reflectance_offsets', None],
+            'ch17': [11, 'reflectance_scales', 'reflectance_offsets', None],
+            'ch18': [12, 'reflectance_scales', 'reflectance_offsets', None],
+            'ch19': [13, 'reflectance_scales', 'reflectance_offsets', None],
+            'ch26': [14, 'reflectance_scales', 'reflectance_offsets', None],
+            'ch20': [ 0, 'radiance_scales', 'radiance_offsets', 3.7500*10**-6],
+            'ch21': [ 1, 'radiance_scales', 'radiance_offsets', 3.9590*10**-6],
+            'ch22': [ 2, 'radiance_scales', 'radiance_offsets', 3.9590*10**-6],
+            'ch23': [ 3, 'radiance_scales', 'radiance_offsets', 4.0500*10**-6],
+            'ch24': [ 4, 'radiance_scales', 'radiance_offsets', 4.4655*10**-6],
+            'ch25': [ 5, 'radiance_scales', 'radiance_offsets', 4.5155*10**-6],
+            'ch27': [ 6, 'radiance_scales', 'radiance_offsets', 6.7150*10**-6],
+            'ch28': [ 7, 'radiance_scales', 'radiance_offsets', 7.3350*10**-6],
+            'ch29': [ 8, 'radiance_scales', 'radiance_offsets', 8.5500*10**-6],
+            'ch31': [10, 'radiance_scales', 'radiance_offsets',11.030*10**-6],
+            'ch32': [11, 'radiance_scales', 'radiance_offsets',12.020*10**-6],
+            'ch33': [12, 'radiance_scales', 'radiance_offsets',13.335*10**-6],
+            'ch34': [13, 'radiance_scales', 'radiance_offsets',13.635*10**-6],
+            'ch35': [14, 'radiance_scales', 'radiance_offsets',13.935*10**-6],
+            'ch36': [15, 'radiance_scales', 'radiance_offsets',14.235*10**-6]
+            }
+        return d[key]
 
     # define dictionary to handle the output structure of the data in the h5 
     # file by providing for each variable name an in-file group name, an 
@@ -248,7 +249,7 @@ class SlstrMeta(Meta):
     def get_resample_dict(self) -> dict:
         pass
     
-    def get_meta_dict(self) -> dict:
+    def get_meta_dict_entry(self) -> dict:
         pass
     
     def get_output_dict(self) -> dict:

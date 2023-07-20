@@ -52,6 +52,8 @@ class RetrievalJob(object):
         #sets aoi in listing process
         self.lst.set_aoi(self.cfg.set_aoi())
         
+        #apply resampling?
+        
         
     def run(self):
         """
