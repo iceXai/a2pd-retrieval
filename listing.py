@@ -20,7 +20,6 @@ import pandas as pd
 
 # In[]
 
-
 class Listing(ABC):
     """
     Abstract base class that handles the suitable (a.k.a., inside a specified 
