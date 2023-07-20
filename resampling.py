@@ -5,6 +5,7 @@
 
 # In[] 
 import pyresample as pr
+import numpy as np
 
 
 # In[]
@@ -19,7 +20,9 @@ class Resample(object):
     Handles all the resample process of the current tobe processed swath data
     """
     def __init__(self):
-        pass
+        self.coord = []
+        self.stack = []
+        self.names = []
     
     
     def set_aoi(self, aoi: dict) -> None:
@@ -76,6 +79,22 @@ class Resample(object):
         #re-store data to the normal data_dict dictionary
         self.finalized_aoi_dict[aoi_to_resample] = resampled_data_dict
         
+        
+    def add_group_to_resample_stack(self) -> None:
+        pass
+        
+    
+    def add_data_to_group(self, 
+                          meta: np.array,
+                          data: np.array,
+                          lon: np.array,
+                          lat: np.array) -> None:
+                
+        import pdb; pdb.set_trace()
+
+        
+    
+    
         
     def regroup_data_to_resample(self):
         #loop through all data sets that need to be resampled

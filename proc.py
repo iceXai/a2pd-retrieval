@@ -533,9 +533,6 @@ class ModisRetrievalProcessor(RetrievalProcessor):
     def get_variables(self) -> list:
         return self.meta.get_vars_to_process()
     
-    def get_channel_meta(self, key: str) -> list:
-        return 
-    
     def open_swath(self, filename: str) -> None:
         FILEPATH = os.path.join(self.rawout, filename)
         self.io.load(FILEPATH)
@@ -552,6 +549,22 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         
     def close_swath(self) -> None:
         self.io.close()
+        
+    def get_resample_variables(self) -> list:
+        return self.meta.get_resample_vars()
+    
+    def prepare_data_to_resample(self, var: str) -> None:
+        #get resample information from meta data
+        meta = self.meta.get_resample_dict_entry(var)
+        #get data from container
+        data = self.swath.get_data(var)
+        lon = self.swath.get_data(meta[0])
+        lat = self.swath.get_data(meta[1])
+        #regroup/shuffle the data by their used lon/lat information
+        self.resample.add_data_to_group(meta, data, lon, lat)
+    
+    def resample_swath(self) -> None:
+        pass
 
     
 

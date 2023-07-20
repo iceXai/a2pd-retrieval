@@ -30,7 +30,7 @@ class Meta(ABC):
         pass
     
     @abstractmethod
-    def get_resample_dict(self) -> dict:
+    def get_resample_dict_entry(self) -> dict:
         pass
     
     @abstractmethod
@@ -53,6 +53,41 @@ class ModisSwathMeta(Meta):
         #set arbitrary starting values for the current way the MODIS variables
         #to process data is implemented
         self.set_vars_to_process()
+        
+        # define dictionary containing the loaded variable names with corresponding
+        # longitude/latitude grid reference for the resample process in case they 
+        # vary, e.g., {var_key: [longitude, latitude]}
+        self.resample_dict = {'sat_zen': ['lon', 'lat'],
+                     'sat_azi': ['lon', 'lat'],
+                     'sol_zen': ['lon', 'lat'],
+                     'sol_azi': ['lon', 'lat'],
+                     # 'ch01': ['lon', 'lat'],
+                     # 'ch02': ['lon', 'lat'],
+                     # 'ch03': ['lon', 'lat'],
+                     # 'ch04': ['lon', 'lat'],
+                     # 'ch05': ['lon', 'lat'],
+                     # 'ch06': ['lon', 'lat'],
+                     # 'ch07': ['lon', 'lat'],
+                     # 'ch17': ['lon', 'lat'],
+                     # 'ch18': ['lon', 'lat'],
+                     # 'ch19': ['lon', 'lat'],
+                     # 'ch26': ['lon', 'lat'],
+                     'ch20': ['lon', 'lat'],
+                     # 'ch21': ['lon', 'lat'],
+                     # 'ch22': ['lon', 'lat'],
+                     # 'ch23': ['lon', 'lat'],
+                     # 'ch24': ['lon', 'lat'],
+                     'ch25': ['lon', 'lat'],
+                     # 'ch27': ['lon', 'lat'],
+                     # 'ch28': ['lon', 'lat'],
+                     # 'ch29': ['lon', 'lat'],
+                     'ch31': ['lon', 'lat'],
+                     'ch32': ['lon', 'lat'],
+                     'ch33': ['lon', 'lat'],
+                     # 'ch34': ['lon', 'lat'],
+                     # 'ch35': ['lon', 'lat'],
+                     # 'ch36': ['lon', 'lat']
+                     }
 
     #define reference location file keys, corresponding to the vars_to_process 
     #dict below
@@ -119,41 +154,11 @@ class ModisSwathMeta(Meta):
     def get_vars_to_process(self) -> dict:
         return self.v2p
     
-    # define dictionary containing the loaded variable names with corresponding
-    # longitude/latitude grid reference for the resample process in case they 
-    # vary, e.g., {var_key: [longitude, latitude]}
-    def get_resample_dict(self) -> dict: 
-        return {'sat_zen': ['lon', 'lat'],
-                'sat_azi': ['lon', 'lat'],
-                'sol_zen': ['lon', 'lat'],
-                'sol_azi': ['lon', 'lat'],
-                # 'ch01': ['lon', 'lat'],
-                # 'ch02': ['lon', 'lat'],
-                # 'ch03': ['lon', 'lat'],
-                # 'ch04': ['lon', 'lat'],
-                # 'ch05': ['lon', 'lat'],
-                # 'ch06': ['lon', 'lat'],
-                # 'ch07': ['lon', 'lat'],
-                # 'ch17': ['lon', 'lat'],
-                # 'ch18': ['lon', 'lat'],
-                # 'ch19': ['lon', 'lat'],
-                # 'ch26': ['lon', 'lat'],
-                'ch20': ['lon', 'lat'],
-                # 'ch21': ['lon', 'lat'],
-                # 'ch22': ['lon', 'lat'],
-                # 'ch23': ['lon', 'lat'],
-                # 'ch24': ['lon', 'lat'],
-                'ch25': ['lon', 'lat'],
-                # 'ch27': ['lon', 'lat'],
-                # 'ch28': ['lon', 'lat'],
-                # 'ch29': ['lon', 'lat'],
-                'ch31': ['lon', 'lat'],
-                'ch32': ['lon', 'lat'],
-                'ch33': ['lon', 'lat'],
-                # 'ch34': ['lon', 'lat'],
-                # 'ch35': ['lon', 'lat'],
-                # 'ch36': ['lon', 'lat']
-               }
+    def get_resample_dict_entry(self, key: str) -> list: 
+        return self.resample_dict[key]
+    
+    def get_resample_vars(self) -> list:
+        return self.resample_dict.keys()
     
     # define dictionary containing key with respective file key for the 
     # meta information such as scale/offset etc., e.g.,

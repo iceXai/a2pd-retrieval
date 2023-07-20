@@ -59,7 +59,7 @@ class SwathData(object):
     def add_to_resampled_data(self, var_key: str, var: np.array) -> None:
         self.resampled_data[var_key] = var 
         
-    def get_resampled_data(self) -> list:
-        return self.resampled_data
+    def get_resampled_data(self, var_key: str) -> list:
+        return self.resampled_data[var_key]
     
     
