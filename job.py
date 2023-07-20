@@ -45,17 +45,27 @@ class RetrievalJob(object):
         None.
 
         """
-        #adds all necessary components to the current job
-        self.lst  = self.cfg.set_listing()
-        self.ret  = self.cfg.set_retrieval()
+        #initialize the correct listing module/processor
+        self.lst = self.cfg.set_listing()
         
         #sets aoi in listing process
-        self.lst.set_aoi(self.cfg.set_aoi())
+        self.lst.set_aoi(self.cfg.compile_aoi_info())
         
-        #apply resampling?
+        #sets up the listing processor 
+        self.lst.setup_listing_processor()
         
+        if self.cfg.do_swath_download():
+            #initialize and setup the correct retrieval module/processor
+            self.ret = self.cfg.set_retrieval()
+            self.ret.setup_retrieval_processor()
         
-    def run(self):
+        if self.cfg.do_resampling():
+            #add the resampling module to the retrieval and processor module
+            self.ret.apply_resampling()
+            
+
+        
+    def run(self) -> None:
         """
         Executes the built retrieval job
 
@@ -64,15 +74,13 @@ class RetrievalJob(object):
         None.
 
         """
-        #setup and run the listing processor to compile the file listing
-        self.lst.setup_listing_processor()
+        #run the listing processor to compile the file listing
         listing = self.lst.compile_file_listing()
         
         #pass along listing information to retrieval processor
         self.ret.set_listing(listing)
         
-        #setup and run the retrieval processor
-        self.ret.setup_retrieval_processor()
+        #run the retrieval processor
         self.ret.download_and_process_swaths()
         
         

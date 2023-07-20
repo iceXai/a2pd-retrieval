@@ -75,7 +75,7 @@ class Configuration(object):
         #returns list of aois to be used on the current job
         return self.config['meta']['aoi']
     
-    def set_aoi(self) -> None:
+    def compile_aoi_info(self) -> None:
         #sets the aoi definitions based on the specified aoi's
         aoi_dict = {}
         aoi_specified = self.get_aoi()
@@ -95,12 +95,8 @@ class Configuration(object):
     
     def do_swath_download(self) -> bool:
         #returns the status of the actual file retrieval
-        return self.config['processing']['download']['apply']
-
-    def get_resampling_class(self) -> object:
-        #returns the specified resampling class
-        class_name = self.config['processing']['resampling']['name']
-    
+        return self.config['processing']['retrieval']['apply']
+        
     def get_listing_class(self) -> object:
         #returns the specified listing class
         class_name = self.config['processing']['listing']['name']
@@ -112,22 +108,6 @@ class Configuration(object):
         class_name = self.config['processing']['retrieval']['name']
         module_name = 'retrieval'
         return self.get_class(module_name, class_name)
-    
-    
-    # """ Job::I/O """
-    # def set_io(self) -> None:
-    #     #sets the io tools correponding to the sensor/carrier
-    #     class_name = self.get_sensor().capitalize() + 'IO'
-    #     module_name = 'iotools'
-    #     return self.get_class(module_name, class_name)
-    
-    
-    # """ Job::Metadata """
-    # def set_meta(self) -> None:
-    #     #sets the meta information correponding to the sensor/carrier
-    #     class_name = self.get_sensor().capitalize() + 'Meta'
-    #     module_name = 'meta'
-    #     return self.get_class(module_name, class_name)
     
     
     """ Job::Listing """
@@ -148,13 +128,7 @@ class Configuration(object):
         token = self.get_token()
         out = self.get_output_path()
         return self.get_retrieval_class()(token, out)
-    
-    """ Job::Resampling """
-    def set_resampling(self) -> None:
-        #adds the resample processor
-        pass
-    
-    
+
 
 
     #[...] more necessary getters/setters

@@ -4,12 +4,13 @@
 """
 
 # In[] 
-
+from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 
 from iotools import ListingIO, ModisSwathIO
 from data import ListingData, SwathData
 from meta import ModisSwathMeta
+from resampling import Resample
 
 import pandas as pd
 import numpy as np
@@ -23,7 +24,10 @@ import sys
 
 #TODO with implementation of more sensors this likely has some potential to 
 #     outsource common functions to a ListingProcessor() ABC
-class ModisListingProcessor(object):
+class ListingProcessor(ABC):
+    pass
+
+class ModisListingProcessor(ListingProcessor):
     def __init__(self):
         #define sensor specific download url's
         self.url = {'terra':{'mxd02':'https://ladsweb.modaps.eosdis.'+\
@@ -343,7 +347,12 @@ class ModisListingProcessor(object):
 """
 Processing::Swath Download
 """
-class ModisRetrievalProcessor(object):
+
+class RetrievalProcessor(ABC):
+    pass
+
+
+class ModisRetrievalProcessor(RetrievalProcessor):
     """
     Handles the actual download process of the identified swaths from the 
     file listing process
@@ -393,6 +402,11 @@ class ModisRetrievalProcessor(object):
     def initialize_swath_meta(self) -> None:
         #initiate i/o handler
         self.meta = ModisSwathMeta()
+        
+        
+    def initialize_resampling(self) -> None:
+        self.resampling = Resample()
+    
         
     """ Retrieval procedure """
     def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -535,27 +549,6 @@ class ModisRetrievalProcessor(object):
         self.io.close()
 
     
-    
-# In[]
-# In[]
-# In[]
 
-
-    
-# In[]
-# In[]
-# In[]
-    
-"""
-Processing::Resampling to Grid
-"""
-class Resample(object):
-    """
-    Handles all the resample process of the current tobe processed swath data
-    """
-    def __init__(self):
-        pass
-    
-    
 
 

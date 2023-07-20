@@ -19,7 +19,6 @@ import pandas as pd
 
 # In[]
 
-
 class Retrieval(ABC):
     """
     Abstract base class that handles the swath retrieval and post-processing 
@@ -38,6 +37,9 @@ class Retrieval(ABC):
         self.token = token
         self.out = out
         
+        #store status
+        self.resampling = False
+        
     
     """ Setup """    
     def set_listing(self, listing: pd.DataFrame) -> None:
@@ -50,6 +52,10 @@ class Retrieval(ABC):
             listing module
         """
         self.listing = listing
+        
+    def apply_resampling(self) -> None:
+        self.proc.initialize_resampling()
+        self.resampling = True
 
 
     """ Swath handling """
@@ -138,9 +144,10 @@ class ModisRetrieval(Retrieval):
 
             #load swath data
             self.load_swath()            
-            
+            import pdb; pdb.set_trace()
             #resample swath data if specified
-            
+            if self.apply_resampling:
+                pass
             
             #save swath data to h5 format
             
