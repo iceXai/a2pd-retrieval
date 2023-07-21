@@ -157,7 +157,6 @@ class ModisListingProcessor(ListingProcessor):
             #TODO needs improvemenet
             return False
 
-
     
     def process_mxd03_listing_file(self) -> None:
         #parse listing
@@ -561,7 +560,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         lon = self.swath.get_data(meta[0])
         lat = self.swath.get_data(meta[1])
         #regroup/shuffle the data by their used lon/lat information
-        self.resample.add_data_to_group(meta, data, lon, lat)
+        self.resampling.add_data_to_group(var, meta, data, lon, lat)
     
     def resample_swath(self) -> None:
         pass

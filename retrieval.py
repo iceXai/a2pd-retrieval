@@ -165,7 +165,7 @@ class ModisRetrieval(Retrieval):
             self.load_swath()            
 
             #resample swath data if specified
-            if self.apply_resampling:
+            if self.resampling:
                 self.resample_swath()
             
             #save swath data to h5 format

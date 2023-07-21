@@ -20,13 +20,16 @@ class Resample(object):
     Handles all the resample process of the current tobe processed swath data
     """
     def __init__(self):
-        self.coord = []
-        self.stack = []
-        self.names = []
+        self.coord = {}
+        self.stack = {}
+        self.names = {}
     
     
     def set_aoi(self, aoi: dict) -> None:
         self.aoi = aoi
+        
+    def set_data(self, data: dict) -> None:
+        self.data = data
         
     
     def resample_to_grid(self,aoi_to_resample):   
@@ -80,73 +83,48 @@ class Resample(object):
         self.finalized_aoi_dict[aoi_to_resample] = resampled_data_dict
         
         
-    def add_group_to_resample_stack(self) -> None:
-        pass
+    def add_groups_to_resample_stack(self) -> dict:
+        resample_stack = {}
+        for i,key in enumerate(coord):
+            idx = str(i+1)
+            resample_stack[f'grp{idx}'] = {'grid': coord[key],
+                                           'dset': names[key],
+                                           'data': np.stack(stack[key],axis=2)
+                                           }
+        #return
+        return resample_stack
         
-    
-    def add_data_to_group(self, 
-                          meta: np.array,
-                          data: np.array,
-                          lon: np.array,
-                          lat: np.array) -> None:
-                
-        import pdb; pdb.set_trace()
 
+    def add_data_to_group(self, var: str, lo: str, lat: str) -> None:
+        """
+        Parameters
+        ----------
+        var : str
+            DESCRIPTION.
+        lon : str
+            DESCRIPTION.
+        lat : str
+            DESCRIPTION.
+
+        Returns
+        -------
+        None
+            Adds the data (names and coordinates) to the global dictionaries
+        """
+        variable  = self.data.get_data[var]
+        longitude = self.data.get_data[lon]
+        latitude  = self.data.get_data[lat]
         
+        #check if respective group already exists
+        key = f'{lon}{lat}'
+        if key not in self.coord.keys():
+            #if not create it 
+            self.coord[key] = [longitude,latitude]
+            self.stack[key] = []
+            self.names[key] = []
+        #place dataset names and actual data in respective dicts
+        self.stack[key].append(variable)
+        self.names[key].append(var)
     
-    
-        
-    def regroup_data_to_resample(self):
-        #loop through all data sets that need to be resampled
-        vars_list = self.data_dict.keys()
-        
-        #sensor-specific regrouping for faster resample procedure
-        if self.sensor == 'MODIS':
-            coord = []
-            stack = []
-            names = []
-            for variable_dict_handle in vars_list:
-                if variable_dict_handle in self.resample_dict:
-                    stack.append(self.data_dict[variable_dict_handle])
-                    names.append(variable_dict_handle)
-                    if len(coord) == 0:
-                        grid_lon, grid_lat = self.resample_dict[variable_dict_handle]
-                        coord = [self.data_dict[grid_lon],
-                                 self.data_dict[grid_lat]]  
-            #wrap-up and return
-            resample_stack = {'grp1': {'grid': coord,
-                                       'dset': names,
-                                       'data': np.stack(stack,axis=2)}}
-            return resample_stack
-        if self.sensor == 'SLSTR':
-            coord = {}
-            stack = {}
-            names = {}
-            #loop over variables to resample and group them based 
-            #on their respective grid
-            for variable_dict_handle in vars_list:
-                if variable_dict_handle in self.resample_dict:
-                    #retrieve grid
-                    grid_lon, grid_lat = self.resample_dict[variable_dict_handle]
-                    #check if respective group already exists
-                    if grid_lon not in coord:
-                        #if not create it 
-                        coord[grid_lon] = [self.data_dict[grid_lon],
-                                           self.data_dict[grid_lat]]
-                        stack[grid_lon] = []
-                        names[grid_lon] = []
-                    #place dataset names and actual data in respective dicts
-                    stack[grid_lon].append(self.data_dict[variable_dict_handle])
-                    names[grid_lon].append(variable_dict_handle)
-            #wrap-up
-            resample_stack = {}
-            for i,key in enumerate(coord):
-                resample_stack['grp'+str(i+1)] = {'grid': coord[key],
-                                                  'dset': names[key],
-                                                  'data': np.stack(stack[key],
-                                                                   axis=2)}
-            #return
-            return resample_stack
-        
         
         
