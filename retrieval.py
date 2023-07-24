@@ -102,8 +102,8 @@ class Retrieval(ABC):
         variables_to_process = self.proc.get_resample_variables()
         
         for var in variables_to_process: 
-            self.proc.prepare_data_to_resample(var)
-        
+            self.proc.group_data_to_resample(var)
+
         #apply the resampling
         self.proc.resample_swath()
     
@@ -166,6 +166,9 @@ class ModisRetrieval(Retrieval):
 
             #resample swath data if specified
             if self.resampling:
+                #id aoi's for current swath
+                self.proc.identify_resample_aois(self.listing, mxd03)
+                #resample
                 self.resample_swath()
             
             #save swath data to h5 format

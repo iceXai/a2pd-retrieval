@@ -48,7 +48,7 @@ class SwathData(object):
         #will store all loaded data from the swaths
         self.data = {}
         #will store the finalized data per specified aoi
-        self.resampled_data = {}
+        self.resampled_data = None
         
     def add_to_data(self, var_key: str, var: np.array) -> None:
         self.data[var_key] = var 
@@ -56,10 +56,10 @@ class SwathData(object):
     def get_data(self, var_key: str):
         return self.data[var_key]
         
-    def add_to_resampled_data(self, var_key: str, var: np.array) -> None:
-        self.resampled_data[var_key] = var 
+    def add_to_resampled_data(self, resampled_data: dict) -> None:
+        self.resampled_data = resampled_data 
         
-    def get_resampled_data(self, var_key: str) -> list:
-        return self.resampled_data[var_key]
+    def get_resampled_data(self) -> dict:
+        return self.resampled_data
     
     

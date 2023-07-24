@@ -410,10 +410,24 @@ class ModisRetrievalProcessor(RetrievalProcessor):
     def initialize_resampling(self) -> None:
         self.resampling = Resample()
         self.resampling.set_aoi(self.aoi)
+        self.resampling.set_data(self.swath)
     
         
     """ Retrieval procedure """
     def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The raw listing data frame with potentially multiple entries for 
+            swaths that are supposed to be resampled to several different 
+            AOI's
+
+        Returns
+        -------
+        pd.DataFrame
+            Reduced dataframe with only unique swaths
+        """
         mxd03 = df['url_mxd03'].astype(str) + df['mxd03'].astype(str)
         mxd02 = df['url_mxd02'].astype(str) + df['mxd02'].astype(str)
         return pd.DataFrame({'mxd03': mxd03.unique(),
@@ -548,22 +562,45 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         
     def close_swath(self) -> None:
         self.io.close()
+    
         
+    """ Resample procedure """
+    def identify_resample_aois(self, df: pd.DataFrame, swath: str) -> list:
+        """
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The raw listing data frame with potentially multiple entries for 
+            swaths that are supposed to be resampled to several different 
+            AOI's
+        swath : str
+            Name of current swath to identify applicable AOI's for resampling
+
+        Returns
+        -------
+        list :
+            List of AOI's for this swath
+        """
+        swath = swath.split('/')[-1]
+        self.resample_aoi = df['aoi'].loc[df['mxd03']==swath].tolist()
+    
     def get_resample_variables(self) -> list:
         return self.meta.get_resample_vars()
     
-    def prepare_data_to_resample(self, var: str) -> None:
+    def group_data_to_resample(self, var: str) -> None:
         #get resample information from meta data
-        meta = self.meta.get_resample_dict_entry(var)
-        #get data from container
-        data = self.swath.get_data(var)
-        lon = self.swath.get_data(meta[0])
-        lat = self.swath.get_data(meta[1])
+        lon, lat = self.meta.get_resample_dict_entry(var)
         #regroup/shuffle the data by their used lon/lat information
-        self.resampling.add_data_to_group(var, meta, data, lon, lat)
+        self.resampling.add_data_to_group(var, lon, lat)
     
     def resample_swath(self) -> None:
-        pass
+        #stack the groups if necessary
+        self.resampling.add_groups_to_resample_stack()
+        #resample the data
+        self.resampling.resample(self.resample_aoi)
+        #add to data container
+        resampled_data = self.resampling.get_resampled_data()
+        self.swath.add_to_resampled_data(resampled_data)
 
     
 
