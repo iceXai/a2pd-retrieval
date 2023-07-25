@@ -109,15 +109,6 @@ class Listing(ABC):
         """
         pass
     
-    #TODO this needs to be moved to the Retrieval() class and its subclasses
-    @abstractmethod
-    def skip_existing_files(self) -> None:
-        """
-        handles the skipping of already downloaded files in a 
-        restarted/continued job setup
-        """
-        pass
-
 
     def set_aoi(self, aoi: dict) -> None:
         """
@@ -212,14 +203,6 @@ class ModisListing(Listing):
         #returns the completed listing to the caller
         return self.proc.get_listing()
             
-        
-    def skip_existing_files(self) -> None:
-        #handling only the completely processed h5 data!!!!
-        #TODO likely move this also to the ABC and rework the way the listign 
-        # is stored to something like pandas or polars instead of lists?
-        # [date_tag, url (mxd02/mxd03), aoi, covfrac]
-        # and store as csv?
-        pass
 
 # In[]
 
@@ -234,11 +217,7 @@ class SlstrListing(Listing):
     
     
     def compile_file_listing(self):
-        pass
-        
-    
-    def skip_existing_files(self):
-        pass           
+        pass          
  
     
 
@@ -256,10 +235,6 @@ class OlciListing(Listing):
     def compile_file_listing(self):
         pass
 
-
-    def skip_existing_files(self):
-        pass           
-  
     
 
 # In[]
@@ -277,7 +252,5 @@ class ViirsListing(Listing):
     def compile_file_listing(self):
         pass
 
-
-    def skip_existing_files(self):
-        pass           
+         
  
