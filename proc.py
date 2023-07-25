@@ -601,6 +601,10 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         #add to data container
         resampled_data = self.resampling.get_resampled_data()
         self.swath.add_to_resampled_data(resampled_data)
+        
+        
+    """ Output """
+    
 
     
 

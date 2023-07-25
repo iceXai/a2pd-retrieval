@@ -126,8 +126,9 @@ class Configuration(object):
         #sets the correct retrieval processor corresponding to the
         #sensor/carrier
         token = self.get_token()
+        carrier = self.get_carrier()
         out = self.get_output_path()
-        return self.get_retrieval_class()(token, out)
+        return self.get_retrieval_class()(token, carrer, out)
 
 
 

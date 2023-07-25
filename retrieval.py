@@ -23,7 +23,7 @@ class Retrieval(ABC):
     """
     Abstract base class that handles the swath retrieval and post-processing 
     """
-    def __init__(self, token: str, out: str):
+    def __init__(self, token: str, carrier: str, out: str):
         """
         Parameters
         ----------
@@ -36,6 +36,7 @@ class Retrieval(ABC):
         #store arguements
         self.token = token
         self.out = out
+        self.carrier = carrier
         
         #store status
         self.resampling = False
