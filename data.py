@@ -59,7 +59,10 @@ class SwathData(object):
     def add_to_resampled_data(self, resampled_data: dict) -> None:
         self.resampled_data = resampled_data 
         
-    def get_resampled_data(self) -> dict:
-        return self.resampled_data
+    def get_aois(self) -> list:
+        return self.resampled_data.keys()
+    
+    def get_resampled_data(self, aoi_key: str, var_key: str) -> dict:
+        return self.resampled_data[aoi_key][var_key]
     
     
