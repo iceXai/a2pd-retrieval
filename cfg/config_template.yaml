@@ -1,12 +1,13 @@
 # Configuration File for the MODIS/SLSTR/OLCI file retrieval wrapper
 meta:
     # meta information on sensor/carrier [MODIS/SLSTR/OLCI/VIIRS; terra/aqua/s3a/s3b], 
-    # hemisphere [north/south], and aois [as python list, e.g., [berkner, brunt, dibble]],
-    # to be used
+    # hemisphere [north/south], aois [as python list, e.g., [berkner, brunt, dibble]],
+    # and its meta-data version [full/production/experimental] to be used
     sensor: MODIS
     carrier: terra
     hemisphere: south
     aoi: [berkner, brunt, dibble]
+    version: production
 
 output:
     # output path for the retrieved data [will be created if not existent]
