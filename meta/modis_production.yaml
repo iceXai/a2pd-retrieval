@@ -1,0 +1,76 @@
+# Meta File for the MODIS sensor (terra/aqua)
+variables:
+    #list of variables (keys) to be used
+    #consistent with following specifications
+    - lat
+    - lon
+    - sat_zen
+    - sat_azi
+    - sol_zen
+    - sol_azi
+    - ch20
+    - ch25
+    - ch31
+    - ch32
+    - ch33
+    
+input_specs:
+    #information about file, group, and variable names of the input data, e.g.,
+    #[file, grp, var]
+    lat: [mxd03, None, Latitude]
+    lon: [mxd03, None, Longitude]
+    sat_zen: [mxd03, None, SensorZenith]
+    sat_azi: [mxd03, None, SensorAzimuth]
+    sol_zen: [mxd03, None, SolarZenith]
+    sol_azi: [mxd03, None, SolarAzimuth]
+    ch20: [mxd02, None, EV_1KM_Emissive]
+    ch25: [mxd02, None, EV_1KM_Emissive]
+    ch31: [mxd02, None, EV_1KM_Emissive]
+    ch32: [mxd02, None, EV_1KM_Emissive]
+    ch33: [mxd02, None, EV_1KM_Emissive]
+    
+resampling:
+    #information about the reference longitude/latitude grid reference internal
+    #names for the resampling process, e.g.,
+    #[lon, lat]
+    sat_zen: [lon, lat]
+    sat_azi: [lon, lat]
+    sol_zen: [lon, lat]
+    sol_azi: [lon, lat]
+    ch20: [lon, lat]
+    ch25: [lon, lat]
+    ch31: [lon, lat]
+    ch32: [lon, lat]
+    ch33: [lon, lat]
+
+channel_specs:
+    #define channel specifications such as scale/offset internal names and the 
+    #channel index within the file data stack whereever applicable, e.g.,
+    #[index, scale, offset, wavelength]
+    sat_zen: [None, scale_factor, None, None]
+    sat_azi: [None, scale_factor, None, None]
+    sol_zen: [None, scale_factor, None, None]
+    sol_azi: [None, scale_factor, None, None] 
+    ch20: [0, radiance_scales, radiance_offsets, 3.7500*10**-6]
+    ch25: [5, radiance_scales, radiance_offsets, 4.5155*10**-6]
+    ch31: [10, radiance_scales, radiance_offsets, 11.030*10**-6]
+    ch32: [11, radiance_scales, radiance_offsets, 12.020*10**-6]
+    ch33: [12, radiance_scales, radiance_offsets, 13.335*10**-6]
+
+output_specs:
+    #define output structure of the data in the h5 file by providing 
+    #for each variable name an in-file group name, an in-file variable
+    #name as well as an attribute long name, e.g., 
+    #[file_grp_name, file_var_name, attr_long_name]
+    lat: [mod03, lat, mod03_latitude]
+    lon: [mod03, lon, mod03_longitude]
+    sat_zen: [mod03, sat_zen, mod03_sensor_zenith_angle]
+    sat_azi: [mod03, sat_azi, mod03_sensor_azimuth_angle]
+    sol_zen: [mod03, sol_zen, mod03_solar_zenith_angle]
+    sol_azi: [mod03, sol_azi, mod03_solar_azimuth_angle]
+    ch20: [mod02, ch20, mod02_ch20_brightness_temperature_data]
+    ch25: [mod02, ch25, mod02_ch25_brightness_temperature_data]
+    ch31: [mod02, ch31, mod02_ch31_brightness_temperature_data]
+    ch32: [mod02, ch32, mod02_ch32_brightness_temperature_data]
+    ch33: [mod02, ch33, mod02_ch33_brightness_temperature_data]
+    
