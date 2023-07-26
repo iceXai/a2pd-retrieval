@@ -135,8 +135,6 @@ class ModisSwathIO(SwathIO):
         fill = attributes['_FillValue'][0]
         valid_min = attributes['valid_range'][0][0]
         valid_max = attributes['valid_range'][0][1]
-
-        #apply attributes to variable
         
         #mask invalid entries
         invalid = np.logical_or(variable>valid_max, 
@@ -156,7 +154,6 @@ class ModisSwathIO(SwathIO):
             non_nan = ~np.isnan(variable)
             non_nan[non_nan] = np.less(variable[non_nan],0)
             variable[non_nan] = np.nan
-            
             variable = self._calculate_Tb(variable, meta[3])
         
         #return variable to caller

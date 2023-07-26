@@ -64,6 +64,15 @@ class Retrieval(ABC):
         """
         self.aoi = aoi
         
+    def set_meta(self, meta: object) -> None:
+        """
+        Parameters
+        ----------
+        meta : object
+            meta class correspomnding to the specified sensor/version
+        """
+        self.meta = meta
+        
     def apply_resampling(self) -> None:
         self.proc.initialize_resampling()
         self.resampling = True
@@ -74,20 +83,13 @@ class Retrieval(ABC):
         #loop through all downloaded variables and import corresponding 
         #files/data
         variables_to_process = self.proc.get_variables()
-        variables = variables_to_process.keys()
         
         for var in variables_to_process:
-            #retrieve content from dict
-            file_entry, grp_entry, var_entry = variables_to_process[var]
-
             #open file link
-            self.proc.open_swath(file_entry)
-                
-            #set current variable key in processor
-            self.proc.set_current_variable(var)
+            self.proc.open_swath(var)
             
             #retrieve content from group/variable
-            self.proc.load_variable(var_entry, grp_entry)
+            self.proc.load_variable(var)
             
             #close file handle
             self.proc.close_swath()
@@ -135,9 +137,9 @@ class ModisRetrieval(Retrieval):
         self.proc.set_token(self.token)
         self.proc.set_output_path(self.out)
         self.proc.set_aoi(self.aoi)
+        self.proc.set_meta(self.meta)
         self.proc.initialize_swath_data()
         self.proc.initialize_swath_io()
-        self.proc.initialize_swath_meta()
     
     
     def download_and_process_swaths(self) -> None:
@@ -173,7 +175,7 @@ class ModisRetrieval(Retrieval):
                 self.resample_swath()
             
             #save swath data to h5 format
-            
+            import pdb; pdb.set_trace()
             
             #clean-up afterwards
             

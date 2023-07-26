@@ -356,8 +356,6 @@ class ModisRetrievalProcessor(RetrievalProcessor):
     Handles the actual download process of the identified swaths from the 
     file listing process
     """
-    def __init__(self):
-        self.current_variable_key = None
     
     """ High-level functions """
     
@@ -382,16 +380,11 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         
     def set_aoi(self, aoi: dict) -> None:
         self.aoi = aoi
+        
+    def set_meta(self, meta: object) -> None:
+        self.meta = meta
+        
 
-        
-    def set_current_variable(self, variable_key: str) -> None:
-        self.current_variable_key = variable_key
-        
-    
-    def get_current_variable(self) -> str:
-        return self.current_variable_key
-        
-        
     def initialize_swath_data(self) -> None:
         #initiate swath data container
         self.swath = SwathData()
@@ -400,11 +393,6 @@ class ModisRetrievalProcessor(RetrievalProcessor):
     def initialize_swath_io(self) -> None:
         #initiate i/o handler
         self.io = ModisSwathIO(self.out)
-        
-        
-    def initialize_swath_meta(self) -> None:
-        #initiate i/o handler
-        self.meta = ModisSwathMeta()
         
         
     def initialize_resampling(self) -> None:
@@ -502,7 +490,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         """
         #solely the swath file name
         swath = url.split('/')[-1]
-        
+
         #status
         print(f'['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
                f'] - Retrieving {swath}...')
@@ -541,24 +529,25 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         """
         mxd03 = swaths[0].split('/')[-1]
         mxd02 = swaths[1].split('/')[-1]
-        self.meta.set_vars_to_process((mxd03, mxd02))
+        self.meta.update_input_specs((mxd03, mxd02))
 
     def get_variables(self) -> list:
-        return self.meta.get_vars_to_process()
+        return self.meta.get_variables()
     
-    def open_swath(self, filename: str) -> None:
-        FILEPATH = os.path.join(self.rawout, filename)
+    def open_swath(self, var: str) -> None:
+        FILENAME = self.meta.get_var_input_specs(var)[0]
+        FILEPATH = os.path.join(self.rawout, FILENAME)
         self.io.load(FILEPATH)
         
-    def load_variable(self, var: str, grp: str) -> None:
-        #get current variable key handle
-        key = self.get_current_variable()
-        #retrieve correspondign channel meta data
-        meta = self.meta.get_meta_dict_entry(key)
+    def load_variable(self, var: str) -> None:
+        #get current variable/group name info
+        GRP, VAR = self.meta.get_var_input_specs(var)[1:]
+        #retrieve corresponding channel specifications
+        CHSPECS = self.meta.get_var_channel_specs(var)
         #retrieve the actual variable data from the swath
-        variable = self.io.get_var(var, grp, meta)
+        variable = self.io.get_var(VAR, GRP, CHSPECS)
         #store it to the data container using the same variable key handle
-        self.swath.add_to_data(key,variable)
+        self.swath.add_to_data(var, variable)
         
     def close_swath(self) -> None:
         self.io.close()
@@ -585,11 +574,11 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         self.resample_aoi = df['aoi'].loc[df['mxd03']==swath].tolist()
     
     def get_resample_variables(self) -> list:
-        return self.meta.get_resample_vars()
+        return self.meta.get_resample_variables()
     
     def group_data_to_resample(self, var: str) -> None:
         #get resample information from meta data
-        lon, lat = self.meta.get_resample_dict_entry(var)
+        lon, lat = self.meta.get_var_grid_specs(var)
         #regroup/shuffle the data by their used lon/lat information
         self.resampling.add_data_to_group(var, lon, lat)
     

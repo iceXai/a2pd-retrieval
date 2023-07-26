@@ -48,6 +48,10 @@ class Configuration(object):
         #returns specified hemisphere
         return self.config['meta']['hemisphere'].lower()
     
+    def get_version(self) -> str:
+        #returns the version needed for the meta class
+        return self.config['meta']['version'].lower()
+    
     
     """ Configfile::Output """
     def get_output_path(self) -> str:
@@ -109,9 +113,15 @@ class Configuration(object):
         module_name = 'retrieval'
         return self.get_class(module_name, class_name)
     
+    def get_meta_class(self) -> object:
+        #returns the appropriate meta class
+        sensor = self.get_sensor().capitalize()
+        class_name = f'{sensor}SwathMeta'
+        module_name = 'meta'
+        return self.get_class(module_name, class_name)
     
     """ Job::Listing """
-    def set_listing(self) -> None:
+    def get_listing_module(self) -> object:
         #sets the correct listing processor corresponding to the 
         #sensor/carrier
         token = self.get_token()
@@ -122,13 +132,21 @@ class Configuration(object):
         return self.get_listing_class()(token, carrier, start, stop, out)
     
     """ Job::Retrieval """
-    def set_retrieval(self) -> None:
+    def get_retrieval_module(self) -> object:
         #sets the correct retrieval processor corresponding to the
         #sensor/carrier
         token = self.get_token()
         carrier = self.get_carrier()
         out = self.get_output_path()
-        return self.get_retrieval_class()(token, carrer, out)
+        return self.get_retrieval_class()(token, carrier, out)
+
+    """ Job::MetaData """
+    def get_meta_module(self) -> object:
+        #sets the correct meta data class corresponding to the
+        #sensor/carrier
+        sensor = self.get_sensor()
+        version = self.get_version()
+        return self.get_meta_class()(sensor, version)
 
 
 

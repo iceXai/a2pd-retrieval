@@ -9,7 +9,7 @@ input_specs:
     #[file, grp, var]
     ...: [file, grp, var]
     
-resampling:
+grid_specs:
     #information about the reference longitude/latitude grid reference internal
     #names for the resampling process, e.g.,
     #[lon, lat]

@@ -41,57 +41,6 @@ class Resample(object):
         self.data = data
         
     """ Resampling """
-    def resample_to_grid(self,aoi_to_resample):   
-        #load resampled data into a data dictionary
-        resampled_data_dict = {}
-        
-        #retrieve aoi grid to resample to
-        aoi_grid = self.aoi[aoi_to_resample].return_aoi_grid()
-
-        #return reference-grid latitude/longitude
-        ref_grid_lon, ref_grid_lat = aoi_grid.get_lonlats()
-        resampled_data_dict['lon'] = ref_grid_lon
-        resampled_data_dict['lat'] = ref_grid_lat
-        
-        #regroup data
-        resample_stack = self.regroup_data_to_resample()
-
-        #retrieve resample group keys
-        grp_keys = resample_stack.keys()
-        
-        #loop through groups
-        for grp in grp_keys:
-            #get lon/lat values
-            lon = resample_stack[grp]['grid'][0]
-            lat = resample_stack[grp]['grid'][1]
-            
-            #set-up swath definition
-            swath_def = pr.geometry.SwathDefinition(lons=lon,
-                                                    lats=lat)
-            #get_projection_coordinates_from_lonlat()
-            #get neighbour information
-            in_idx,out_idx,idx,dist = \
-                pr.kd_tree.get_neighbour_info(swath_def,aoi_grid,
-                                              radius_of_influence=5000,
-                                              neighbours=1,
-                                              nprocs=self.cores)
-            
-            #resample group using neighbor info
-            resampled = pr.kd_tree.get_sample_from_neighbour_info('nn',aoi_grid.shape,
-                                                                  resample_stack[grp]['data'],
-                                                                  in_idx,out_idx,idx)
-            
-            #rearrange order
-            resampled = np.transpose(resampled,(2,0,1))
-
-            #append to dict
-            resampled_data_dict = {**resampled_data_dict,\
-                                    **dict(zip(resample_stack[grp]['dset'],resampled))}
-        
-        #re-store data to the normal data_dict dictionary
-        self.finalized_aoi_dict[aoi_to_resample] = resampled_data_dict
-        
-
     def add_data_to_group(self, var: str, lon: str, lat: str) -> None:
         """
         Parameters

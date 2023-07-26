@@ -46,7 +46,7 @@ class RetrievalJob(object):
 
         """
         #initialize the correct listing module/processor
-        self.lst = self.cfg.set_listing()
+        self.lst = self.cfg.get_listing_module()
         
         #sets aoi in listing process
         self.lst.set_aoi(self.cfg.compile_aoi_info())
@@ -56,10 +56,13 @@ class RetrievalJob(object):
         
         if self.cfg.do_swath_download():
             #initialize the correct retrieval module/processor
-            self.ret = self.cfg.set_retrieval()
+            self.ret = self.cfg.get_retrieval_module()
             
-            #sets aoi in retrieval process
+            #passes aoi information on to the retrieval processer
             self.ret.set_aoi(self.cfg.compile_aoi_info())
+            
+            #passes meta information on to the retrieval processer
+            self.ret.set_meta(self.cfg.get_meta_module())
             
             #setup the retrieval processor
             self.ret.setup_retrieval_processor()
