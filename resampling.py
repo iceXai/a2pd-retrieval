@@ -36,7 +36,6 @@ class Resample(object):
     def set_aoi(self, aoi: dict) -> None:
         self.aoi = aoi
         
-        
     def set_data(self, data: dict) -> None:
         self.data = data
         
@@ -91,37 +90,36 @@ class Resample(object):
         self.resample_stack = stack
         
         
-    def resample(self, resample_aois: list) -> dict:
-        for aoi in resample_aois:
-            #load resampled data into a data dictionary
-            rsd = {}
-        
-            #retrieve aoi grid to resample to
-            aoi_grid = self.aoi[aoi].get_aoi_grid()
-
-            #return reference-grid latitude/longitude
-            ref_grid_lon, ref_grid_lat = aoi_grid.get_lonlats()
-            rsd['lon'] = ref_grid_lon
-            rsd['lat'] = ref_grid_lat
-            #retrieve resample group keys
-            grp_keys = self.resample_stack.keys()
-        
-            #loop through groups
-            for grp in grp_keys:
-                #get lon/lat values
-                lon = self.resample_stack[grp]['grid'][0]
-                lat = self.resample_stack[grp]['grid'][1]
-                
-                #set-up swath definition
-                swath_def = pr.geometry.SwathDefinition(lons=lon, lats=lat)
-                #resample using kd tree
-                data_stack = self.resample_stack[grp]['data']
-                rs = self._kd_tree_resample(swath_def, aoi_grid, data_stack)
+    def resample(self, aoi: str) -> dict:
+        #load resampled data into a data dictionary
+        rsd = {}
     
-                #append to dict
-                names_stack = self.resample_stack[grp]['dset']
-                rsd = {**rsd,**dict(zip(names_stack, rs))}
-                
+        #retrieve aoi grid to resample to
+        aoi_grid = self.aoi[aoi].get_aoi_grid()
+
+        #return reference-grid latitude/longitude
+        ref_grid_lon, ref_grid_lat = aoi_grid.get_lonlats()
+        rsd['lon'] = ref_grid_lon
+        rsd['lat'] = ref_grid_lat
+        #retrieve resample group keys
+        grp_keys = self.resample_stack.keys()
+    
+        #loop through groups
+        for grp in grp_keys:
+            #get lon/lat values
+            lon = self.resample_stack[grp]['grid'][0]
+            lat = self.resample_stack[grp]['grid'][1]
+            
+            #set-up swath definition
+            swath_def = pr.geometry.SwathDefinition(lons=lon, lats=lat)
+            #resample using kd tree
+            data_stack = self.resample_stack[grp]['data']
+            rs = self._kd_tree_resample(swath_def, aoi_grid, data_stack)
+
+            #append to dict
+            names_stack = self.resample_stack[grp]['dset']
+            rsd = {**rsd,**dict(zip(names_stack, rs))}
+            
         self.resampled_aoi_data[aoi] = rsd
         
 

@@ -96,8 +96,20 @@ class Retrieval(ABC):
 
     
     def save_swath(self) -> None:
-        pass
+        #creating the h5 output file with base global attributes
+        self.proc.save_swath()
+            
+        #close file connection
+        self.proc.close_swath()
+ 
     
+     def save_resampled_swath(self) -> None:
+        #creating the h5 output file with base global attributes
+        self.proc.save_resampled_swath()
+            
+        #close file connection
+        self.proc.close_swath()
+        
     
     def resample_swath(self) -> None:
         #loop through all variables in the data and send it to the 
@@ -135,6 +147,7 @@ class ModisRetrieval(Retrieval):
     def setup_retrieval_processor(self) -> None:
         self.proc = ModisRetrievalProcessor()
         self.proc.set_token(self.token)
+        self.set_carrier(self.carrier)
         self.proc.set_output_path(self.out)
         self.proc.set_aoi(self.aoi)
         self.proc.set_meta(self.meta)
@@ -173,12 +186,14 @@ class ModisRetrieval(Retrieval):
                 self.proc.identify_resample_aois(self.listing, mxd03)
                 #resample
                 self.resample_swath()
-            
-            #save swath data to h5 format
-            import pdb; pdb.set_trace()
-            
+                #save resampled swath data to h5 format
+                self.save_resampled_swath()
+            else:
+                #save swath data to h5 format
+                self.save_swath()
+                
             #clean-up afterwards
-            
+            self.cleanup()
             
 
 

@@ -82,9 +82,20 @@ class SwathIO(ABC):
             Returns numpy array with corresponding data
         """
         pass
-    
+
     @abstractmethod
-    def create(self, path: str) -> None:
+    def save(self, path: str) -> None:
+        """
+        Parameters
+        ----------
+        path : str
+            Path to the file/swath to be created and saved to
+
+        Returns
+        -------
+        None
+            Stores the specific file handle, e.g., within self.fh
+        """
         pass
     
     @abstractmethod
@@ -93,10 +104,6 @@ class SwathIO(ABC):
     
     @abstractmethod
     def close(self, path: str) -> None:
-        pass
-    
-    @abstractmethod
-    def save(self, path: str) -> None:
         pass
     
     @abstractmethod
@@ -158,18 +165,30 @@ class ModisSwathIO(SwathIO):
         
         #return variable to caller
         return variable[:,:]
-    
-    def create(path: str) -> None:
-        pass
-    
-    def set_var(self, var: str, grp: str) -> None:
-        pass
         
     def close(self) -> None:
         self.fh.end()
     
     def save(self, path: str) -> None:
-        pass
+        #create file and open file handle
+        self.fh = h5py.File(path,'w')
+        #set global attributes
+        AUTHOR = "Dr. Stephan Paul (AWI/iceXai)"
+        self.fh.attrs.create("author", AUTHOR)
+        EMAIL = "stephan.paul@posteo.net"
+        self.fh.attrs.create("contact", EMAIL)
+        TIMESTAMP = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.fh.attrs.create("created", TIMESTAMP)
+    
+    def set_var(self, inpath: str, ds: np.array, attr: str) -> None:
+        #create dataset in file
+        h5ds = self.fh.create_dataset(inpath,
+                                      data=ds,
+                                      compression="gzip",
+                                      compression_opts=9)
+        #set data attributes
+        h5ds.attrs.create("long_name",attribute_key)
+        h5ds.attrs.create("valid_range",[np.nanmin(ds),np.nanmax(ds)])
     
     def cleanup(self, path: str) -> None:
         pass        

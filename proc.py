@@ -356,12 +356,18 @@ class ModisRetrievalProcessor(RetrievalProcessor):
     Handles the actual download process of the identified swaths from the 
     file listing process
     """
+    def __init__(self):
+        self.overlapping_aois = None
     
     """ High-level functions """
     
     """ Getters/Setters for Processor Setup """
     def set_token(self, token: str) -> None:
         self.token = token
+        
+    
+    def set_carrier(self, carrier: str) -> None:
+        self.carrier = carrier
         
         
     def set_output_path(self, path: str) -> None:
@@ -571,7 +577,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
             List of AOI's for this swath
         """
         swath = swath.split('/')[-1]
-        self.resample_aoi = df['aoi'].loc[df['mxd03']==swath].tolist()
+        self.overlapping_aois = df['aoi'].loc[df['mxd03']==swath].tolist()
     
     def get_resample_variables(self) -> list:
         return self.meta.get_resample_variables()
@@ -586,14 +592,45 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         #stack the groups if necessary
         self.resampling.add_groups_to_resample_stack()
         #resample the data
-        self.resampling.resample(self.resample_aoi)
+        for aoi in self.overlapping_aois:
+            self.resampling.resample(aoi)
         #add to data container
         resampled_data = self.resampling.get_resampled_data()
         self.swath.add_to_resampled_data(resampled_data)
         
         
     """ Output """
+    def save_swath(self) -> None:
+        #wrapper function to handle the h5 output file creation and data 
+        #storage process
+        pass
     
+    def save_resampled_swath(self) -> None:
+        #wrapper function to handle the h5 output file creation and data 
+        #storage process of the resampled data
+        pass
+        
+        
+    def create_swath(self, aoi: str = None) -> None:
+        FILENAME = self.compile_output_swath_name()
+        FILEPATH = os.path.join(self.out, FILENAME)
+        self.io.save(FILEPATH)
+    
+    def compile_output_swath_name(self aoi: str = None) -> str:
+        pass
+    
+    def set_variable(self, var: str) -> None:
+        #get variable specific output specifications
+        GRP, VAR, ATTR = self.meta.get_var_output_specs(var)
+        #compile in-file specific group/variable path
+        INPATH = f'{GRP}/{VAR}'
+        #pick dataset
+        if self.overlapping_aois is None:
+            DS = self.swath.get_data(var)
+        else:
+            DS = self.swath.get_resampled_data(var)
+        #pass data to io
+        self.io.set_var(INPATH, DS, ATTR)
 
     
 

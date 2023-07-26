@@ -60,7 +60,10 @@ class SwathData(object):
         self.resampled_data = resampled_data 
         
     def get_aois(self) -> list:
-        return self.resampled_data.keys()
+        if self.resampled_data is not None:
+            return self.resampled_data.keys()
+        else: 
+            return None
     
     def get_resampled_data(self, aoi_key: str, var_key: str) -> dict:
         return self.resampled_data[aoi_key][var_key]
