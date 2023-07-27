@@ -600,24 +600,34 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         
         
     """ Output """
-    def save_swath(self) -> None:
-        #wrapper function to handle the h5 output file creation and data 
+    def save_swath(self, aoi: str = None) -> None:
+        #wrapper function to handle the h5 output file-creation and data- 
         #storage process
-        pass
+        vars_to_process = self.get_variables()
+        for var in vars_to_process:
+            self.create_swath(aoi)
+            self.set_variables(var)
+            
     
     def save_resampled_swath(self) -> None:
-        #wrapper function to handle the h5 output file creation and data 
+        #wrapper function to handle the h5 output file-creation and data- 
         #storage process of the resampled data
-        pass
+        for aoi in self.overlapping_aois:
+            self.save_swath(aoi)
         
         
     def create_swath(self, aoi: str = None) -> None:
-        FILENAME = self.compile_output_swath_name()
+        FILENAME = self.compile_output_swath_name(aoi)
         FILEPATH = os.path.join(self.out, FILENAME)
         self.io.save(FILEPATH)
     
-    def compile_output_swath_name(self aoi: str = None) -> str:
+    def compile_output_swath_name(self aoi: str) -> str:
+        if aoi is None:
+            extension = 'raw'
+        else:
+            extention = aoi
         pass
+    
     
     def set_variable(self, var: str) -> None:
         #get variable specific output specifications

@@ -96,21 +96,17 @@ class Retrieval(ABC):
 
     
     def save_swath(self) -> None:
-        #creating the h5 output file with base global attributes
-        self.proc.save_swath()
+        #creating the h5 output file with base global attributes and set
+        #all variables
+        if self.resampling:
+            self.proc.save_resampled_swath()
+        else:
+            self.proc.save_swath()
             
         #close file connection
         self.proc.close_swath()
  
-    
-     def save_resampled_swath(self) -> None:
-        #creating the h5 output file with base global attributes
-        self.proc.save_resampled_swath()
-            
-        #close file connection
-        self.proc.close_swath()
-        
-    
+
     def resample_swath(self) -> None:
         #loop through all variables in the data and send it to the 
         #resample procedure
@@ -186,11 +182,9 @@ class ModisRetrieval(Retrieval):
                 self.proc.identify_resample_aois(self.listing, mxd03)
                 #resample
                 self.resample_swath()
-                #save resampled swath data to h5 format
-                self.save_resampled_swath()
-            else:
-                #save swath data to h5 format
-                self.save_swath()
+
+            #save swath data to h5 format
+            self.save_swath()
                 
             #clean-up afterwards
             self.cleanup()
