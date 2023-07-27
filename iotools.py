@@ -167,7 +167,10 @@ class ModisSwathIO(SwathIO):
         return variable[:,:]
         
     def close(self) -> None:
-        self.fh.end()
+        try:
+            self.fh.end()
+        except:
+            self.fh.close()
     
     def save(self, path: str) -> None:
         #create file and open file handle

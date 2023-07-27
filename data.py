@@ -45,10 +45,17 @@ class SwathData(object):
     classes, i.e., swath data, resampled data
     """
     def __init__(self):
+        self.id = None
         #will store all loaded data from the swaths
         self.data = {}
         #will store the finalized data per specified aoi
         self.resampled_data = None
+        
+    def set_swath_id(self, fn: str) -> None:
+        self.id = fn
+        
+    def get_swath_id(self) -> str:
+        return self.id
         
     def add_to_data(self, var_key: str, var: np.array) -> None:
         self.data[var_key] = var 

@@ -496,6 +496,9 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         """
         #solely the swath file name
         swath = url.split('/')[-1]
+        
+        #store swath file name for later and reference
+        self.swath.set_swath_id(swath)
 
         #status
         print(f'['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
@@ -621,13 +624,32 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         FILEPATH = os.path.join(self.out, FILENAME)
         self.io.save(FILEPATH)
     
-    def compile_output_swath_name(self aoi: str) -> str:
+    def compile_output_swath_name(self, aoi: str) -> str:
+        #correct processing state extension
         if aoi is None:
-            extension = 'raw'
+            EXT = 'raw'
         else:
-            extention = aoi
+            EXT = aoi
         pass
+        #set file-name parts
+        DATE = self.get_date_from_swath_file()
+        CARRIER = self.carrier.lower()[0:3]
+        SENSOR = 'modis'
+        #compile and return
+        return f'{CARRIER}_{SENSOR}_{DATE}_{EXT}.h5'
     
+    def get_date_from_swath_file(self):
+        #get swath id
+        swath = self.get_swath_id()        
+        #take raw date from swath id and convert it to datetime object
+        raw_yyjj = swath.split('.')[1]
+        raw_hhmm = swath.split('.')[2]
+        raw_date = datetime.strptime(raw_yyjj+raw_hhmm,'A%Y%j%H%M')
+        #transform it
+        yyjj = raw_date.strftime('%Y%j')
+        hhmm = raw_date.strftime('%H%M%S')
+        #return
+        return f'{yyjj}_{hhmm}'
     
     def set_variable(self, var: str) -> None:
         #get variable specific output specifications
