@@ -7,6 +7,7 @@
 # In[] 
 from abc import ABC, abstractmethod
 from pyhdf.SD import SD, SDC
+from datetime import datetime, timedelta
 
 import h5py
 import os
@@ -180,7 +181,7 @@ class ModisSwathIO(SwathIO):
         self.fh.attrs.create("author", AUTHOR)
         EMAIL = "stephan.paul@posteo.net"
         self.fh.attrs.create("contact", EMAIL)
-        TIMESTAMP = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        TIMESTAMP = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.fh.attrs.create("created", TIMESTAMP)
     
     def set_var(self, inpath: str, ds: np.array, attr: str) -> None:
@@ -190,7 +191,7 @@ class ModisSwathIO(SwathIO):
                                       compression="gzip",
                                       compression_opts=9)
         #set data attributes
-        h5ds.attrs.create("long_name",attribute_key)
+        h5ds.attrs.create("long_name",attr)
         h5ds.attrs.create("valid_range",[np.nanmin(ds),np.nanmax(ds)])
     
     def cleanup(self, path: str) -> None:

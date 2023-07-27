@@ -464,6 +464,10 @@ class ModisRetrievalProcessor(RetrievalProcessor):
     def get_swath_files(self, mxd03_swath: str, mxd02_swath: str) -> None:
         #TODO this needs some error/exception handling
         
+        #store swath file name for later reference
+        SWATH = mxd02_swath.split('/')[-1]
+        self.swath.set_swath_id(SWATH)
+        
         #retieve list of currently temporarily stored/downloaded files
         downloaded_files = [f.name for f in os.scandir(self.rawout) 
                             if f.is_file()]
@@ -496,9 +500,6 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         """
         #solely the swath file name
         swath = url.split('/')[-1]
-        
-        #store swath file name for later and reference
-        self.swath.set_swath_id(swath)
 
         #status
         print(f'['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
@@ -607,9 +608,9 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         #wrapper function to handle the h5 output file-creation and data- 
         #storage process
         vars_to_process = self.get_variables()
+        self.create_swath(aoi)
         for var in vars_to_process:
-            self.create_swath(aoi)
-            self.set_variables(var)
+            self.set_variable(var)
             
     
     def save_resampled_swath(self) -> None:
@@ -640,7 +641,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
     
     def get_date_from_swath_file(self):
         #get swath id
-        swath = self.get_swath_id()        
+        swath = self.swath.get_swath_id()
         #take raw date from swath id and convert it to datetime object
         raw_yyjj = swath.split('.')[1]
         raw_hhmm = swath.split('.')[2]
@@ -651,16 +652,16 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         #return
         return f'{yyjj}_{hhmm}'
     
-    def set_variable(self, var: str) -> None:
+    def set_variable(self, var: str, aoi: str = None) -> None:
         #get variable specific output specifications
         GRP, VAR, ATTR = self.meta.get_var_output_specs(var)
         #compile in-file specific group/variable path
         INPATH = f'{GRP}/{VAR}'
         #pick dataset
-        if self.overlapping_aois is None:
+        if aoi is None:
             DS = self.swath.get_data(var)
         else:
-            DS = self.swath.get_resampled_data(var)
+            DS = self.swath.get_resampled_data(aoi, var)
         #pass data to io
         self.io.set_var(INPATH, DS, ATTR)
 

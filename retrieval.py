@@ -143,7 +143,7 @@ class ModisRetrieval(Retrieval):
     def setup_retrieval_processor(self) -> None:
         self.proc = ModisRetrievalProcessor()
         self.proc.set_token(self.token)
-        self.set_carrier(self.carrier)
+        self.proc.set_carrier(self.carrier)
         self.proc.set_output_path(self.out)
         self.proc.set_aoi(self.aoi)
         self.proc.set_meta(self.meta)
@@ -185,7 +185,7 @@ class ModisRetrieval(Retrieval):
 
             #save swath data to h5 format
             self.save_swath()
-                
+            import pdb; pdb.set_trace()
             #clean-up afterwards
             self.cleanup()
             
