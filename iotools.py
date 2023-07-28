@@ -195,7 +195,7 @@ class ModisSwathIO(SwathIO):
         h5ds.attrs.create("valid_range",[np.nanmin(ds),np.nanmax(ds)])
     
     def cleanup(self, path: str) -> None:
-        pass        
+        os.remove(path)       
 
     #calculate TB specific for this sensor?
     def _calculate_Tb(self, variable, wavelength):

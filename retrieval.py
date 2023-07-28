@@ -120,7 +120,7 @@ class Retrieval(ABC):
     
     
     def cleanup(self) -> None:
-        pass
+        self.proc.cleanup()
 
 
     """ Abstract high-level methods """
@@ -161,8 +161,11 @@ class ModisRetrieval(Retrieval):
 
         #loop over all swath listing entries
         for mxd03, mxd02 in self.swaths.itertuples(index=False):          
+            #make processor aware of currently processed swaths
+            self.proc.set_swath_id((mxd03, mxd02))
+            
             #download the swath files
-            DOWNLOAD_COMPLETED = self.proc.get_swath_files(mxd03, mxd02)
+            DOWNLOAD_COMPLETED = self.proc.get_swath_files()
 
             #continue with next entry in case something went wrong
             if not all(DOWNLOAD_COMPLETED):

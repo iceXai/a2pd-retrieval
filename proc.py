@@ -460,13 +460,14 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         # return lst[~df.isin(downloaded_files)].dropna()
         pass
     
+    def set_swath_id(self, swaths :str) -> None:
+        SWATHS = {mxd03: swaths[0].split('/')[-1],
+                  mxd02: swaths[1].split('/')[-1]}
+        self.swath.set_swath_id(SWATHS)
+    
 
-    def get_swath_files(self, mxd03_swath: str, mxd02_swath: str) -> None:
+    def get_swath_files(self) -> None:
         #TODO this needs some error/exception handling
-        
-        #store swath file name for later reference
-        SWATH = mxd02_swath.split('/')[-1]
-        self.swath.set_swath_id(SWATH)
         
         #retieve list of currently temporarily stored/downloaded files
         downloaded_files = [f.name for f in os.scandir(self.rawout) 
@@ -641,7 +642,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
     
     def get_date_from_swath_file(self):
         #get swath id
-        swath = self.swath.get_swath_id()
+        swath = self.swath.get_swath_id()[1]
         #take raw date from swath id and convert it to datetime object
         raw_yyjj = swath.split('.')[1]
         raw_hhmm = swath.split('.')[2]
@@ -665,7 +666,18 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         #pass data to io
         self.io.set_var(INPATH, DS, ATTR)
 
-    
+    """ Cleanup """
+    def cleanup(self):
+        #get swath id
+        swaths = self.swath.get_swath_id()
+        #remove swaths
+        self._remove_swath(swaths[0])
+        self._remove_swath(swaths[1])
+        
+    def _remove_swath(self, swath: str) -> None:
+        FILENAME = swaths
+        FILEPATH = os.path.join(self.rawout, FILENAME)
+        self.io.cleanup(FILEPATH)
 
 
 
