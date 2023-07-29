@@ -440,29 +440,26 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         pd.DataFrame :
             shortened listing in case o existing files
         """
-        #TODO still needs implementation iof the processed files but needs 
-        #     file names function first
-        #     the current implementation of downloaded file sis actually not 
-        #     necessary and shall be handeled otherwise
+        #retrieve processed files
+        processed_files = [f.name.split('_')[:4] for f in os.scandir(self.out) 
+                           if f.is_file()]
         
-        # #scan directories for already processed/loaded swath files
-        # processed_files = [f.name for f in os.scandir(self.out) 
-        #                    if f.is_file()]
-        # downloaded_files = [f.name for f in os.scandir(self.rawout) 
-        #                     if f.is_file()]
-        # #reduce to file names
-        # df = pd.DataFrame({'mxd03': [e.split('/')[-1] 
-        #                              for e in lst['mxd03'].values],
-        #                    'mxd02': [e.split('/')[-1] 
-        #                              for e in lst['mxd02'].values]
-        #                    })
-        # #return (reduced) DataFrame
-        # return lst[~df.isin(downloaded_files)].dropna()
-        pass
+        for idx, mxd02, mxd03 in lst.itertuples():
+            #temporarily set file id
+            self.set_swath_id((mxd03, mxd02))
+            #compile output swath-file name
+            sname = self.compile_output_swath_name()
+            #check for existance
+            if sname.split('_')[:4] not in processed_files:
+                break
+
+        #return updated listing
+        return lst.iloc[idx:,:]
+
     
-    def set_swath_id(self, swaths :str) -> None:
-        SWATHS = {mxd03: swaths[0].split('/')[-1],
-                  mxd02: swaths[1].split('/')[-1]}
+    def set_swath_id(self, swaths: str) -> None:
+        SWATHS = {'mxd03': swaths[0].split('/')[-1],
+                  'mxd02': swaths[1].split('/')[-1]}
         self.swath.set_swath_id(SWATHS)
     
 
@@ -626,7 +623,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         FILEPATH = os.path.join(self.out, FILENAME)
         self.io.save(FILEPATH)
     
-    def compile_output_swath_name(self, aoi: str) -> str:
+    def compile_output_swath_name(self, aoi: str = None) -> str:
         #correct processing state extension
         if aoi is None:
             EXT = 'raw'
@@ -642,7 +639,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
     
     def get_date_from_swath_file(self):
         #get swath id
-        swath = self.swath.get_swath_id()[1]
+        swath = self.swath.get_swath_id()['mxd02']
         #take raw date from swath id and convert it to datetime object
         raw_yyjj = swath.split('.')[1]
         raw_hhmm = swath.split('.')[2]
