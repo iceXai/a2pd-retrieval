@@ -405,6 +405,19 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         self.resampling = Resample()
         self.resampling.set_aoi(self.aoi)
         self.resampling.set_data(self.swath)
+        
+    
+    def set_swath_id(self, swaths: str) -> None:
+        SWATHS = {'mxd03': swaths[0],'mxd02': swaths[1]}
+        self.swath.set_swath_id(SWATHS)
+        
+    
+    def get_swath_id(self, short: bool = True) -> tuple:
+        SWATHS = self.swath.get_swath_id()
+        if short:
+            SWATHS['mxd03'] = SWATHS['mxd03'].split('/')[-1]
+            SWATHS['mxd02'] = SWATHS['mxd02'].split('/')[-1]
+        return SWATHS
     
         
     """ Retrieval procedure """
@@ -455,12 +468,6 @@ class ModisRetrievalProcessor(RetrievalProcessor):
 
         #return updated listing
         return lst.iloc[idx:,:]
-
-    
-    def set_swath_id(self, swaths: str) -> None:
-        SWATHS = {'mxd03': swaths[0].split('/')[-1],
-                  'mxd02': swaths[1].split('/')[-1]}
-        self.swath.set_swath_id(SWATHS)
     
 
     def get_swath_files(self) -> None:
@@ -469,15 +476,19 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         #retieve list of currently temporarily stored/downloaded files
         downloaded_files = [f.name for f in os.scandir(self.rawout) 
                             if f.is_file()]
+        #retrieve current swath id's
+        GET_SWATH_NAME_ONLY = False
+        SWATHS = self.get_swath_id(GET_SWATH_NAME_ONLY)
+        
         #only download in case do not already exist
-        MXD03_EXISTS = mxd03_swath.split('/')[-1] in downloaded_files
+        MXD03_EXISTS = SWATHS['mxd03'].split('/')[-1] in downloaded_files
         if not MXD03_EXISTS:
-            status_mxd03 = self.download_swath(mxd03_swath)
+            status_mxd03 = self.download_swath(SWATHS['mxd03'])
         else:
             status_mxd03 = True
-        MXD02_EXISTS = mxd02_swath.split('/')[-1] in downloaded_files
+        MXD02_EXISTS = SWATHS['mxd02'].split('/')[-1] in downloaded_files
         if not MXD02_EXISTS:
-            status_mxd02 = self.download_swath(mxd02_swath)
+            status_mxd02 = self.download_swath(SWATHS['mxd02'])
         else:
             status_mxd02 = True
             
@@ -639,7 +650,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
     
     def get_date_from_swath_file(self):
         #get swath id
-        swath = self.swath.get_swath_id()['mxd02']
+        swath = self.get_swath_id()['mxd02']
         #take raw date from swath id and convert it to datetime object
         raw_yyjj = swath.split('.')[1]
         raw_hhmm = swath.split('.')[2]
@@ -666,13 +677,13 @@ class ModisRetrievalProcessor(RetrievalProcessor):
     """ Cleanup """
     def cleanup(self):
         #get swath id
-        swaths = self.swath.get_swath_id()
+        swaths = self.get_swath_id()
         #remove swaths
-        self._remove_swath(swaths[0])
-        self._remove_swath(swaths[1])
+        self._remove_swath(swaths['mxd03'])
+        self._remove_swath(swaths['mxd02'])
         
     def _remove_swath(self, swath: str) -> None:
-        FILENAME = swaths
+        FILENAME = swath
         FILEPATH = os.path.join(self.rawout, FILENAME)
         self.io.cleanup(FILEPATH)
 

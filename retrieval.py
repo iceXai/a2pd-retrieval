@@ -188,7 +188,7 @@ class ModisRetrieval(Retrieval):
 
             #save swath data to h5 format
             self.save_swath()
-            import pdb; pdb.set_trace()
+
             #clean-up afterwards
             self.cleanup()
             
