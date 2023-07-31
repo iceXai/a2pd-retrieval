@@ -7,6 +7,7 @@
 # In[] 
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
+from loguru import logger
 
 from proc import ModisRetrievalProcessor
 
@@ -141,6 +142,8 @@ class ModisRetrieval(Retrieval):
     """
         
     def setup_retrieval_processor(self) -> None:
+        #status
+        logger.info(f'Setup retrieval processor...')
         self.proc = ModisRetrievalProcessor()
         self.proc.set_token(self.token)
         self.proc.set_carrier(self.carrier)
@@ -152,6 +155,8 @@ class ModisRetrieval(Retrieval):
     
     
     def download_and_process_swaths(self) -> None:
+        #status
+        logger.info(f'Retrieve and process swaths...')
         #parse swath listing to mitigate multiple downloads of the same 
         #file due to several AOIs being specified
         self.swaths = self.proc.parse_swath_listing(self.listing)
@@ -169,8 +174,6 @@ class ModisRetrieval(Retrieval):
 
             #continue with next entry in case something went wrong
             if not all(DOWNLOAD_COMPLETED):
-                ##TODO
-                #log failures!
                 continue
             
             #update the processor meta data once for the currently used swaths

@@ -9,6 +9,8 @@
 """
 Modules
 """
+from loguru import logger
+
 import cfg
 
 

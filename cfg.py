@@ -6,6 +6,8 @@
 # In[]
 from aoi import AOI
 
+from loguru import logger
+
 import yaml
 import datetime
 import os
@@ -19,6 +21,8 @@ Configuration
 
 class Configuration(object):
     def __init__(self):
+        #status
+        logger.info('Load configuration file...')
         #loads the yaml file and reads it content
         with open(os.path.join(os.getcwd(), 'cfg', 'config.yaml')) as f:
             self.config = yaml.load(f,Loader=yaml.FullLoader)
@@ -80,6 +84,8 @@ class Configuration(object):
         return self.config['meta']['aoi']
     
     def compile_aoi_info(self) -> None:
+        #status
+        logger.info('Compile AOI information...')
         #sets the aoi definitions based on the specified aoi's
         aoi_dict = {}
         aoi_specified = self.get_aoi()
@@ -105,12 +111,16 @@ class Configuration(object):
         #returns the specified listing class
         class_name = self.config['processing']['listing']['name']
         module_name = 'listing'
+        #status
+        logger.info(f'Set listing class {class_name}...')
         return self.get_class(module_name, class_name)
     
     def get_retrieval_class(self) -> object:
         #returns the specified download class
         class_name = self.config['processing']['retrieval']['name']
         module_name = 'retrieval'
+        #status
+        logger.info(f'Set retrieval class {class_name}...')
         return self.get_class(module_name, class_name)
     
     def get_meta_class(self) -> object:
@@ -118,6 +128,8 @@ class Configuration(object):
         sensor = self.get_sensor().capitalize()
         class_name = f'{sensor}SwathMeta'
         module_name = 'meta'
+        #status
+        logger.info(f'Set meta class {class_name}...')
         return self.get_class(module_name, class_name)
     
     """ Job::Listing """

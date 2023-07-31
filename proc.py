@@ -6,6 +6,7 @@
 # In[] 
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
+from loguru import logger
 
 from iotools import ListingIO, ModisSwathIO
 from data import ListingData, SwathData
@@ -51,6 +52,10 @@ class ModisListingProcessor(ListingProcessor):
                        'aqua': 'MYD'
                        }
         
+        #counters for download failures
+        self.critical_download_failures = 5
+        self.current_download_failures = 0
+        
         
     """ High-level functions """
     
@@ -79,7 +84,9 @@ class ModisListingProcessor(ListingProcessor):
         #create listing directory if necessary
         path = os.path.join(path, LISTING_FOLDER)
         if not os.path.isdir(path):
-            os.makedirs(path)   
+            os.makedirs(path) 
+        #status
+        logger.info(f'Set listing output directory: {path}')
         self.lstout = path
         
         
@@ -147,15 +154,12 @@ class ModisListingProcessor(ListingProcessor):
         #get url to download from
         download_url = self.get_current_url(url_type)
         
-        try:
-            #call download function
-            status = self.download_listing(download_url)
-                    
-            #return status
-            return status
-        except:
-            #TODO needs improvemenet
-            return False
+        #call download function
+        status = self.download_listing(download_url)
+                
+        #return status
+        return status
+
 
     
     def process_mxd03_listing_file(self) -> None:
@@ -207,25 +211,41 @@ class ModisListingProcessor(ListingProcessor):
 
         #TODO put this function into the ABC ?!
      
-        print(f'['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
-               f'] - Retrieving listing file...')
-
+        #status
+        logger.info(f'Retrieving listing file...')
+        
         #requests call
         headers = {'Authorization': "Bearer {}".format(self.token)}
         r = requests.get(url, headers=headers)
 
         if r.status_code == 200:
-            print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
-                  '] - Retrieval of file listing complete!')
-            
             self.temporary_listing = self._parse_byte_listing(r.content)
-            
+            #status
+            logger.info(f'Retrieval complete!')
+            #reset counter
+            self.reset_crit_counter()
             return True
         else:
-            print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
-                  '] - Error with file listing retrieval!')
-        
+            #status
+            logger.info(f'Retrieval incomplete!')
+            logger.error(f'Error with file listing retrieval!')
+            #increase coutner
+            self.increase_crit_counter()
             return False
+        
+        
+    """ Download management """
+    def increase_crit_counter(self) -> None:
+        self.current_download_failures += 1
+        if self.current_download_failures == self.critical_download_failures:
+            msg = f'Critical value ({self.critical_download_failures}) of '\
+                f'download failures reached!'
+            logger.critical(msg)
+            sys.exit()
+            
+    def reset_crit_counter(self) -> None:
+        self.current_download_failures = 0
+    
         
     """ I/O Management """    
     def save_listing(self) -> None:
@@ -357,7 +377,12 @@ class ModisRetrievalProcessor(RetrievalProcessor):
     file listing process
     """
     def __init__(self):
+        #aoi
         self.overlapping_aois = None
+        
+        #counters for download failures
+        self.critical_download_failures = 5
+        self.current_download_failures = 0
     
     """ High-level functions """
     
@@ -374,6 +399,8 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         #output directory
         RAW_FOLDER = 'tmp'
         
+        #status
+        logger.info(f'Set processed output directory: {path}')
         #set output directory
         self.out = path
         
@@ -381,6 +408,8 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         path = os.path.join(path, RAW_FOLDER)
         if not os.path.isdir(path):
             os.makedirs(path)   
+        #status
+        logger.info(f'Set temporary output directory: {path}')
         self.rawout = path
         
         
@@ -470,9 +499,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         return lst.iloc[idx:,:]
     
 
-    def get_swath_files(self) -> None:
-        #TODO this needs some error/exception handling
-        
+    def get_swath_files(self) -> None:       
         #retieve list of currently temporarily stored/downloaded files
         downloaded_files = [f.name for f in os.scandir(self.rawout) 
                             if f.is_file()]
@@ -511,25 +538,25 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         swath = url.split('/')[-1]
 
         #status
-        print(f'['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
-               f'] - Retrieving {swath}...')
+        logger.info(f'Retrieving swath file: {swath}')
 
         #requests call
         headers = {'Authorization': "Bearer {}".format(self.token)}
         r = requests.get(url, headers=headers)
 
         if r.status_code == 200:
-            print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
-                  '] - Retrieval of swath complete!')
             #store downloaded swath
             with open(os.path.join(self.out, swath), "wb") as f:
                 f.write(r.content)
-            
+            #status
+            logger.info(f'Retrieval complete!')
+            self.reset_crit_counter()
             return True
         else:
-            print('['+str(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))+\
-                  '] - Error with swath retrieval!')
-        
+            #status
+            logger.info(f'Retrieval incomplete!')
+            logger.error(f'Error with swath retrieval!')
+            self.increase_crit_counter()
             return False
         
     def update_meta_info(self, swaths: tuple) -> None:
@@ -572,6 +599,19 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         self.io.close()
     
         
+    """ Download management """
+    def increase_crit_counter(self) -> None:
+        self.current_download_failures += 1
+        if self.current_download_failures == self.critical_download_failures:
+            msg = f'Critical value ({self.critical_download_failures}) of '\
+                f'download failures reached!'
+            logger.critical(msg)
+            sys.exit()
+            
+    def reset_crit_counter(self) -> None:
+        self.current_download_failures = 0
+        
+        
     """ Resample procedure """
     def identify_resample_aois(self, df: pd.DataFrame, swath: str) -> list:
         """
@@ -606,6 +646,8 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         self.resampling.add_groups_to_resample_stack()
         #resample the data
         for aoi in self.overlapping_aois:
+            #status
+            logger.info(f'Resampling to grid: {aoi}')
             self.resampling.resample(aoi)
         #add to data container
         resampled_data = self.resampling.get_resampled_data()
@@ -632,7 +674,10 @@ class ModisRetrievalProcessor(RetrievalProcessor):
     def create_swath(self, aoi: str = None) -> None:
         FILENAME = self.compile_output_swath_name(aoi)
         FILEPATH = os.path.join(self.out, FILENAME)
+        #status
+        logger.info(f'Saving to file: {FILENAME}')
         self.io.save(FILEPATH)
+    
     
     def compile_output_swath_name(self, aoi: str = None) -> str:
         #correct processing state extension
@@ -648,6 +693,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         #compile and return
         return f'{CARRIER}_{SENSOR}_{DATE}_{EXT}.h5'
     
+    
     def get_date_from_swath_file(self):
         #get swath id
         swath = self.get_swath_id()['mxd02']
@@ -660,6 +706,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         hhmm = raw_date.strftime('%H%M%S')
         #return
         return f'{yyjj}_{hhmm}'
+    
     
     def set_variable(self, var: str, aoi: str = None) -> None:
         #get variable specific output specifications
@@ -674,18 +721,27 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         #pass data to io
         self.io.set_var(INPATH, DS, ATTR)
 
+
     """ Cleanup """
     def cleanup(self):
         #get swath id
         swaths = self.get_swath_id()
         #remove swaths
-        self._remove_swath(swaths['mxd03'])
-        self._remove_swath(swaths['mxd02'])
+        mxd03 = swaths['mxd03']
+        logger.info(f'Removing downloaded file: {mxd03}')
+        self._remove_swath(mxd03)
+        mxd02 = swaths['mxd02']
+        logger.info(f'Removing downloaded file: {mxd02}')
+        self._remove_swath(mxd02)
         
     def _remove_swath(self, swath: str) -> None:
         FILENAME = swath
         FILEPATH = os.path.join(self.rawout, FILENAME)
-        self.io.cleanup(FILEPATH)
+        try:
+            self.io.cleanup(FILEPATH)
+            logger.info(f'Removal successful!')
+        except:
+            logger.error(f'Removal of {FILENAME} failed!')
 
 
 

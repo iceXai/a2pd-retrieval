@@ -7,6 +7,7 @@
 # In[] 
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
+from loguru import logger
 
 from proc import ModisListingProcessor
 
@@ -144,6 +145,8 @@ class ModisListing(Listing):
     """
     
     def setup_listing_processor(self) -> None:
+        #status
+        logger.info(f'Setup listing processor...')
         #set processor
         self.proc = ModisListingProcessor()
         self.proc.set_carrier(self.carrier)
@@ -155,7 +158,9 @@ class ModisListing(Listing):
         self.proc.initialize_listing_io()
 
     
-    def compile_file_listing(self) -> pd.DataFrame:        
+    def compile_file_listing(self) -> pd.DataFrame:
+        #status
+        logger.info(f'Compile file listing...')        
         #retrieve date strings for specified processing period
         date_str = self.get_date_strings()
         
@@ -177,8 +182,6 @@ class ModisListing(Listing):
 
             #continue with next date in case something went wrong
             if not DOWNLOAD_COMPLETED:
-                ##TODO
-                #log failures!
                 continue
             
             #process listing
@@ -190,8 +193,6 @@ class ModisListing(Listing):
 
             #continue with next date in case something went wrong
             if not DOWNLOAD_COMPLETED:
-                ##TODO
-                #log failures!
                 continue
             
             #further process listing; adding MXD02 file names by matching
