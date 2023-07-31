@@ -29,7 +29,7 @@ class RetrievalJob(object):
         -------
         None.
 
-        """
+        """        
         #calls and initiates the configuration
         self.cfg = cfg.Configuration()
     

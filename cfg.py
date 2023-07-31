@@ -26,6 +26,24 @@ class Configuration(object):
         #loads the yaml file and reads it content
         with open(os.path.join(os.getcwd(), 'cfg', 'config.yaml')) as f:
             self.config = yaml.load(f,Loader=yaml.FullLoader)
+        #configure the logger
+        self.configure_logger()
+            
+    """ Logger Setup """
+    def configure_logger(self) -> None:
+        path = self.get_output_path()
+        LOG_PATH = os.path.join(path,'log')
+        if not os.path.isdir(LOG_PATH):
+            os.makedirs(LOG_PATH)
+        CARRIER = self.get_carrier()
+        SENSOR = self.get_sensor()
+        HEMISPHERE = self.get_hemisphere()
+        VERSION = self.get_version()
+        START = self.get_start_date().strftime('%Y%j')
+        END = self.get_stop_date().strftime('%Y%j')
+        NAME = f'{CARRIER}_{SENSOR}_{HEMISPHERE}_{VERSION}_{START}-{END}.log'
+        logger.add(f'{LOG_PATH}/{NAME}')
+        
             
     """Helper Functions"""
     def get_class(self, module_name: str, class_name: str) -> object:
