@@ -165,7 +165,10 @@ class ModisListing(Listing):
         date_str = self.get_date_strings()
         
         #loop over all dates
-        for yy, jj in date_str: 
+        for yy, jj in date_str:
+            #status
+            logger.info(f'Retrieving file listing for {jj}/{yy}...')
+
             #set current urls/listing file names
             self.proc.set_current_url(yy, jj)
             self.proc.set_current_lfn(yy, jj)
@@ -173,6 +176,7 @@ class ModisListing(Listing):
             #check whether listing for specified date already exists
             LISTING_EXISTS = self.proc.check_for_existing_listing()
             if LISTING_EXISTS:
+                logger.info(f'File listing does already exist!')
                 self.proc.load_listing()
                 continue
             

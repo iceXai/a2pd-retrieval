@@ -95,7 +95,7 @@ class Resample(object):
         rsd = {}
     
         #retrieve aoi grid to resample to
-        aoi_grid = self.aoi[aoi].get_aoi_grid()
+        aoi_grid = self.aoi.get_aoi(aoi).get_grid()
 
         #return reference-grid latitude/longitude
         ref_grid_lon, ref_grid_lat = aoi_grid.get_lonlats()

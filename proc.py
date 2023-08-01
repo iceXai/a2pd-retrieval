@@ -283,26 +283,14 @@ class ModisListingProcessor(ListingProcessor):
         #check for overlap to exclude non-matching links from listing
         overlap_aois = []
         
-        #create polygon/bounding box from swath coordinates
-        lon = np.array([float(lst_entry[1]),float(lst_entry[2]),
-                        float(lst_entry[3]),float(lst_entry[4])])
-        lat = np.array([float(lst_entry[5]),float(lst_entry[6]),
-                        float(lst_entry[7]),float(lst_entry[8])])
-            
-        #create swath polyon
-        polygon_coordinates = [[lat[0],lon[0]],
-                               [lat[3],lon[3]],
-                               [lat[2],lon[2]],
-                               [lat[1],lon[1]],
-                               [lat[0],lon[0]]]
+        #get aois to process
+        aois_to_check = self.aoi.get_aois()
         
         #check for overlap of bounding box with predefined aoi polygons
-        for aoi in self.aoi:    
-            #set swath polygon
-            self.aoi[aoi].set_swath_polygon(polygon_coordinates)
-            
+        for aoi in aois_to_check:    
             #check for overlap
-            overlap, frac = self.aoi[aoi].check_overlap_with_aoi()
+            grid = self.aoi.get_aoi(aoi)
+            overlap, frac = grid.check_overlap_with_aoi(lst_entry)
             if overlap and frac >= 5.0:
                 overlap_aois.append([aoi,frac])
         
