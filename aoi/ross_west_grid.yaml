@@ -1,0 +1,17 @@
+# Detailed meta/grid specifications of area_id [short name], 
+# description [long_name], proj_id [in general 'lonlat'],
+# projection [source projection EPSG code; e.g., EPSG:4326],
+# width/height [number of pixels per grid in x/y direction],
+# and area_extent [as tuple (LonMin, LatMin, LonMax, LatMax)
+# in decimal degrees from -180:180 and -90:90, respectively]
+meta:
+    hemisphere: south
+
+grid:
+    area_id: ross
+    description: Antarctic Ross Sea Grid
+    proj_id: lonlat
+    projection: EPSG:4326
+    width: 530
+    height: 195
+    area_extent: (-180.,-78.75,-158,-77.0)

@@ -1,0 +1,28 @@
+# Reference file for all supported AOI's
+aois:
+    #list of supported aois with corresponding
+    #grid-specification file
+    amundsen: amundsen_grid.yaml
+    atka: atka_grid.yaml
+    barrier: barrier_grid.yaml
+    berkner: berkner_grid.yaml
+    brunt: brunt_grid.yaml
+    dalton: dalton_grid.yaml
+    darnley: darnley_grid.yaml
+    dibble: dibble_grid.yaml
+    getz-east: getz_east_grid.yaml
+    getz-west: getz_west_grid.yaml
+    greater-amundsen: greater_amundsen_grid.yaml
+    larsen-b: larsen_b_grid.yaml
+    larsen-c: larsen_c_grid.yaml
+    mertz: metz_grid.yaml
+    pineisland: pineisland_grid.yaml
+    prydz: prydz_grid.yaml
+    ronne: ronne_grid.yaml
+    ross-east: ross_east_grid.yaml
+    ross-west: ross_west_grid.yaml
+    shackleton: shackleton_grid.yaml
+    thwaites: thwaites_grid.yaml
+    tnb: terranovabay_grid.yaml
+    vincennes: vincennes_grid.yaml
+    weddell: weddell_grid.yaml
