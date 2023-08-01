@@ -37,11 +37,10 @@ class Configuration(object):
             os.makedirs(LOG_PATH)
         CARRIER = self.get_carrier()
         SENSOR = self.get_sensor()
-        HEMISPHERE = self.get_hemisphere()
         VERSION = self.get_version()
         START = self.get_start_date().strftime('%Y%j')
         END = self.get_stop_date().strftime('%Y%j')
-        NAME = f'{CARRIER}_{SENSOR}_{HEMISPHERE}_{VERSION}_{START}-{END}.log'
+        NAME = f'{CARRIER}_{SENSOR}_{VERSION}_{START}-{END}.log'
         logger.add(f'{LOG_PATH}/{NAME}')
         
             
@@ -65,10 +64,6 @@ class Configuration(object):
     def get_carrier(self) -> str:
         #returns the carrier of the sensor
         return self.config['meta']['carrier'].lower()
-
-    def get_hemisphere(self) -> str:
-        #returns specified hemisphere
-        return self.config['meta']['hemisphere'].lower()
     
     def get_version(self) -> str:
         #returns the version needed for the meta class
@@ -107,8 +102,7 @@ class Configuration(object):
         #sets the aoi definitions based on the specified aoi's
         aoi_dict = {}
         aoi_specified = self.get_aoi()
-        hemisphere = self.get_hemisphere()
-        
+        logger.info(f'AOI:{aoi_specified}')
         for aoi in aoi_specified:
             aoi = aoi.lower()
             aoi_dict[aoi] = AOI(aoi = aoi, 
