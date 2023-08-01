@@ -26,7 +26,7 @@ class Meta(ABC):
         #loads the yaml file and reads it content
         fn = f'{sensor}_{version}.yaml'
         with open(os.path.join(os.getcwd(), 'meta', fn)) as f:
-            self.meta = yaml.load(f,Loader=yaml.FullLoader)       
+            self.meta = yaml.safe_load(f)       
             
     def get_variables(self) -> list:
         #returns the variable tags to be used by all other instances
@@ -66,6 +66,8 @@ class ModisSwathMeta(Meta):
     sensor-specific data processing
     """
     def get_var_input_file_index(self, var: str) -> int:
+        #for MODIS the input data stems from two different swath files
+        #making it necessary to open both, but both feature variable names
         indices = {'lat': 0,
                    'lon': 0,
                    'sat_zen': 0,

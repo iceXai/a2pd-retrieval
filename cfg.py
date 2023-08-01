@@ -4,7 +4,7 @@
 """
 
 # In[]
-from aoi import AOI
+from aoi import AoiData
 
 from loguru import logger
 
@@ -25,7 +25,7 @@ class Configuration(object):
         logger.info('Load configuration file...')
         #loads the yaml file and reads it content
         with open(os.path.join(os.getcwd(), 'cfg', 'config.yaml')) as f:
-            self.config = yaml.load(f,Loader=yaml.FullLoader)
+            self.config = yaml.safe_load(f)
         #configure the logger
         self.configure_logger()
             
@@ -92,22 +92,17 @@ class Configuration(object):
     
 
     """ Configfile::AOI """    
-    def get_aoi(self) -> list:
+    def get_aois(self) -> list:
         #returns list of aois to be used on the current job
         return self.config['meta']['aoi']
     
-    def compile_aoi_info(self) -> None:
-        #status
-        logger.info('Compile AOI information...')
-        #sets the aoi definitions based on the specified aoi's
-        aoi_dict = {}
-        aoi_specified = self.get_aoi()
-        logger.info(f'AOI:{aoi_specified}')
-        for aoi in aoi_specified:
-            aoi = aoi.lower()
-            aoi_dict[aoi] = AOI(aoi = aoi, 
-                                hemisphere = hemisphere)
-        return aoi_dict
+    def compile_aoi_data(self) -> None:
+        #returns the user specified aoi's
+        user_aois = self.get_aois()
+        #initiates and populates the AOI Data Handler
+        aoi = AoiData(user_aois)
+        #returns to caller
+        return aoi
     
     
     """ Configfile::Processing Modules """    
