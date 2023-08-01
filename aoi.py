@@ -8,312 +8,124 @@
 import pyresample as pr
 import numpy as np
 
+import os
+import yaml
+
 from osgeo import ogr
 from osgeo import osr
 from osgeo import gdal
-
-#from pyproj import CRS
+from loguru import logger
 
 
 # In[]
-class AOI(object):
-    """
-    class to keep all necessary aoi specifications
+class AoiData(object):
+    def __init__(self, aois: list):
+        #status
+        logger.info('Compile AOI grid specifications...')
+        #loads the yaml reference file
+        with open(os.path.join(os.getcwd(), 'aoi', 'list_of_aois.yaml')) as f:
+            refaois = yaml.safe_load(f)
+        self.refs = refaois['aois']
+        #allocate container
+        aoi_dict = {}
+        #loop over all user specified aoi's
+        for aoi in aois:
+            #status
+            logger.info(f'Initiate AOI: {aoi}')
+            #get file name of grid file
+            aoi = aoi.lower()
+            fn = self.get_aoi_grid_file(aoi)
+            #get aoi grid
+            grid = self.initiate_aoi_grid(fn)
+            #store it
+            aoi_dict[aoi] = grid
+        
+    def get_aoi_grid_file(self, aoi: str) -> str:
+        return self.refs[aoi]
     
-    TODO: this could probably use some refactoring and clean-up as well but 
-          for now keep as is
-    """
-    def __init__(self,aoi,hemisphere):
-        #store hemisphere to use
-        self.hemisphere      = hemisphere
-        #transformations/projections for overlap check
-        self.prj_epsg_source = 4326
-        #store gdal version
-        gdal_version         = gdal.__version__
-        self.gdal            = int(gdal_version[0])
-        #placeholder for swath and overlap check
-        self.swath           = None
-        #set the specified aoi
-        self.set_aoi(aoi)
+    def initiate_aoi_grid(self, grid_file: str) -> object:
+        return AoiGrid(grid_file)
+    
+    def get_aois(self) -> list:
+        return aoi_dict.keys()
+    
+    def get_aoi(self, aoi: str) -> object:
+        return aoi_dict[aoi]
 
-    def get_aoi_grid(self):
+
+# In[]
+class AoiGrid(object):
+    def __init__(self, grid_file: str):
+        #loads the yaml reference file
+        with open(os.path.join(os.getcwd(), 'aoi', grid_file)) as f:
+            self.grid_def = yaml.safe_load(f)
+
+        #set the aoi grid
+        self.set_grid()
+        #set derived aoi polygon
+        self.set_aoi_poly()
+        #set the target EPSG code for any projection needed in the 
+        #overlap check
+        self.set_target_epsg()
+        
+    def get_gdal_version(self) -> int:
+        GDAL_VERSION = gdal.__version__[0]
+        return int(GDAL_VERSION)
+        
+    def get_meta_spec(self, specification: str) -> str:
+        return self.grid_def['meta'][specification]
+
+    def get_hemisphere(self) -> str:
+        return self.get_meta_spec('hemisphere').lower()
+        
+    def get_grid_spec(self, specification: str) -> str:
+        return self.grid_def['grid'][specification]
+    
+    def get_area_id(self) -> str:
+        return self.get_grid_spec('area_id')
+    
+    def get_description(self) -> str:
+        return self.get_grid_spec('description')
+    
+    def get_proj_id(self) -> str:
+        return self.get_grid_spec('proj_id')
+    
+    def get_projection(self) -> str:
+        return self.get_grid_spec('projection')
+    
+    def get_width(self) -> int:
+        return self.get_grid_spec('width')
+    
+    def get_height(self) -> int:
+        return self.get_grid_spec('height')
+    
+    def get_area_extent(self) -> tuple:
+        EXTENT = self.get_grid_spec('area_extent')
+        return tuple([float(e) for e in EXTENT[1:-1].split(',')])
+        
+    def set_grid(self) -> None:
+        ID       = self.get_area_id()
+        LONGNAME = self.get_description()
+        PROJID   = self.get_proj_id()
+        PROJ     = self.get_projection()
+        WIDTH    = self.get_width()
+        HEIGHT   = self.get_height()
+        EXTENT   = self.get_area_extent()
+        #pyresample area definition
+        self.grid = pr.geometry.AreaDefinition(ID, LONGNAME, PROJID, PROJ,
+                                               WIDTH, HEIGHT, EXTENT)
+        
+    def get_grid(self) -> object:
         return self.grid
-        
-    def get_aoi_polygon(self):
-        return self.polygon
-    
-    def set_swath_polygon(self,swath_coordinates):     
-        self.swath = self.create_swath_poly(swath_coordinates)
-        
-    def get_swath_polygon(self):
-        return self.swath
-    
-    def check_overlap_with_aoi(self):
-        #additional check in case of wrong hemisphere due to projection problems 
-        swath_env = self.swath.GetEnvelope()
-        if self.hemisphere == 'south':
-            if self.gdal >= 3:
-                inHemisphere = swath_env[0] < (-30.0)
-            else:
-                inHemisphere = swath_env[2] < (-30.0)
-        else:
-            if self.gdal >= 3:
-                inHemisphere = swath_env[0] > (30.0)
-            else:
-                inHemisphere = swath_env[2] > (30.0)
-            
-        #check for overlap
-        if self.swath != None:
-            #define soure/target spatial reference
-            insrs = osr.SpatialReference()
-            insrs.ImportFromEPSG(self.prj_epsg_source)
-            outsrs = osr.SpatialReference()
-            outsrs.ImportFromEPSG(self.prj_epsg_target)
-            #set up transformation
-            crs_transformation = osr.CoordinateTransformation(insrs,outsrs)
-            #transform aoi/swath polygons
-            self.polygon.Transform(crs_transformation)
-            self.swath.Transform(crs_transformation)
 
-            #check for overlap
-            intersect_geom = self.polygon.Intersection(self.swath.Buffer(0))
-            if intersect_geom is not None and intersect_geom.Area()>0 \
-                and inHemisphere:
-                overlap = True
-                frac = np.round(intersect_geom.Area()/
-                                self.polygon.Area()*100.,2)
-            else:
-                overlap = False
-                frac = 0.0
-            
-            #reverse transformation
-            crs_transformation = osr.CoordinateTransformation(outsrs,insrs)
-            #transform aoi/swath polygons
-            self.polygon.Transform(crs_transformation)
-            self.swath.Transform(crs_transformation)
-            
-            #return
-            return overlap, frac
-    
-    def set_aoi(self,aoi):
-        #choose grid/polygon definitions
-        if aoi == 'atka':
-            area_id     = 'atkabay'
-            description = 'Antarctic Atka-Bay Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 222
-            height      = 111
-            area_extent = (-11.0,-71.0,-5.0,-70.0)
-        elif aoi == 'berkner':
-            area_id     = 'berkner'
-            description = 'Antarctic Berkner Island Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 510
-            height      = 390
-            area_extent = (-50.0,-78.5,-30.0,-75.0)
-        elif aoi == 'brunt':
-            area_id     = 'brunt'
-            description = 'Antarctic Brunt Ice Shelf Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 460
-            height      = 445
-            area_extent = (-34.0,-77.0,-18.0,-73.0)
-        elif aoi == 'weddell':
-            area_id     = 'weddell'
-            description = 'Antarctic Southern Weddell Sea Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 1290
-            height      = 1060
-            area_extent = (-66.0,-78.5,-18.0,-69.0)
-        elif aoi == 'tnb':
-            area_id     = 'terranovabay'
-            description = 'Antarctic Terra Nova Bay Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 560
-            height      = 300
-            area_extent = (160.0,-77.5,170.0,-72.5)
-        elif aoi == 'ross-west':
-            area_id     = 'ross'
-            description = 'Antarctic Ross Sea Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 530
-            height      = 195
-            area_extent = (-180.,-78.75,-158,-77.0)
-        elif aoi == 'ross-east':
-            area_id     = 'ross'
-            description = 'Antarctic Ross Sea Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 490
-            height      = 190
-            area_extent = (160.,-78.2,180,-76.5)
-        elif aoi == 'prydz':
-            area_id     = 'prydzbay'
-            description = 'Antarctic Prydz Bay Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 1300
-            height      = 556
-            area_extent = (60.0,-70.0,90.0,-65.0)
-        elif aoi == 'darnley':
-            area_id     = 'capedarnley'
-            description = 'Antarctic Cape Darnley Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 435
-            height      = 445
-            area_extent = (65.0,-70.0,75.0,-66.0)
-        elif aoi == 'barrier':
-            area_id     = 'barrier'
-            description = 'Antarctic West Ice Shelf (Barrier) Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 652
-            height      = 556
-            area_extent = (75.0,-70.0,90.0,-65.0)
-        elif aoi == 'mertz':
-            area_id     = 'mertz'
-            description = 'Antarctic Mertz Glacier Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 435
-            height      = 278
-            area_extent = (140.0,-68.0,150.0,-65.5)
-        elif aoi == 'vincennes':
-            area_id     = 'vincennesbay'
-            description = 'Antarctic Vincennes Bay Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 266
-            height      = 334
-            area_extent = (126.0,-68.0,132.0,-65.0)
-        elif aoi == 'amundsen':
-            area_id     = 'amundsen'
-            description = 'Antarctic Amundsen Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 260
-            height      = 334
-            area_extent = (-116.0,-75.0,-108.0,-72.0)
-        elif aoi == 'greater-amundsen':
-            area_id     = 'greater-amundsen'
-            description = 'Antarctic Greater Amundsen Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 520
-            height      = 390
-            area_extent = (-116.0,-75.5,-100.0,-72.0)
-        elif aoi == 'getz-west':
-            area_id     = 'getz-west'
-            description = 'Antarctic Western Getz Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 368
-            height      = 222
-            area_extent = (-135.0,-75.0,-123.0,-73.0)
-        elif aoi == 'getz-east':
-            area_id     = 'getz-east'
-            description = 'Antarctic Eastern Getz Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 306
-            height      = 222
-            area_extent = (-120.0,-75.0,-110.0,-73.0)
-        elif aoi == 'dibble':
-            area_id     = 'dibble'
-            description = 'Antarctic Dibble Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 272
-            height      = 222
-            area_extent = (132.0,-67.0,138.0,-65.0)
-        elif aoi == 'dalton':
-            area_id     = 'dalton'
-            description = 'Antarctic Dalton Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 716
-            height      = 278
-            area_extent = (112.0,-67.5,128.0,-65.0)         
-        elif aoi == 'shackleton':
-            area_id     = 'shackleton'
-            description = 'Antarctic Shackleton Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 448
-            height      = 390
-            area_extent = (90.0,-67.5,100.0,-64.0)
-        elif aoi == 'ronne':
-            area_id     = 'ronne'
-            description = 'Antarctic Ronne Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 540
-            height      = 490
-            area_extent = (-64.0,-78.0,-45.0,-73.6)
-        elif aoi == 'thwaites':
-            area_id     = 'thwaites'
-            description = 'Antarctic Thwaites Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 208
-            height      = 156
-            area_extent = (-111.0,-75.5,-104.0,-74.1)
-        elif aoi == 'pineisland':
-            area_id     = 'pineisland'
-            description = 'Antarctic PineIsland Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 174
-            height      = 390
-            area_extent = (-105.5,-75.5,-100.0,-72.0)
-        elif aoi == 'larsen-b':
-            area_id     = 'larsen-b'
-            description = 'Antarctic Larsen-B Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 256
-            height      = 156
-            area_extent = (-62.5,-66.2,-57.0,-64.8)
-        elif aoi == 'larsen-c':
-            area_id     = 'larsen-c'
-            description = 'Antarctic Larsen-C Grid'
-            proj_id     = 'lonlat'
-            projection  = f'EPSG:{self.prj_epsg_source}'
-            width       = 320
-            height      = 334
-            area_extent = (-65.5,-69.0,-58.0,-66.0)          
-        else:
-            raise Exception('Unrecognized AOI-tag specified!')
-    
-        #create area definition
-        self.grid = pr.geometry.AreaDefinition(area_id,description,proj_id,
-                                                projection,width,height,
-                                                area_extent)
-            
-        #store polygon and grid specs
-        self.polygon = self.create_aoi_poly()
-        
-        #store target projection epsg code for overlap check
-        if self.hemisphere == 'south':
-            self.prj_epsg_target = 6932
-        else:
-            self.prj_epsg_target = 6931
-        
-
-    def create_aoi_poly(self):
+    def set_aoi_poly(self) -> None:
         #get lat/lon from grid definition
         lon, lat = self.grid.get_lonlats()
         
         #create ring
         ring = ogr.Geometry(ogr.wkbLinearRing)
-        if self.gdal >= 3:
+        GDAL_VERSION = self.get_gdal_version()
+        if GDAL_VERSION >= 3:
             ring.AddPoint(lat[ 0, 0],lon[ 0, 0])
             ring.AddPoint(lat[-1, 0],lon[-1, 0])
             ring.AddPoint(lat[-1,-1],lon[-1,-1])
@@ -328,26 +140,119 @@ class AOI(object):
             
         #create polygon from ring
         poly = ogr.Geometry(ogr.wkbPolygon)
-        poly.AddGeometry(ring)
-
-        #return ogr polygon
-        return poly
+        poly.AddGeometry(ring) 
+        #set ogr polygon
+        self.aoi_poly = poly
         
+    def get_aoi_poly(self) -> object:
+        return self.aoi_poly
     
-    def create_swath_poly(self,swath_coords):
+    def set_target_epsg(self) -> None:
+        HEMISPHERE = self.get_hemisphere()
+        if HEMISPHERE == 'south':
+            self.target_epsg = 6932
+        else:
+            self.target_epsg = 6931
+            
+    def get_target_epsg(self) -> int:
+        return self.target_epsg
+    
+    def check_overlap_with_aoi(self, listing_entry: list) -> (bool, list):
+        """
+        Parameters
+        ----------
+        listing_entry : list
+            Entry of the current retrieved listing with among other parameters 
+            the swath bouding ring coordinates
+
+        Returns
+        -------
+        (bool, list)
+            Returns wether the swath lies within this AOI and states in that 
+            case also the fractional coverage
+            
+        This is the primary high-level function to be called to check wether 
+        any given swath is within the bounds of the specified AOI by first 
+        creating a swath polygon and then checking its intersection with the
+        already computed AOI polygon
+        """
+        
+        """ Create Swath Polygon """
+        #create polygon/bounding box from swath coordinates in listing entry
+        lon = np.array([float(listing_entry[1]),float(listing_entry[2]),
+                        float(listing_entry[3]),float(listing_entry[4])])
+        lat = np.array([float(listing_entry[5]),float(listing_entry[6]),
+                        float(listing_entry[7]),float(listing_entry[8])])
+            
+        #compile swath polyon
+        coordinates = [[lat[0],lon[0]],
+                       [lat[3],lon[3]],
+                       [lat[2],lon[2]],
+                       [lat[1],lon[1]],
+                       [lat[0],lon[0]]]
         #create ring
         ring = ogr.Geometry(ogr.wkbLinearRing)
+        
         #fill it
-        if self.gdal >= 3:
-            for coord in swath_coords:
+        GDAL_VERSION = self.get_gdal_version()
+        if GDAL_VERSION >= 3:
+            for coord in coordinates:
                 ring.AddPoint(float(coord[0]),float(coord[1]))
         else:
-            for coord in swath_coords:
+            for coord in coordinates:
                 ring.AddPoint(float(coord[1]),float(coord[0]))
             
         #create polygon from ring
-        poly = ogr.Geometry(ogr.wkbPolygon)
-        poly.AddGeometry(ring)
+        SWATH_POLY = ogr.Geometry(ogr.wkbPolygon)
+        SWATH_POLY.AddGeometry(ring)
 
-        #return ogr polygon
-        return poly
+        #validate swath being in the correct hemisphere 
+        ENVELOPE = SWATH_POLY.GetEnvelope()
+        HEMISPHERE = self.get_hemisphere()
+        if HEMISPHERE == 'south':
+            if GDAL_VERSION >= 3:
+                inHemisphere = ENVELOPE[0] < (-30.0)
+            else:
+                inHemisphere = ENVELOPE[2] < (-30.0)
+        else:
+            if GDAL_VERSION >= 3:
+                inHemisphere = ENVELOPE[0] > (30.0)
+            else:
+                inHemisphere = ENVELOPE[2] > (30.0)
+            
+        """ Check for Overlap with AOI Polygon"""
+        #define soure/target spatial reference
+        SOURCE_EPSG = self.get_projection()
+        TARGET_EPSG = self.get_target_epsg()
+        insrs = osr.SpatialReference()
+        insrs.ImportFromEPSG(SOURCE_EPSG)
+        outsrs = osr.SpatialReference()
+        outsrs.ImportFromEPSG(TARGET_EPSG)
+        #set up transformation
+        crs_transformation = osr.CoordinateTransformation(insrs,outsrs)
+        #transform aoi/swath polygons
+        AOI_POLY = self.get_aoi_poly()
+        AOI_POLY.Transform(crs_transformation)
+        SWATH_POLY.Transform(crs_transformation)
+
+        #check for overlap
+        INTERSECT_GEOMETRY = AOI_POLY.Intersection(SWATH_POLY.Buffer(0))
+        if INTERSECT_GEOMETRY is not None \
+            and INTERSECT_GEOMETRY.Area()>0 \
+            and inHemisphere:
+            OVERLAP = True
+            FRACTION = np.round(INTERSECT_GEOMETRY.Area()/
+                                AOI_POLY.Area()*100.,2)
+        else:
+            OVERLAP = False
+            FRACTION = 0.0
+        
+        #TODO is this still necessary?!
+        #reverse transformation
+        crs_transformation = osr.CoordinateTransformation(outsrs,insrs)
+        #transform aoi/swath polygons
+        AOI_POLY.Transform(crs_transformation)
+        SWATH_POLY.Transform(crs_transformation)
+        
+        #return to caller
+        return OVERLAP, FRACTION
