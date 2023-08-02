@@ -52,9 +52,8 @@ class ModisListingProcessor(ListingProcessor):
                        'aqua': 'MYD'
                        }
         
-        #counters for download failures
-        self.critical_download_failures = 5
-        self.current_download_failures = 0
+        #download error management
+        self.error = DownloadErrorManager()
         
         
     """ High-level functions """
@@ -223,28 +222,15 @@ class ModisListingProcessor(ListingProcessor):
             #status
             logger.info(f'Retrieval complete!')
             #reset counter
-            self.reset_crit_counter()
+            self.error.reset_crit_counter()
             return True
         else:
             #status
             logger.info(f'Retrieval incomplete!')
             logger.error(f'Error with file listing retrieval!')
             #increase coutner
-            self.increase_crit_counter()
+            self.error.increase_crit_counter()
             return False
-        
-        
-    """ Download management """
-    def increase_crit_counter(self) -> None:
-        self.current_download_failures += 1
-        if self.current_download_failures == self.critical_download_failures:
-            msg = f'Critical value ({self.critical_download_failures}) of '\
-                f'download failures reached!'
-            logger.critical(msg)
-            sys.exit()
-            
-    def reset_crit_counter(self) -> None:
-        self.current_download_failures = 0
     
         
     """ I/O Management """    
@@ -369,9 +355,8 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         #aoi
         self.overlapping_aois = None
         
-        #counters for download failures
-        self.critical_download_failures = 5
-        self.current_download_failures = 0
+        #download error management
+        self.error = DownloadErrorManager()
     
     """ High-level functions """
     
@@ -539,13 +524,13 @@ class ModisRetrievalProcessor(RetrievalProcessor):
                 f.write(r.content)
             #status
             logger.info(f'Retrieval complete!')
-            self.reset_crit_counter()
+            self.error.reset_crit_counter()
             return True
         else:
             #status
             logger.info(f'Retrieval incomplete!')
             logger.error(f'Error with swath retrieval!')
-            self.increase_crit_counter()
+            self.error.increase_crit_counter()
             return False
         
     def update_meta_info(self, swaths: tuple) -> None:
@@ -586,19 +571,6 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         
     def close_swath(self) -> None:
         self.io.close()
-    
-        
-    """ Download management """
-    def increase_crit_counter(self) -> None:
-        self.current_download_failures += 1
-        if self.current_download_failures == self.critical_download_failures:
-            msg = f'Critical value ({self.critical_download_failures}) of '\
-                f'download failures reached!'
-            logger.critical(msg)
-            sys.exit()
-            
-    def reset_crit_counter(self) -> None:
-        self.current_download_failures = 0
         
         
     """ Resample procedure """
@@ -734,3 +706,31 @@ class ModisRetrievalProcessor(RetrievalProcessor):
 
 
 
+# In[]
+# In[]
+# In[]
+
+"""
+Misc: Common Functions/Classes
+"""
+
+class DownloadErrorManager(object):
+    """
+    Convenience class to handle the download error management for swath and 
+    listing retrieval to reduce boilerplate code
+    """
+    def __init__(self, crit: int = 5):
+        #counters for download failures
+        self.critical_download_failures = crit
+        self.current_download_failures = 0  
+        
+    def increase_crit_counter(self) -> None:
+        self.current_download_failures += 1
+        if self.current_download_failures == self.critical_download_failures:
+            msg = f'Critical value ({self.critical_download_failures}) of '\
+                f'download failures reached!'
+            logger.critical(msg)
+            sys.exit()
+            
+    def reset_crit_counter(self) -> None:
+        self.current_download_failures = 0
