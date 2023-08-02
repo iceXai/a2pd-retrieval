@@ -219,7 +219,7 @@ class ModisListingProcessor(ListingProcessor):
         r = requests.get(url, headers=headers)
 
         if r.status_code == 200:
-            self.temporary_listing = self._parse_byte_listing(r.content)
+            self.temporary_listing = self.parse_byte_listing(r.content)
             #status
             logger.info(f'Retrieval complete!')
             #reset counter
@@ -252,20 +252,21 @@ class ModisListingProcessor(ListingProcessor):
         self.io.set_listing_file_name(self.get_current_lfn())
         self.io.to_csv(self.listing.get_listing())
         
-        
+    
     def load_listing(self) -> None:
         self.io.set_listing_file_name(self.get_current_lfn())
         self.listing.add_to_listing(self.io.from_csv())
         
+        
     def get_listing(self) -> pd.DataFrame:
         return self.listing.get_listing()
     
-
-    """ Low-level functions """
-    def _parse_byte_listing(self, byte_listing) -> list:
+    
+    def parse_byte_listing(self, byte_listing) -> list:
         return byte_listing.decode('UTF-8').split('\n')
     
-    
+
+    """ Low-level functions """  
     def _parse_mxd03_listing(self) -> None:         
         #listing file consists of various meta information w/ 
         #data[0]:=hdf_file_name; data[9:12]:=RingLON; 
