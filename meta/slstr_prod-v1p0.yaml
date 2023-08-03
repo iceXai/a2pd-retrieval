@@ -1,0 +1,162 @@
+# Meta File for the SLSTR sensor (s3a/s3b)
+urls:
+    #retrieval url's for the different data types per sensor
+    s3a:
+        data: https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/450/S3A_SL_1_RBT/
+        meta: https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMetaSentinel3/450/
+    s3b:
+        data: https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/450/S3B_SL_1_RBT/
+        meta: https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMetaSentinel3/450/
+    
+variables:
+    #list of variables (keys) to be used
+    #consistent with following specifications
+    - s7_n
+    - s7_ex_n
+    - s8_n
+    - s8_ex_n
+    - s9_n
+    - s9_ex_n
+    - s7_o
+    - s7_ex_o
+    - s8_o
+    - s8_ex_o
+    - s9_o
+    - s9_ex_o
+    - bayes_n
+    - bayes_o
+    - cloud_n
+    - cloud_o
+    - sol_zen_n
+    - sol_azi_n
+    - sat_zen_n
+    - sat_azi_n
+    - sol_zen_o
+    - sol_azi_o
+    - sat_zen_o
+    - sat_azi_o
+    
+input_specs:
+    #information about file, group, and variable names of the input data, e.g.,
+    #[file, grp, var]
+    lat_n_i: [geodetic_in.nc, null, latitude_in]
+    lon_n_i: [geodetic_in.nc, null, longitude_in]
+    lat_o_i: [geodetic_io.nc, null, latitude_io]
+    lon_o_i: [geodetic_io.nc, null, longitude_io]
+    lat_t: [geodetic_tx.nc, null, latitude_tx]
+    lon_t: [geodetic_tx.nc, null, longitude_tx]
+    s7_n: [S7_BT_in.nc, null, S7_BT_in]
+    s7_ex_n: [S7_BT_in.nc, null, S7_exception_in]
+    s8_n: [S8_BT_in.nc, null, S8_BT_in]
+    s8_ex_n: [S8_BT_in.nc, null, S8_exception_in]
+    s9_n: [S9_BT_in.nc, null, S9_BT_in]
+    s9_ex_n: [S9_BT_in.nc, null, S9_exception_in]
+    s7_o: [S7_BT_io.nc, null, S7_BT_io]
+    s7_ex_o: [S7_BT_io.nc, null, S7_exception_io]
+    s8_o: [S8_BT_io.nc, null, S8_BT_io]
+    s8_ex_o: [S8_BT_io.nc, null, S8_exception_io]
+    s9_o: [S9_BT_io.nc, null, S9_BT_io]
+    s9_ex_o: [S9_BT_io.nc, null, S9_exception_io]
+    bayes_n: [flags_in.nc, null, bayes_in]
+    bayes_o: [flags_io.nc, null, bayes_io]
+    cloud_n: [flags_in.nc, null, cloud_in]
+    cloud_o: [flags_io.nc, null, cloud_io]
+    sol_zen_n: [geometry_tn.nc, null, solar_zenith_tn]
+    sol_azi_n: [geometry_tn.nc, null, solar_azimuth_tn]
+    sat_zen_n: [geometry_tn.nc, null, sat_zenith_tn]
+    sat_azi_n: [geometry_tn.nc, null, sat_azimuth_tn]
+    sol_zen_o: [geometry_to.nc, null, solar_zenith_to]
+    sol_azi_o: [geometry_to.nc, null, solar_azimuth_to]
+    sat_zen_o: [geometry_to.nc, null, sat_zenith_to]
+    sat_azi_o: [geometry_to.nc, null, sat_azimuth_to]
+    
+grid_specs:
+    #information about the reference longitude/latitude grid reference internal
+    #names for the resampling process, e.g.,
+    #[lon, lat]
+    s7_n: [lon_n_i, lat_n_i]
+    s7_ex_n: [lon_n_i, lat_n_i]
+    s8_n: [lon_n_i, lat_n_i]
+    s8_ex_n: [lon_n_i, lat_n_i]
+    s9_n: [lon_n_i, lat_n_i]
+    s9_ex_n: [lon_n_i, lat_n_i]
+    s7_o: [lon_o_i, lat_o_i]
+    s7_ex_o: [lon_o_i, lat_o_i]
+    s8_o: [lon_o_i, lat_o_i]
+    s8_ex_o: [lon_o_i, lat_o_i]
+    s9_o: [lon_o_i, lat_o_i]
+    s9_ex_o: [lon_o_i, lat_o_i]
+    bayes_n: [lon_n_i, lat_n_i]
+    bayes_o: [lon_o_i, lat_o_i]
+    cloud_n: [lon_n_i, lat_n_i]
+    cloud_o: [lon_o_i, lat_o_i]
+    sol_zen_n: [lon_t, lat_t]
+    sol_azi_n: [lon_t, lat_t]
+    sat_zen_n: [lon_t, lat_t]
+    sat_azi_n: [lon_t, lat_t]
+    sol_zen_o: [lon_t, lat_t]
+    sol_azi_o: [lon_t, lat_t]
+    sat_zen_o: [lon_t, lat_t]
+    sat_azi_o: [lon_t, lat_t]
+
+channel_specs:
+    #define channel specifications such as scale/offset internal names and the 
+    #channel index within the file data stack whereever applicable, e.g.,
+    #[index, scale, offset, wavelength]
+    s7_n': [null, null, null, null]
+    s7_ex_n': [null, null, null, null]
+    s8_n': [null, null, null, null]
+    s8_ex_n': [null, null, null, null]
+    s9_n': [null, null, null, null]
+    s9_ex_n': [null, null, null, null]
+    s7_o': [null, null, null, null]
+    s7_ex_o': [null, null, null, null]
+    s8_o': [null, null, null, null]
+    s8_ex_o': [null, null, null, null]
+    s9_o': [null, null, null, null]
+    s9_ex_o': [null, null, null, null]
+    bayes_n': [null, null, null, null]
+    bayes_o': [null, null, null, null]
+    cloud_n': [null, null, null, null]
+    cloud_o': [null, null, null, null]
+    sol_zen_n': [null, null, null, null]
+    sol_azi_n': [null, null, null, null]
+    sat_zen_n': [null, null, null, null]
+    sat_azi_n': [null, null, null, null]
+    sol_zen_o': [null, null, null, null]
+    sol_azi_o': [null, null, null, null]
+    sat_zen_o': [null, null, null, null]
+    sat_azi_o': [null, null, null, null]
+
+output_specs:
+    #define output structure of the data in the h5 file by providing 
+    #for each variable name an in-file group name, an in-file variable
+    #name as well as an attribute long name, e.g., 
+    #[file_grp_name, file_var_name, attr_long_name]
+    s7_n: [bt, s7n, slstr_ch7_nadir]
+    s7_ex_n: [bt, s7exn, slstr_ch7_nadir_excluded_pixels]
+    s8_n: [bt, s8n, slstr_ch8_nadir]
+    s8_ex_n: [bt, s8exn, slstr_ch8_nadir_excluded_pixels]
+    s9_n: [bt, s9n, slstr_ch9_nadir]
+    s9_ex_n: [bt, s9exn, slstr_ch8_nadir_excluded_pixels]
+    s7_o: [bt, s7o, slstr_ch7_oblique]
+    s7_ex_o: [bt, s7exo, slstr_ch7_oblique_excluded_pixels]
+    s8_o: [bt, s8o, slstr_ch8_oblique]
+    s8_ex_o: [bt, s8exo, slstr_ch8_oblique_excluded_pixels]
+    s9_o: [bt, s9o, slstr_ch9_oblique]
+    s9_ex_o: [bt, s9exo, slstr_ch9_oblique_excluded_pixels]
+    bayes_n: [misc, bayes_n, slstr_bayes_cls_nadir]
+    bayes_o: [misc, bayes_o, slstr_bayes_cls_oblique]
+    cloud_n: [misc, cloud_n, slstr_cloud_cls_nadir]
+    cloud_o: [misc, cloud_o, slstr_cloud_cls_oblique]
+    sol_zen_n: [misc, sol_zen_n, slstr_solar_zenith_angle_nadir]
+    sol_azi_n: [misc, sol_azi_n, slstr_solar_azimuth_angle_nadir]
+    sat_zen_n: [misc, sat_zen_n, slstr_sensor_zenith_angle_nadir]
+    sat_azi_n: [misc, sat_azi_n, slstr_sensor_azimuth_angle_nadir]
+    sol_zen_o: [misc, sol_zen_o, slstr_solar_zenith_angle_oblique]
+    sol_azi_o: [misc, sol_azi_o, slstr_solar_azimuth_angle_oblique]
+    sat_zen_o: [misc, sat_zen_o, slstr_sensor_zenith_angle_oblique]
+    sat_azi_o: [misc, sat_azi_o, slstr_sensor_azimuth_angle_oblique]
+    lat: [geo, lat, reference_grid_latitude]
+    lon: [geo, lon, reference_grid_longitude]
+    
