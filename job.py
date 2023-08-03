@@ -54,6 +54,10 @@ class RetrievalJob(object):
         aoi = self.cfg.compile_aoi_data()
         self.lst.set_aoi(aoi)
         
+        #passes meta information in listing processor
+        meta = self.cfg.get_meta_module()
+        self.lst.set_meta(meta)
+        
         #sets up the listing processor 
         self.lst.setup_listing_processor()
         
@@ -61,11 +65,11 @@ class RetrievalJob(object):
             #initialize the correct retrieval module/processor
             self.ret = self.cfg.get_retrieval_module()
             
-            #passes aoi information on to the retrieval processer
+            #passes aoi information on to the retrieval processor
             self.ret.set_aoi(aoi)
             
-            #passes meta information on to the retrieval processer
-            self.ret.set_meta(self.cfg.get_meta_module())
+            #passes meta information on to the retrieval processor
+            self.ret.set_meta(meta)
             
             #setup the retrieval processor
             self.ret.setup_retrieval_processor()

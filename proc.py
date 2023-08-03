@@ -29,25 +29,8 @@ class ListingProcessor(ABC):
     pass
 
 class ModisListingProcessor(ListingProcessor):
-    def __init__(self):
-        #define sensor specific download url's
-        self.url = {'terra':{'mxd02':'https://ladsweb.modaps.eosdis.'+\
-                                     'nasa.gov/archive/allData/61/MOD021KM/',
-                             'mxd03':'https://ladsweb.modaps.eosdis.'+\
-                                     'nasa.gov/archive/allData/61/MOD03/',
-                             'meta':'https://ladsweb.modaps.eosdis.'+\
-                                    'nasa.gov/archive/geoMeta/61/TERRA/'
-                                    },
-                    'aqua':{'mxd02':'https://ladsweb.modaps.eosdis.'+\
-                                    'nasa.gov/archive/allData/61/MYD021KM/',
-                            'mxd03':'https://ladsweb.modaps.eosdis.'+\
-                                    'nasa.gov/archive/allData/61/MYD03/',
-                            'meta':'https://ladsweb.modaps.eosdis.'+\
-                                   'nasa.gov/archive/geoMeta/61/AQUA/'
-                                   }
-                        }
-        
-        #file prefixes
+    def __init__(self):    
+        #define sensor-specific file prefixes
         self.prefix = {'terra': 'MOD',
                        'aqua': 'MYD'
                        }
@@ -67,12 +50,17 @@ class ModisListingProcessor(ListingProcessor):
         self.token = token
 
         
-    def set_aoi(self, aoi: dict) -> None:
+    def set_aoi(self, aoi: object) -> None:
         self.aoi = aoi
+        
+        
+    def set_meta(self, meta: object) -> None:
+        self.meta = meta
+        self.meta.set_carrier(self.carrier)
 
         
     def set_url(self) -> None:
-        self.url = self.url[self.carrier]
+        self.url = self.meta.get_urls()
         self.prefix = self.prefix[self.carrier]
         
         
@@ -158,7 +146,6 @@ class ModisListingProcessor(ListingProcessor):
                 
         #return status
         return status
-
 
     
     def process_mxd03_listing_file(self) -> None:

@@ -26,7 +26,20 @@ class Meta(ABC):
         #loads the yaml file and reads it content
         fn = f'{sensor}_{version}.yaml'
         with open(os.path.join(os.getcwd(), 'meta', fn)) as f:
-            self.meta = yaml.safe_load(f)       
+            self.meta = yaml.safe_load(f)
+    
+    def set_carrier(self, carrier: str) -> None:
+        #sets the current carrier
+        self.carrier = carrier
+    
+    def get_carrier(self) -> str:
+        #returns the current carrier
+        return self.carrier
+            
+    def get_urls(self) -> dict:
+        #returns the specified variables for the current sensor
+        CARRIER = self.get_carrier()
+        return self.meta['urls'][CARRIER]
             
     def get_variables(self) -> list:
         #returns the variable tags to be used by all other instances

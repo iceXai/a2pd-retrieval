@@ -1,4 +1,8 @@
 # Meta File for the MODIS sensor (terra/aqua)
+urls:
+    #retrieval url's for the different data types per sensor
+    ...
+    
 variables:
     #list of variables (keys) to be used
     #consistent with following specifications

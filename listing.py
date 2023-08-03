@@ -111,15 +111,26 @@ class Listing(ABC):
         pass
     
 
-    def set_aoi(self, aoi: dict) -> None:
+    def set_aoi(self, aoi: object) -> None:
         """
         Parameters
         ----------
-        aoi : dict
-            python dictionary containing all the aoi-based information for the 
-            resampling process by aoi tag
+        aoi : object (AoiData)
+            AoiData class containing all the aoi-based information for the 
+            resampling process
         """
         self.aoi = aoi
+        
+
+    def set_meta(self, meta: object) -> None:
+        """
+        Parameters
+        ----------
+        meta : dict
+            Meta class containing all the meta information regarding retrieval 
+            paths/url's
+        """
+        self.meta = meta       
 
         
     def get_date_strings(self) -> list:
@@ -152,6 +163,7 @@ class ModisListing(Listing):
         self.proc.set_carrier(self.carrier)
         self.proc.set_token(self.token)
         self.proc.set_aoi(self.aoi)
+        self.proc.set_meta(self.meta)
         self.proc.set_output_path(self.out)
         self.proc.set_url()
         self.proc.initialize_listing_data()
