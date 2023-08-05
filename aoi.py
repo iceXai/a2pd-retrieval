@@ -27,7 +27,7 @@ class AoiData(object):
             refaois = yaml.safe_load(f)
         self.refs = refaois['aois']
         #allocate container
-        aoi_dict = {}
+        self.aoi_dict = {}
         #loop over all user specified aoi's
         for aoi in aois:
             #status
@@ -38,7 +38,7 @@ class AoiData(object):
             #get aoi grid
             grid = self.initiate_aoi_grid(fn)
             #store it
-            aoi_dict[aoi] = grid
+            self.aoi_dict[aoi] = grid
         
     def get_aoi_grid_file(self, aoi: str) -> str:
         return self.refs[aoi]
@@ -47,10 +47,10 @@ class AoiData(object):
         return AoiGrid(grid_file)
     
     def get_aois(self) -> list:
-        return aoi_dict.keys()
+        return self.aoi_dict.keys()
     
     def get_aoi(self, aoi: str) -> object:
-        return aoi_dict[aoi]
+        return self.aoi_dict[aoi]
 
 
 # In[]
