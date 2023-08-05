@@ -115,6 +115,13 @@ class ModisSwathMeta(Meta):
                    'ch36': 1,
                    }
         return indices[var]
+    
+    def get_data_prefix(self) -> dict:
+        CARRIER = self.get_carrier()
+        data_prefixes = {'terra': 'MOD',
+                         'aqua': 'MYD',
+                         }
+        return data_prefixes[CARRIER]
 
     def update_input_specs(self, swaths: tuple) -> None:
         input_specs = self.get_grp_data('input_specs')

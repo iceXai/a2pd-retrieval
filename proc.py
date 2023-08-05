@@ -11,6 +11,7 @@ from loguru import logger
 from iotools import ListingIO, ModisSwathIO
 from data import ListingData, SwathData
 from meta import ModisSwathMeta
+from meta import SlstrSwathMeta
 from resampling import Resample
 
 import pandas as pd
@@ -26,20 +27,15 @@ import sys
 #TODO with implementation of more sensors this likely has some potential to 
 #     outsource common functions to a ListingProcessor() ABC
 class ListingProcessor(ABC):
-    pass
-
-class ModisListingProcessor(ListingProcessor):
+    """
+    Listing base class which all sensor-specific listing classes are supposed
+    to inherit/be a child class from
+    """
     def __init__(self):    
-        #define sensor-specific file prefixes
-        self.prefix = {'terra': 'MOD',
-                       'aqua': 'MYD'
-                       }
-        
         #download error management
         self.error = DownloadErrorManager()
-        
-        
-    """ High-level functions """
+    
+    """ High-level (abstract) functions """
     
     """ Getters/Setters for Processor Setup """
     def set_carrier(self, carrier: str) -> None:
@@ -60,9 +56,7 @@ class ModisListingProcessor(ListingProcessor):
 
         
     def set_url(self) -> None:
-        self.url = self.meta.get_urls()
-        self.prefix = self.prefix[self.carrier]
-        
+        self.url = self.meta.get_urls()        
         
     def set_output_path(self, path: str) -> None:
         #output directory
@@ -85,6 +79,19 @@ class ModisListingProcessor(ListingProcessor):
     def initialize_listing_io(self) -> None:
         #initiate i/o handler
         self.io = ListingIO(self.lstout)
+
+
+class SlstrListingProcessor(ListingProcessor):
+
+        
+
+
+class ModisListingProcessor(ListingProcessor):
+    """ High-level functions """
+    
+    """ Getters/Setters for Processor Setup """
+    def set_prefix(self) -> None:
+        self.prefix = self.meta.get_data_prefix() 
 
 
     """ URL/Listing File Name Management """

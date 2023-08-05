@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from loguru import logger
 
 from proc import ModisListingProcessor
+from proc import SlstrListingProcessor
 
 import os
 import sys
@@ -49,46 +50,6 @@ class Listing(ABC):
         out : str
             Output directory path
         """
-        
-        # #common dict of url's
-        # self.url = {'terra':{'mxd02':'https://ladsweb.modaps.eosdis.'+\
-        #                              'nasa.gov/archive/allData/61/MOD021KM/',
-        #                      'mxd03':'https://ladsweb.modaps.eosdis.'+\
-        #                              'nasa.gov/archive/allData/61/MOD03/',
-        #                      'meta':'https://ladsweb.modaps.eosdis.'+\
-        #                             'nasa.gov/archive/geoMeta/61/TERRA/'
-        #                             },
-        #             'aqua':{'mxd02':'https://ladsweb.modaps.eosdis.'+\
-        #                             'nasa.gov/archive/allData/61/MYD021KM/',
-        #                     'mxd03':'https://ladsweb.modaps.eosdis.'+\
-        #                             'nasa.gov/archive/allData/61/MYD03/',
-        #                     'meta':'https://ladsweb.modaps.eosdis.'+\
-        #                            'nasa.gov/archive/geoMeta/61/AQUA/'
-        #                            },
-        #             's3a':{'slstr': 'https://ladsweb.modaps.eosdis.'+\
-        #                             'nasa.gov/archive/allData/450/'+\
-        #                             'S3A_SL_1_RBT/',
-        #                    'olci': 'https://ladsweb.modaps.eosdis.'+\
-        #                             'nasa.gov/archive/allData/450/'+\
-        #                             'S3A_OL_1_EFR/',
-        #                    'meta': 'https://ladsweb.modaps.eosdis.'+\
-        #                             'nasa.gov/archive/geoMetaSentinel3/450/'
-        #                         },
-        #             's3b':{'slstr': 'https://ladsweb.modaps.eosdis.'+\
-        #                             'nasa.gov/archive/allData/450/'+\
-        #                             'S3B_SL_1_RBT/',
-        #                    'olci': 'https://ladsweb.modaps.eosdis.'+\
-        #                             'nasa.gov/archive/allData/450/'+\
-        #                             'S3B_OL_1_EFR/',
-        #                    'meta': 'https://ladsweb.modaps.eosdis.'+\
-        #                             'nasa.gov/archive/geoMetaSentinel3/450/'
-        #                         }
-        #                   }
-        
-        # #common dict of prefixes
-        # self.prefix = {'terra': 'MOD',
-        #                'aqua': 'MYD'
-        #                }
         
         #store arguments
         self.token = token
@@ -166,6 +127,7 @@ class ModisListing(Listing):
         self.proc.set_meta(self.meta)
         self.proc.set_output_path(self.out)
         self.proc.set_url()
+        self.proc.set_prefix()
         self.proc.initialize_listing_data()
         self.proc.initialize_listing_io()
 
