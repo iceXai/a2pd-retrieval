@@ -507,7 +507,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
 
         if r.status_code == 200:
             #store downloaded swath
-            with open(os.path.join(self.out, swath), "wb") as f:
+            with open(os.path.join(self.rawout, swath), "wb") as f:
                 f.write(r.content)
             #status
             logger.info(f'Retrieval complete!')
