@@ -47,6 +47,9 @@ class RetrievalJob(object):
         None.
 
         """
+        #status
+        logger.info('Setting-up job processor...')
+        
         #initialize the correct listing module/processor
         self.lst = self.cfg.get_listing_module()
         
@@ -89,6 +92,9 @@ class RetrievalJob(object):
         None.
 
         """
+        #status
+        logger.info('Executing job processor...')
+        
         #run the listing processor to compile the file listing
         listing = self.lst.compile_file_listing()
         
@@ -97,6 +103,9 @@ class RetrievalJob(object):
         
         #run the retrieval processor
         self.ret.download_and_process_swaths()
+        
+        #status
+        logger.info('Job complete! :)')
         
         
 
