@@ -24,8 +24,6 @@ import sys
 
 # In[] 
 
-#TODO with implementation of more sensors this likely has some potential to 
-#     outsource common functions to a ListingProcessor() ABC
 class ListingProcessor(ABC):
     """
     Listing base class which all sensor-specific listing classes are supposed
@@ -79,51 +77,58 @@ class ListingProcessor(ABC):
     def initialize_listing_io(self) -> None:
         #initiate i/o handler
         self.io = ListingIO(self.lstout)
-
-
-class SlstrListingProcessor(ListingProcessor):
-
         
-
-
-class ModisListingProcessor(ListingProcessor):
-    """ High-level functions """
-    
-    """ Getters/Setters for Processor Setup """
-    def set_prefix(self) -> None:
-        self.prefix = self.meta.get_data_prefix() 
-
-
+        
     """ URL/Listing File Name Management """
+    @abstractmethod
     def set_current_url(self, yy: str, jj: str) -> None:
-        #compile day and month of current date
+        """
+        Parameters
+        ----------
+        yy : str
+            Current year in yyyy format
+        jj : str
+            Current julian day of year
+
+        Returns
+        -------
+        None
+            Stores the current url's for the listing file retrievals after 
+            compiling the geoMeta file name (with current date) as well as 
+            the year and julian day of year extensions to the base url's'
+        """
+        pass
+    
+    def compile_ddmm_from_yyjj(self, yy: str, jj: str) -> tuple:
         d = datetime.strptime(f'{yy}-{jj}', "%Y-%j")
         dd = d.strftime('%d')
         mm = d.strftime('%m')
-        
-        #build url using the GeoMeta part and file name
-        geometa_file_name = f'{self.prefix}03_{yy}-{mm}-{dd}.txt'
-        meta_url = f'{self.url["meta"]}{yy}/{geometa_file_name}'
-        mxd3_url = f'{self.url["mxd03"]}{yy}/{jj}/' 
-        mxd2_url = f'{self.url["mxd02"]}{yy}/{jj}/' 
-        
-        #set current urls
-        self.current_url = {'meta': meta_url,
-                            'mxd03': mxd3_url,
-                            'mxd02': mxd2_url
-                            }
-        
+        return dd, mm
+    
     def get_current_url(self, url_type: str) -> str:
         return self.current_url[url_type]
     
-    
+    @abstractmethod
     def set_current_lfn(self, yy: str, jj: str) -> None:
-        #set curreent listing file name
-        self.current_lfn = f'{self.carrier}_modis_listing_{yy}_{jj}.csv'
-    
-        
+        """
+        Parameters
+        ----------
+        yy : str
+            Current year in yyyy format
+        jj : str
+            Current julian day of year
+
+        Returns
+        -------
+        None
+            Stores the current listing file name (lfn) with the format:
+            "[CARRIER]_[SENSOR]_listing_[yyyy]_[jj].csv" in self.current_lfn
+        """
+        pass
+      
     def get_current_lfn(self) -> str:
         return self.current_lfn
+
     
     """ Listing Procedure """
     def check_for_existing_listing(self) -> bool:
@@ -131,13 +136,17 @@ class ModisListingProcessor(ListingProcessor):
         return os.path.isfile(path)
     
     
+    def get_geometa_file(self) -> bool:
+        return self.get_listing_file('meta')
+
     def get_listing_file(self, url_type: str) -> bool:
         """
         Parameters
         ----------
         url_type : str
             Type of url to be retrieved; according to the url dict, i.e.,
-            'meta', 'mxd03', and 'mxd02'
+            'meta', 'data', or other sensor-specific ones like 'mxd03', 
+            and 'mxd02'
 
         Returns
         -------
@@ -153,6 +162,100 @@ class ModisListingProcessor(ListingProcessor):
                 
         #return status
         return status
+    
+    def download_listing(self, url: str) -> bool:
+        """
+        Parameters
+        ----------
+        url : str
+            sensor/carrier specific download url
+
+        Returns
+        -------
+        Bool :
+            download successful? True/False
+        """     
+        #status
+        logger.info(f'Retrieving listing file...')
+        
+        #requests call
+        headers = {'Authorization': "Bearer {}".format(self.token)}
+        r = requests.get(url, headers=headers)
+
+        if r.status_code == 200:
+            self.temporary_listing = self.parse_byte_listing(r.content)
+            #status
+            logger.info(f'Retrieval complete!')
+            #reset counter
+            self.error.reset_crit_counter()
+            return True
+        else:
+            #status
+            logger.info(f'Retrieval incomplete!')
+            logger.error(f'Error with file listing retrieval!')
+            #increase coutner
+            self.error.increase_crit_counter()
+            return False
+    
+    
+    
+
+class SlstrListingProcessor(ListingProcessor):
+    """ High-level functions """
+
+    """ URL/Listing File Name Management """
+    def set_current_url(self, yy: str, jj: str) -> None:
+        #compile day and month of current date
+        dd, mm = self.compile_ddmm_from_yyjj(yy, jj)
+        
+        #build url using the GeoMeta part and file name
+        CARRIER = self.carrier.upper()
+        geometa_file_name = f'{CARRIER}_SL_1_RBT_{yy}-{mm}-{dd}.txt'
+        meta_url = f'{self.url["meta"]}{yy}/{geometa_file_name}'
+        data_url = f'{self.url["data"]}{yy}/{jj}/' 
+        
+        #set current urls
+        self.current_url = {'meta': meta_url,
+                            'data': data_url,
+                            }
+
+        
+
+
+class ModisListingProcessor(ListingProcessor):
+    """ High-level functions """
+    
+    """ Getters/Setters for Processor Setup """
+    def set_prefix(self) -> None:
+        self.prefix = self.meta.get_data_prefix() 
+
+
+    """ URL/Listing File Name Management """
+    def set_current_url(self, yy: str, jj: str) -> None:
+        #compile day and month of current date
+        dd, mm = self.compile_ddmm_from_yyjj(yy, jj)
+        
+        #build url using the GeoMeta part and file name
+        geometa_file_name = f'{self.prefix}03_{yy}-{mm}-{dd}.txt'
+        meta_url = f'{self.url["meta"]}{yy}/{geometa_file_name}'
+        mxd3_url = f'{self.url["mxd03"]}{yy}/{jj}/' 
+        mxd2_url = f'{self.url["mxd02"]}{yy}/{jj}/' 
+        
+        #set current urls
+        self.current_url = {'meta': meta_url,
+                            'mxd03': mxd3_url,
+                            'mxd02': mxd2_url
+                            }
+    
+    
+    def set_current_lfn(self, yy: str, jj: str) -> None:
+        #set curreent listing file name
+        self.current_lfn = f'{self.carrier}_modis_listing_{yy}_{jj}.csv'
+
+    
+    """ Listing Procedure """
+    def get_mxd02_file(self) -> bool:
+        return self.get_listing_file('mxd02')
 
     
     def process_mxd03_listing_file(self) -> None:
@@ -187,44 +290,6 @@ class ModisListingProcessor(ListingProcessor):
         
         #match it with mxd03 list
         self._get_processed_mxd02_listing()
-
-
-    def download_listing(self, url: str) -> bool:
-        """
-        Parameters
-        ----------
-        url : str
-            sensor/carrier specific download url
-
-        Returns
-        -------
-        Bool :
-            download successful? True/False
-        """
-
-        #TODO put this function into the ABC ?!
-     
-        #status
-        logger.info(f'Retrieving listing file...')
-        
-        #requests call
-        headers = {'Authorization': "Bearer {}".format(self.token)}
-        r = requests.get(url, headers=headers)
-
-        if r.status_code == 200:
-            self.temporary_listing = self.parse_byte_listing(r.content)
-            #status
-            logger.info(f'Retrieval complete!')
-            #reset counter
-            self.error.reset_crit_counter()
-            return True
-        else:
-            #status
-            logger.info(f'Retrieval incomplete!')
-            logger.error(f'Error with file listing retrieval!')
-            #increase coutner
-            self.error.increase_crit_counter()
-            return False
     
         
     """ I/O Management """    
