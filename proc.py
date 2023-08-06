@@ -219,14 +219,25 @@ class SlstrListingProcessor(ListingProcessor):
                             'data': data_url,
                             }
 
-        
 
+    def set_current_lfn(self, yy: str, jj: str) -> None:
+        #set curreent listing file name
+        self.current_lfn = f'{self.carrier}_slstr_listing_{yy}_{jj}.csv'
+
+
+    """ Listing Procedure """
+    
+    
 
 class ModisListingProcessor(ListingProcessor):
     """ High-level functions """
     
     """ Getters/Setters for Processor Setup """
     def set_prefix(self) -> None:
+        """
+        Additional function dealing with the carrier-dependent file prefix:
+        Aqua -> MYD, Terra -> MOD!
+        """
         self.prefix = self.meta.get_data_prefix() 
 
 
