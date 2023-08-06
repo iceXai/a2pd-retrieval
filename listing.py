@@ -156,7 +156,7 @@ class ModisListing(Listing):
             
             """ geoMeta/MXD03: identify swaths in AOI's """                
             #get mxd03 listing file
-            DOWNLOAD_COMPLETED = self.proc.get_listing_file('meta')
+            DOWNLOAD_COMPLETED = self.proc.get_geometa_file()
 
             #continue with next date in case something went wrong
             if not DOWNLOAD_COMPLETED:
@@ -167,7 +167,7 @@ class ModisListing(Listing):
 
             """ Compile list of matched MXD02 swaths """
             #get the mxd02 listign file
-            DOWNLOAD_COMPLETED = self.proc.get_listing_file('mxd02')
+            DOWNLOAD_COMPLETED = self.proc.get_mxd02_file()
 
             #continue with next date in case something went wrong
             if not DOWNLOAD_COMPLETED:
