@@ -3,10 +3,10 @@ urls:
     #retrieval url's for the different data types per sensor
     s3a:
         data: https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/450/S3A_SL_1_RBT/
-        meta: https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMetaSentinel3/450/
+        meta: https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMetaSentinel3/450/SLSTR/
     s3b:
         data: https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/450/S3B_SL_1_RBT/
-        meta: https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMetaSentinel3/450/
+        meta: https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMetaSentinel3/450/SLSTR/
     
 variables:
     #list of variables (keys) to be used
