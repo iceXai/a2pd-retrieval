@@ -150,12 +150,15 @@ class AoiGrid(object):
     def set_target_epsg(self) -> None:
         HEMISPHERE = self.get_hemisphere()
         if HEMISPHERE == 'south':
-            self.target_epsg = 6932
+            self.target_epsg = 'EPSG:6932'
         else:
-            self.target_epsg = 6931
+            self.target_epsg = 'EPSG:6931'
             
     def get_target_epsg(self) -> int:
         return self.target_epsg
+    
+    def format_epsg(self, epsg: str) -> int:
+        return int(epsg[-4:])
     
     def check_overlap_with_aoi(self, listing_entry: list) -> (bool, list):
         """
@@ -222,8 +225,8 @@ class AoiGrid(object):
             
         """ Check for Overlap with AOI Polygon"""
         #define soure/target spatial reference
-        SOURCE_EPSG = self.get_projection()
-        TARGET_EPSG = self.get_target_epsg()
+        SOURCE_EPSG = self.format_epsg(self.get_projection())
+        TARGET_EPSG = self.format_epsg(self.get_target_epsg())
         insrs = osr.SpatialReference()
         insrs.ImportFromEPSG(SOURCE_EPSG)
         outsrs = osr.SpatialReference()
