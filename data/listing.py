@@ -33,3 +33,6 @@ class ListingData(object):
     
     def get_current_listing(self) -> pd.DataFrame():
         return self.tmp
+    
+    def get_number_of_entries(self) -> int:
+        return self.lst.shape[0]
