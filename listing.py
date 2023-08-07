@@ -163,7 +163,7 @@ class ModisListing(Listing):
                 continue
             
             #process listing
-            self.proc.process_mxd03_listing_file()
+            self.proc.process_geometa_file()
 
             """ Compile list of matched MXD02 swaths """
             #get the mxd02 listign file
@@ -192,11 +192,58 @@ class SlstrListing(Listing):
     """
 
     def setup_listing_processor(self) -> None:
-        pass
+        #status
+        logger.info(f'Setup listing processor...')
+        #set processor
+        self.proc = SlstrListingProcessor()
+        self.proc.set_carrier(self.carrier)
+        self.proc.set_token(self.token)
+        self.proc.set_aoi(self.aoi)
+        self.proc.set_meta(self.meta)
+        self.proc.set_output_path(self.out)
+        self.proc.set_url()
+        self.proc.initialize_listing_data()
+        self.proc.initialize_listing_io()
     
     
     def compile_file_listing(self):
-        pass          
+        #status
+        logger.info(f'Compile file listing...')        
+        #retrieve date strings for specified processing period
+        date_str = self.get_date_strings()
+        
+        #loop over all dates
+        for yy, jj in date_str:
+            #status
+            logger.info(f'Retrieving file listing for {jj}/{yy}...')
+
+            #set current urls/listing file names
+            self.proc.set_current_url(yy, jj)
+            self.proc.set_current_lfn(yy, jj)
+
+            #check whether listing for specified date already exists
+            LISTING_EXISTS = self.proc.check_for_existing_listing()
+            if LISTING_EXISTS:
+                logger.info(f'File listing does already exist!')
+                self.proc.load_listing()
+                continue
+            
+            """ geoMeta/MXD03: identify swaths in AOI's """                
+            #get mxd03 listing file
+            DOWNLOAD_COMPLETED = self.proc.get_geometa_file()
+
+            #continue with next date in case something went wrong
+            if not DOWNLOAD_COMPLETED:
+                continue
+            
+            #process listing
+            self.proc.process_geometa_file() 
+            
+            #output listing csv file
+            self.proc.save_listing()
+            
+        #returns the completed listing to the caller
+        return self.proc.get_listing()
  
     
 

@@ -146,7 +146,8 @@ class ListingProcessor(ABC):
         url_type : str
             Type of url to be retrieved; according to the url dict, i.e.,
             'meta', 'data', or other sensor-specific ones like 'mxd03', 
-            and 'mxd02'
+            and 'mxd02' - needs to correspond to whatever is set with
+            self.set_current_url()
 
         Returns
         -------
@@ -196,13 +197,100 @@ class ListingProcessor(ABC):
             #increase coutner
             self.error.increase_crit_counter()
             return False
+        
+    def process_geometa_file(self) -> None:
+        """
+        Processes the downloaded geoMeta file from LAADS by identifying 
+        matches with the predefined AOI's and neatly compiling all necessary
+        information for retrieval process
+        """
+        #parse listing
+        self.parse_geometa_listing()
+        
+        #allocate dataframe for listing storage
+        df = pd.DataFrame()
+        
+        #loop over entries
+        for lst_entry in self.geometa:
+            #check for overlap with specified aoi's
+            aois, frac = self.validate_aoi_overlap(lst_entry)
+            
+            #process in case of overlap
+            if len(aois) > 0:
+                #get swath name from listing entry
+                SWATH = lst_entry[0]
+                #compile lists of aois/overlap fractions
+                AOI = [aoi for aoi in aois]
+                FRC = [frc for frc in frac]
+                #compose dict
+                d = {'url': self.get_current_url('data'),
+                     'file': SWATH,
+                     'aoi': AOI,
+                     'frac': FRC,
+                              }
+                #append to df
+                df = pd.concat([df, pd.DataFrame(d)])
+            
+        #update listing
+        df = df.reset_index().drop('index', axis=1)
+        #store in data container
+        self.listing.add_to_listing(df)
+    
+    def parse_geometa_listing(self) -> None:         
+        #listing file consists of various meta information w/ 
+        #line[0]:=file_name; line[9:12]:=RingLON; 
+        #line[13:16]:=RingLAT       
+        lst = [[s[0], s[9], s[10], s[11], s[12], s[13], s[14], s[15], s[16]]
+               for s in [e.split(',') for e in self.temporary_listing[3:-1]]]
+        
+        #update temporary listing
+        self.geometa = lst
+        
+    def validate_aoi_overlap(self, lst_entry: list) -> (bool, list, list):
+        #check for overlap to exclude non-matching links from listing
+        AOIS = []
+        FRAC = []
+        
+        #get aois to process
+        aois_to_check = self.aoi.get_aois()
+        
+        #check for overlap of bounding box with predefined aoi polygons
+        for aoi in aois_to_check:    
+            #check for overlap
+            grid = self.aoi.get_aoi(aoi)
+            overlap, frac = grid.check_overlap_with_aoi(lst_entry)
+            if overlap and frac >= 5.0:
+                AOIS.append(aoi)
+                FRAC.append(frac)
+        
+        #return
+        return AOIS, FRAC
+        
+    
+    """ I/O Management """    
+    def save_listing(self) -> None:
+        N = self.listing.get_number_of_entries()
+        if N > 0:
+            self.io.set_listing_file_name(self.get_current_lfn())
+            self.io.to_csv(self.listing.get_listing())
+        else:
+            logger.critical(f'No listing available/retrievable!')
+            sys.exit()       
+        
+    def load_listing(self) -> None:
+        self.io.set_listing_file_name(self.get_current_lfn())
+        self.listing.add_to_listing(self.io.from_csv())
+        
+    def get_listing(self) -> pd.DataFrame:
+        return self.listing.get_listing()
+    
+    def parse_byte_listing(self, byte_listing) -> list:
+        return byte_listing.decode('UTF-8').split('\n')
     
     
     
 
 class SlstrListingProcessor(ListingProcessor):
-    """ High-level functions """
-
     """ URL/Listing File Name Management """
     def set_current_url(self, yy: str, jj: str) -> None:
         #compile day and month of current date
@@ -223,15 +311,11 @@ class SlstrListingProcessor(ListingProcessor):
     def set_current_lfn(self, yy: str, jj: str) -> None:
         #set curreent listing file name
         self.current_lfn = f'{self.carrier}_slstr_listing_{yy}_{jj}.csv'
-
-
-    """ Listing Procedure """
-    
+        
+        
     
 
-class ModisListingProcessor(ListingProcessor):
-    """ High-level functions """
-    
+class ModisListingProcessor(ListingProcessor):    
     """ Getters/Setters for Processor Setup """
     def set_prefix(self) -> None:
         """
@@ -266,116 +350,68 @@ class ModisListingProcessor(ListingProcessor):
     
     """ Listing Procedure """
     def get_mxd02_file(self) -> bool:
+        """
+        Additional function to retrieve the MXD021KM files from another 
+        position on the server to identify corresponding MXD02 files to 
+        the MXD03 files available in the geoMeta data
+        """
         return self.get_listing_file('mxd02')
 
     
-    def process_mxd03_listing_file(self) -> None:
+    def process_geometa_file(self) -> None:
+        """
+        Sensor-specific adaptation of the base function, primarily allowing 
+        for a better matchmaking with the MXD021KM files through the use of 
+        datetags stored in the listing dataframe
+        """
         #parse listing
+        self.parse_geometa_listing()
+        
+        #allocate dataframe for listing storage
         df = pd.DataFrame()
-        self._parse_mxd03_listing()
         
         #loop over entries
-        for lst_entry in self.mxd03:
+        for lst_entry in self.geometa:
             #check for overlap with specified aoi's
-            valid_aois, overlap_aois = self._validate_aoi_overlap(lst_entry)
+            aois, frac = self.validate_aoi_overlap(lst_entry)
             
             #process in case of overlap
-            if valid_aois:
-                tgs, mxd, mt = self._get_processed_mxd03_listing(lst_entry,
-                                                                 overlap_aois)
-                mxd03_dict = {'tag': tgs,
-                              'url_mxd03': self.get_current_url('mxd03'),
-                              'mxd03': mxd,
-                              'aoi': mt[0],
-                              'frac': mt[1]}
+            if len(aois) > 0:
+                #compile filename and date tag
+                HDF_FILE = lst_entry[0]
+                HDF_PARTS = hdf_file.split('.')
+                HDF_TAG = '.'.join(hdf_split[1:4])
+                #compile lists of aois/overlap fractions
+                AOI = [aoi for aoi in aois]
+                FRC = [frc for frc in frac]
+                #compose dict
+                d = {'tag': HDF_TAG,
+                     'url_mxd03': self.get_current_url('mxd03'),
+                     'mxd03': HDF_FILE,
+                     'aoi': AOI,
+                     'frac': FRC,
+                     }
                 #append to df
-                df = pd.concat([df, pd.DataFrame(mxd03_dict)])
+                df = pd.concat([df, pd.DataFrame(d)])
             
         #update listing
-        self.mxd03 = df.reset_index().drop('index', axis=1)
+        self.geometa = df.reset_index().drop('index', axis=1)
     
 
     def process_mxd02_listing_file(self) -> None:
+        """
+        Processes the the webcrawl information to retrieve all available 
+        MXD021KM files for the given date in the LAADS archive by parsing the 
+        data and matching it to the MXD03 data by their corresponding datetags
+        """
         #parse listing
-        self._parse_mxd02_listing()
+        self.parse_mxd02_listing()
         
         #match it with mxd03 list
-        self._get_processed_mxd02_listing()
-    
-        
-    """ I/O Management """    
-    def save_listing(self) -> None:
-        self.io.set_listing_file_name(self.get_current_lfn())
-        self.io.to_csv(self.listing.get_listing())
-        
-    
-    def load_listing(self) -> None:
-        self.io.set_listing_file_name(self.get_current_lfn())
-        self.listing.add_to_listing(self.io.from_csv())
-        
-        
-    def get_listing(self) -> pd.DataFrame:
-        return self.listing.get_listing()
-    
-    
-    def parse_byte_listing(self, byte_listing) -> list:
-        return byte_listing.decode('UTF-8').split('\n')
-    
-
-    """ Low-level functions """  
-    def _parse_mxd03_listing(self) -> None:         
-        #listing file consists of various meta information w/ 
-        #data[0]:=hdf_file_name; data[9:12]:=RingLON; 
-        #data[13:16]:=RingLAT
-        lst = [[line.split(',')[0],line.split(',')[9],
-                line.split(',')[10],line.split(',')[11],
-                line.split(',')[12],line.split(',')[13],
-                line.split(',')[14],line.split(',')[15],
-                line.split(',')[16]] for line in self.temporary_listing[3:-1]]
-        
-        #update temporary listing
-        self.mxd03 = lst
-    
-    def _validate_aoi_overlap(self, lst_entry: list) -> (bool, list):
-        #check for overlap to exclude non-matching links from listing
-        overlap_aois = []
-        
-        #get aois to process
-        aois_to_check = self.aoi.get_aois()
-        
-        #check for overlap of bounding box with predefined aoi polygons
-        for aoi in aois_to_check:    
-            #check for overlap
-            grid = self.aoi.get_aoi(aoi)
-            overlap, frac = grid.check_overlap_with_aoi(lst_entry)
-            if overlap and frac >= 5.0:
-                overlap_aois.append([aoi,frac])
-        
-            #check status
-        if len(overlap_aois)>0:
-            valid = True
-        else:
-            valid = False
-        
-        #return
-        return valid, overlap_aois
-    
-    def _get_processed_mxd03_listing(self, 
-                                     lst_entry: list, 
-                                     overlap_aois: list) -> (str, str, list):
-        #compile download link and append to swath/search list
-        hdf_file = lst_entry[0]
-        hdf_split = hdf_file.split('.')
-        
-        #compile meta output
-        aoi_list = [aoi for aoi,frc in overlap_aois]
-        frc_list = [frc for aoi,frc in overlap_aois]
-        
-        #return
-        return '.'.join(hdf_split[1:4]), hdf_file , [aoi_list,frc_list]
-        
+        self.get_processed_mxd02_listing()
+            
                 
-    def _parse_mxd02_listing(self) -> None:
+    def parse_mxd02_listing(self) -> None:
         #create list of file links 
         SEARCH_STR = '<a class="btn btn-default" href="/archive/allData/'
         lst = [line.split('"')[3].split('/')[-1] \
@@ -385,7 +421,7 @@ class ModisListingProcessor(ListingProcessor):
         self.mxd02 = lst       
      
     
-    def _get_processed_mxd02_listing(self) -> None:
+    def get_processed_mxd02_listing(self) -> None:
         #create search tags for mxd02
         tags = ['.'.join(lst_entry.split('.')[1:4])
                 for lst_entry in self.mxd02]
@@ -396,7 +432,7 @@ class ModisListingProcessor(ListingProcessor):
                                    'mxd02': self.mxd02})
         
         #join them on tags and rearrange them
-        df = self.mxd03.join(df_to_join.set_index('tag'), on='tag')
+        df = self.geometa.join(df_to_join.set_index('tag'), on='tag')
         df.drop('tag', axis=1, inplace=True)
         df = df[['url_mxd03', 'mxd03', 'url_mxd02', 'mxd02', 'aoi', 'frac']]
         #store in data container
