@@ -228,8 +228,7 @@ class SlstrListing(Listing):
                 self.proc.load_listing()
                 continue
             
-            """ geoMeta/MXD03: identify swaths in AOI's """                
-            #get mxd03 listing file
+            #get geoMeta listing file
             DOWNLOAD_COMPLETED = self.proc.get_geometa_file()
 
             #continue with next date in case something went wrong
