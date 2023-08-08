@@ -9,11 +9,11 @@ job.validate()
 job.setup()
 
 
-print(job.cfg.get_sensor())
-print(job.cfg.get_carrier())
-print(job.cfg.get_token())
+#print(job.cfg.get_sensor())
+#print(job.cfg.get_carrier())
+#print(job.cfg.get_token())
 
-print(job.cfg.config)
+#print(job.cfg.config)
 
 #test = job.lst._get_date_strings()
 
