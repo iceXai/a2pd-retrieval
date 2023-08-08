@@ -477,7 +477,8 @@ class RetrievalProcessor(ABC):
         
         #download error management
         self.error = DownloadErrorManager()
-        
+
+    """ Getters/Setters for Processor Setup """
     def set_cfg(self, cfg: object) -> None:
         self.cfg = cfg
         
@@ -535,38 +536,24 @@ class RetrievalProcessor(ABC):
         self.resampling = Resample()
         self.resampling.set_aoi(self.aoi)
         self.resampling.set_data(self.swath)
-
-
-
-class ModisRetrievalProcessor(RetrievalProcessor):
-    """
-    Handles the actual download process of the identified swaths from the 
-    file listing process
-    """
-
-    """ High-level functions """
-    
-    """ Getters/Setters for Processor Setup """        
-    def set_swath_id(self, swaths: str) -> None:
-        SWATHS = {'mxd03': swaths[0],'mxd02': swaths[1]}
-        self.swath.set_swath_id(SWATHS)
         
-    
+    """ Getters/Setters for swath handling """
+    def set_swath_id(self, swath: str) -> None:
+        self.swath.set_swath_id(swath)
+        
     def get_swath_id(self, short: bool = True) -> tuple:
-        SWATHS = self.swath.get_swath_id()
+        SWATH = self.swath.get_swath_id()
         if short:
-            SWATHS['mxd03'] = SWATHS['mxd03'].split('/')[-1]
-            SWATHS['mxd02'] = SWATHS['mxd02'].split('/')[-1]
-        return SWATHS
+            SWATH = SWATH.split('/')[-1]
+        return SWATH
     
-        
     """ Retrieval procedure """
     def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Parameters
         ----------
         df : pd.DataFrame
-            The raw listing data frame with potentially multiple entries for 
+            The raw listing dataframe with potentially multiple entries for 
             swaths that are supposed to be resampled to several different 
             AOI's
 
@@ -575,31 +562,30 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         pd.DataFrame
             Reduced dataframe with only unique swaths
         """
-        mxd03 = df['url_mxd03'].astype(str) + df['mxd03'].astype(str)
-        mxd02 = df['url_mxd02'].astype(str) + df['mxd02'].astype(str)
-        return pd.DataFrame({'mxd03': mxd03.unique(),
-                             'mxd02': mxd02.unique()})
+        swaths = df['url'].astype(str) + df['file'].astype(str)
+        return pd.DataFrame({'swaths': swaths.unique()})
 
     
-    def check_for_existing_swaths(self, lst: pd.DataFrame) -> pd.DataFrame:
+    def check_for_existing_swaths(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Parameters
         ----------
-        lst : pd.DataFrame
-            swath listing to be handeled by the processor
+        df : pd.DataFrame
+            Reduced swath listing after parsing to be handeled by the 
+            processor to check for already fully-processed h5 files
         
         Returns
         -------
         pd.DataFrame :
-            shortened listing in case o existing files
+            shortened listing in case of existing files
         """
         #retrieve processed files
         processed_files = [f.name.split('_')[:4] for f in os.scandir(self.out) 
                            if f.is_file()]
         
-        for idx, mxd02, mxd03 in lst.itertuples():
+        for idx, swath in df.itertuples():
             #temporarily set file id
-            self.set_swath_id((mxd03, mxd02))
+            self.set_swath_id(swath)
             #compile output swath-file name
             sname = self.compile_output_swath_name()
             #check for existance
@@ -607,32 +593,31 @@ class ModisRetrievalProcessor(RetrievalProcessor):
                 break
 
         #return updated listing
-        return lst.iloc[idx:,:]
-    
+        return df.iloc[idx:,:]
 
-    def get_swath_files(self) -> None:       
+    def get_swath_file(self) -> bool:
+        """
+        Wrapper function to handle the check for already downloaded but 
+        unprocessed swath files as well as the actual swath retrieval in 
+        case it is necessary
+        """
         #retieve list of currently temporarily stored/downloaded files
-        downloaded_files = [f.name for f in os.scandir(self.rawout) 
+        DOWNLOADED_FILES = [f.name for f in os.scandir(self.rawout) 
                             if f.is_file()]
         #retrieve current swath id's
         GET_SWATH_NAME_ONLY = False
-        SWATHS = self.get_swath_id(GET_SWATH_NAME_ONLY)
+        SWATH = self.get_swath_id(GET_SWATH_NAME_ONLY)
         
         #only download in case do not already exist
-        MXD03_EXISTS = SWATHS['mxd03'].split('/')[-1] in downloaded_files
-        if not MXD03_EXISTS:
-            status_mxd03 = self.download_swath(SWATHS['mxd03'])
+        SWATH_EXISTS = SWATH.split('/')[-1] in DOWNLOADED_FILES
+        if not SWATH_EXISTS:
+            status = self.download_swath(SWATHS['mxd03'])
         else:
-            status_mxd03 = True
-        MXD02_EXISTS = SWATHS['mxd02'].split('/')[-1] in downloaded_files
-        if not MXD02_EXISTS:
-            status_mxd02 = self.download_swath(SWATHS['mxd02'])
-        else:
-            status_mxd02 = True
-            
-        return status_mxd03, status_mxd02
-    
-    
+            status = True
+        
+        #return
+        return status
+
     def download_swath(self, url: str) -> bool:
         """
         Parameters
@@ -669,6 +654,105 @@ class ModisRetrievalProcessor(RetrievalProcessor):
             logger.error(f'Error with swath retrieval!')
             self.error.increase_crit_counter()
             return False
+        
+        
+
+class ModisRetrievalProcessor(RetrievalProcessor):
+    """
+    Handles the actual download process of the identified swaths from the 
+    file listing process
+    """
+    
+    """ Getters/Setters for swath handling """
+    def set_swath_id(self, swaths: str) -> None:
+        SWATHS = {'mxd03': swaths[0],'mxd02': swaths[1]}
+        self.swath.set_swath_id(SWATHS)
+        
+    
+    def get_swath_id(self, short: bool = True) -> tuple:
+        SWATHS = self.swath.get_swath_id()
+        if short:
+            SWATHS['mxd03'] = SWATHS['mxd03'].split('/')[-1]
+            SWATHS['mxd02'] = SWATHS['mxd02'].split('/')[-1]
+        return SWATHS
+    
+        
+    """ Retrieval procedure """
+    def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The raw listing dataframe with potentially multiple entries for 
+            swaths that are supposed to be resampled to several different 
+            AOI's
+
+        Returns
+        -------
+        pd.DataFrame
+            Reduced dataframe with only unique swaths
+        """
+        mxd03 = df['url_mxd03'].astype(str) + df['mxd03'].astype(str)
+        mxd02 = df['url_mxd02'].astype(str) + df['mxd02'].astype(str)
+        return pd.DataFrame({'mxd03': mxd03.unique(),
+                             'mxd02': mxd02.unique()})
+
+    
+    def check_for_existing_swaths(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Reduced swath listing after parsing to be handeled by the 
+            processor to check for already fully-processed h5 files
+        
+        Returns
+        -------
+        pd.DataFrame :
+            shortened listing in case of existing files
+        """
+        #retrieve processed files
+        processed_files = [f.name.split('_')[:4] for f in os.scandir(self.out) 
+                           if f.is_file()]
+        
+        for idx, mxd02, mxd03 in df.itertuples():
+            #temporarily set file id
+            self.set_swath_id((mxd03, mxd02))
+            #compile output swath-file name
+            sname = self.compile_output_swath_name()
+            #check for existance
+            if sname.split('_')[:4] not in processed_files:
+                break
+
+        #return updated listing
+        return df.iloc[idx:,:]
+    
+
+    def get_swath_files(self) -> bool:       
+        #retieve list of currently temporarily stored/downloaded files
+        downloaded_files = [f.name for f in os.scandir(self.rawout) 
+                            if f.is_file()]
+        #retrieve current swath id's
+        GET_SWATH_NAME_ONLY = False
+        SWATHS = self.get_swath_id(GET_SWATH_NAME_ONLY)
+        
+        #only download in case do not already exist
+        MXD03_EXISTS = SWATHS['mxd03'].split('/')[-1] in downloaded_files
+        if not MXD03_EXISTS:
+            status_mxd03 = self.download_swath(SWATHS['mxd03'])
+        else:
+            status_mxd03 = True
+        MXD02_EXISTS = SWATHS['mxd02'].split('/')[-1] in downloaded_files
+        if not MXD02_EXISTS:
+            status_mxd02 = self.download_swath(SWATHS['mxd02'])
+        else:
+            status_mxd02 = True
+            
+        return status_mxd03, status_mxd02
+    
+    
+    
+        
         
     def update_meta_info(self, swaths: tuple) -> None:
         """
