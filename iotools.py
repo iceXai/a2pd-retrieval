@@ -212,4 +212,24 @@ class ModisSwathIO(SwathIO):
         return Tb
 
 
+class SlstrSwathIO(SwathIO):
+    """
+    Childclass for all SLSTR swath-related I/O
+    """
+    def load(self, path: str) -> None:
+        pass
+    
+    def get_var(self, var: str, grp: str, meta: list) -> np.array:
+        pass
 
+    def save(self, path: str) -> None:
+        pass
+    
+    def set_var(self, var: str, grp: str) -> None:
+        pass
+    
+    def close(self, path: str) -> None:
+        pass
+    
+    def cleanup(self, path: str) -> None:
+        pass
