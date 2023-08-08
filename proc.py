@@ -527,7 +527,7 @@ class RetrievalProcessor(ABC):
         
     def set_swath_io(self) -> None:
         #initiate i/o handler
-        SENSOR = self.cfg.get_sensor()
+        SENSOR = self.cfg.get_sensor().capitalize()
         IO_CLASS = self.cfg.get_class('iotools', f'{SENSOR}SwathIO') 
         self.io = IO_CLASS(self.out)
         
