@@ -155,7 +155,9 @@ class Configuration(object):
     def get_meta_module(self) -> object:
         #sets the correct meta data class corresponding to the
         #sensor/carrier
-        return self.get_meta_class()()
+        SENSOR = self.get_sensor()
+        VERSION = self.get_version()
+        return self.get_meta_class()(SENSOR, VERSION)
 
 
 
