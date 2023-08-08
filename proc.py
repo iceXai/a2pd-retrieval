@@ -8,8 +8,10 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from loguru import logger
 
-from iotools import ListingIO, ModisSwathIO
-from data import ListingData, SwathData
+from iotools import ListingIO
+from iotools import ModisSwathIO
+from data import ListingData
+from data import SwathData
 from meta import ModisSwathMeta
 from meta import SlstrSwathMeta
 from resampling import Resample
@@ -32,49 +34,54 @@ class ListingProcessor(ABC):
     def __init__(self):    
         #download error management
         self.error = DownloadErrorManager()
-    
-    """ High-level (abstract) functions """
-    
+        
     """ Getters/Setters for Processor Setup """
-    def set_carrier(self, carrier: str) -> None:
-        self.carrier = carrier
-  
+    def set_cfg(self, cfg: object) -> None:
+        self.cfg = cfg
         
-    def set_token(self, token: str) -> None:
-        self.token = token
-
+    def initialize_processor(self) -> None:
+        self.set_carrier()
+        self.set_token()
+        self.set_aoi()
+        self.set_meta()
+        self.set_url()
+        self.set_output_path()
+        self.set_listing_data()
+        self.set_listing_io()  
         
-    def set_aoi(self, aoi: object) -> None:
-        self.aoi = aoi
+    def set_carrier(self) -> None:
+        self.carrier = self.cfg.get_carrier()
         
+    def set_token(self) -> None:
+        self.token = self.cfg.get_token()
         
-    def set_meta(self, meta: object) -> None:
-        self.meta = meta
+    def set_aoi(self) -> None:
+        self.aoi = self.cfg.compile_aoi_data()
+        
+    def set_meta(self) -> None:
+        self.meta = self.cfg.get_meta_module()
         self.meta.set_carrier(self.carrier)
-
         
     def set_url(self) -> None:
         self.url = self.meta.get_urls()        
         
-    def set_output_path(self, path: str) -> None:
+    def set_output_path(self) -> None:
         #output directory
         LISTING_FOLDER = 'listing'
         
         #create listing directory if necessary
-        path = os.path.join(path, LISTING_FOLDER)
-        if not os.path.isdir(path):
-            os.makedirs(path) 
+        OUTPATH = os.path.join(self.cfg.get_output_path(), LISTING_FOLDER)
+        if not os.path.isdir(OUTPATH):
+            os.makedirs(OUTPATH) 
         #status
-        logger.info(f'Set listing output directory: {path}')
-        self.lstout = path
+        logger.info(f'Set listing output directory: {OUTPATH}')
+        self.lstout = OUTPATH
         
-        
-    def initialize_listing_data(self) -> None:
+    def set_listing_data(self) -> None:
         #initiate listing data container
         self.listing = ListingData()
         
-        
-    def initialize_listing_io(self) -> None:
+    def set_listing_io(self) -> None:
         #initiate i/o handler
         self.io = ListingIO(self.lstout)
         
@@ -317,6 +324,17 @@ class SlstrListingProcessor(ListingProcessor):
 
 class ModisListingProcessor(ListingProcessor):    
     """ Getters/Setters for Processor Setup """
+    def initialize_processor(self) -> None:
+        self.set_carrier()
+        self.set_token()
+        self.set_aoi()
+        self.set_meta()
+        self.set_url()
+        self.set_prefix()
+        self.set_output_path()
+        self.set_listing_data()
+        self.set_listing_io() 
+        
     def set_prefix(self) -> None:
         """
         Additional function dealing with the carrier-dependent file prefix:
@@ -449,13 +467,9 @@ Processing::Swath Download
 """
 
 class RetrievalProcessor(ABC):
-    pass
-
-
-class ModisRetrievalProcessor(RetrievalProcessor):
     """
-    Handles the actual download process of the identified swaths from the 
-    file listing process
+    Retrieval base class which all sensor-specific retrieval classes are 
+    supposed to inherit/be a child class from
     """
     def __init__(self):
         #aoi
@@ -463,59 +477,76 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         
         #download error management
         self.error = DownloadErrorManager()
-    
-    """ High-level functions """
-    
-    """ Getters/Setters for Processor Setup """
-    def set_token(self, token: str) -> None:
-        self.token = token
         
-    
-    def set_carrier(self, carrier: str) -> None:
-        self.carrier = carrier
+    def set_cfg(self, cfg: object) -> None:
+        self.cfg = cfg
         
+    def initialize_processor(self) -> None:
+        self.set_carrier()
+        self.set_token()
+        self.set_aoi()
+        self.set_meta()
+        self.set_output_path()
+        self.set_swath_data()
+        self.set_swath_io()  
         
-    def set_output_path(self, path: str) -> None:
-        #output directory
+    def set_carrier(self) -> None:
+        self.carrier = self.cfg.get_carrier()
+        
+    def set_token(self) -> None:
+        self.token = self.cfg.get_token()
+        
+    def set_aoi(self) -> None:
+        self.aoi = self.cfg.compile_aoi_data()
+        
+    def set_meta(self) -> None:
+        self.meta = self.cfg.get_meta_module()
+        self.meta.set_carrier(self.carrier)      
+        
+    def set_output_path(self) -> None:
+        #general output path
+        OUTPATH = self.cfg.get_output_path()
+        #raw output directory
         RAW_FOLDER = 'tmp'
-        
         #status
-        logger.info(f'Set processed output directory: {path}')
+        logger.info(f'Set processed output directory: {OUTPATH}')
         #set output directory
-        self.out = path
+        self.out = OUTPATH
         
         #create raw output temporary directory if necessary
-        path = os.path.join(path, RAW_FOLDER)
-        if not os.path.isdir(path):
-            os.makedirs(path)   
+        RAWPATH = os.path.join(OUTPATH, RAW_FOLDER)
+        if not os.path.isdir(RAWPATH):
+            os.makedirs(RAWPATH)   
         #status
-        logger.info(f'Set temporary output directory: {path}')
-        self.rawout = path
+        logger.info(f'Set temporary output directory: {RAWPATH}')
+        self.rawout = RAWPATH
         
-        
-    def set_aoi(self, aoi: dict) -> None:
-        self.aoi = aoi
-        
-    def set_meta(self, meta: object) -> None:
-        self.meta = meta
-        
-
-    def initialize_swath_data(self) -> None:
+    def set_swath_data(self) -> None:
         #initiate swath data container
         self.swath = SwathData()
         
-        
-    def initialize_swath_io(self) -> None:
+    def set_swath_io(self) -> None:
         #initiate i/o handler
-        self.io = ModisSwathIO(self.out)
-        
+        SENSOR = self.cfg.get_sensor()
+        IO_CLASS = self.cfg.get_class('iotools', f'{SENSOR}SwathIO') 
+        self.io = IO_CLASS(self.out)
         
     def initialize_resampling(self) -> None:
         self.resampling = Resample()
         self.resampling.set_aoi(self.aoi)
         self.resampling.set_data(self.swath)
-        
+
+
+
+class ModisRetrievalProcessor(RetrievalProcessor):
+    """
+    Handles the actual download process of the identified swaths from the 
+    file listing process
+    """
+
+    """ High-level functions """
     
+    """ Getters/Setters for Processor Setup """        
     def set_swath_id(self, swaths: str) -> None:
         SWATHS = {'mxd03': swaths[0],'mxd02': swaths[1]}
         self.swath.set_swath_id(SWATHS)

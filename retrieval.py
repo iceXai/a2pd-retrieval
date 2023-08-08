@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from loguru import logger
 
 from proc import ModisRetrievalProcessor
+#from proc import SlstrRetrievalProcessor
 
 import os
 import sys
@@ -24,24 +25,9 @@ class Retrieval(ABC):
     """
     Abstract base class that handles the swath retrieval and post-processing 
     """
-    def __init__(self, token: str, carrier: str, out: str):
-        """
-        Parameters
-        ----------
-        token : str
-            LAADS authentication token for the download (to be generated at 
-            https://ladsweb.modaps.eosdis.nasa.gov/)
-        out : str
-            Output directory path
-        """
-        #store arguements
-        self.token = token
-        self.out = out
-        self.carrier = carrier
-        
+    def __init__(self):      
         #store status
         self.resampling = False
-        
     
     """ Setup """    
     def set_listing(self, listing: pd.DataFrame) -> None:
@@ -55,29 +41,24 @@ class Retrieval(ABC):
         """
         self.listing = listing
         
-    def set_aoi(self, aoi: dict) -> None:
+    def set_cfg(self, cfg: object) -> None:
         """
         Parameters
         ----------
-        aoi : dict
-            python dictionary containing all the aoi-based information for the 
-            resampling process by aoi tag
+        cfg : object
+            Configuration module loading/handling the config file
+
+        Returns
+        -------
+        None
+            Used to pass the configuration down to the listing module and all 
+            subsequent instances and modules
         """
-        self.aoi = aoi
-        
-    def set_meta(self, meta: object) -> None:
-        """
-        Parameters
-        ----------
-        meta : object
-            meta class correspomnding to the specified sensor/version
-        """
-        self.meta = meta
+        self.cfg = cfg  
         
     def apply_resampling(self) -> None:
         self.proc.initialize_resampling()
         self.resampling = True
-
 
     """ Swath handling """
     def load_swath(self) -> None:
@@ -95,7 +76,6 @@ class Retrieval(ABC):
             #close file handle
             self.proc.close_swath()
 
-    
     def save_swath(self) -> None:
         #creating the h5 output file with base global attributes and set
         #all variables
@@ -107,7 +87,6 @@ class Retrieval(ABC):
         #close file connection
         self.proc.close_swath()
  
-
     def resample_swath(self) -> None:
         #loop through all variables in the data and send it to the 
         #resample procedure
@@ -119,16 +98,13 @@ class Retrieval(ABC):
         #apply the resampling
         self.proc.resample_swath()
     
-    
     def cleanup(self) -> None:
         self.proc.cleanup()
 
-
-    """ Abstract high-level methods """
+    """ Abstract methods """
     @abstractmethod
     def setup_retrieval_processor(self) -> None:
         pass
-
 
     @abstractmethod
     def download_and_process_swaths(self) -> None:
@@ -145,13 +121,8 @@ class ModisRetrieval(Retrieval):
         #status
         logger.info(f'Setup retrieval processor...')
         self.proc = ModisRetrievalProcessor()
-        self.proc.set_token(self.token)
-        self.proc.set_carrier(self.carrier)
-        self.proc.set_output_path(self.out)
-        self.proc.set_aoi(self.aoi)
-        self.proc.set_meta(self.meta)
-        self.proc.initialize_swath_data()
-        self.proc.initialize_swath_io()
+        self.proc.set_cfg(self.cfg)
+        self.proc.initialize_processor()
     
     
     def download_and_process_swaths(self) -> None:
@@ -196,5 +167,19 @@ class ModisRetrieval(Retrieval):
             self.cleanup()
             
 
-
+class SlstrsRetrieval(Retrieval):
+    """
+    Sentinel3-A/B SLSTR retrieval child class tailored to the 
+    sensor-specific processing
+    """
+        
+    def setup_retrieval_processor(self) -> None:
+        #status
+        logger.info(f'Setup retrieval processor...')
+        self.proc = SlstrRetrievalProcessor()
+        self.proc.set_cfg(self.cfg)
+        self.proc.initialize_processor()
     
+    
+    def download_and_process_swaths(self) -> None:
+        pass

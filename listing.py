@@ -27,38 +27,7 @@ class Listing(ABC):
     Abstract base class that handles the suitable (a.k.a., inside a specified 
     AOI) file identification process and the compilation of a list with 
     corresponding file URL's
-    """
-    def __init__(self,
-                 token: str,
-                 carrier: str,
-                 start: datetime.date,
-                 stop: datetime.date,
-                 out: str
-                 ):
-        """
-        Parameters
-        ----------
-        token : str
-            LAADS authentication token for the download (to be generated at 
-            https://ladsweb.modaps.eosdis.nasa.gov/)
-        carrier : str
-            Carrier satellite for the specified sensor (e.g., Terra/S3A...)
-        start : datetime.date
-            Start date of the files to be downloaded
-        stop : datetime.date
-            End date of the files to be downloaded
-        out : str
-            Output directory path
-        """
-        
-        #store arguments
-        self.token = token
-        self.carrier = carrier
-        self.start = start
-        self.stop = stop
-        self.out = out
-
-        
+    """        
     @abstractmethod
     def setup_listing_processor(self) -> None:
         pass
@@ -71,37 +40,32 @@ class Listing(ABC):
         """
         pass
     
-
-    def set_aoi(self, aoi: object) -> None:
+    def set_cfg(self, cfg: object) -> None:
         """
         Parameters
         ----------
-        aoi : object (AoiData)
-            AoiData class containing all the aoi-based information for the 
-            resampling process
-        """
-        self.aoi = aoi
-        
+        cfg : object
+            Configuration module loading/handling the config file
 
-    def set_meta(self, meta: object) -> None:
+        Returns
+        -------
+        None
+            Used to pass the configuration down to the listing module and all 
+            subsequent instances and modules
         """
-        Parameters
-        ----------
-        meta : dict
-            Meta class containing all the meta information regarding retrieval 
-            paths/url's
-        """
-        self.meta = meta       
-
+        self.cfg = cfg     
         
     def get_date_strings(self) -> list:
         """
         handles the splitting up of the datetime objects into single strings
         independent of the used carrier/sensor
         """
+        #get start/stop dates
+        START = self.cfg.get_start_date()
+        STOP = self.cfg.get_stop_date()
         # generate year (yy) and day-of-year (jj) strings for covered range
-        dates = [self.start + timedelta(days = day_diff) \
-                 for day_diff in range(0, (self.stop - self.start).days+1)]
+        dates = [START + timedelta(days = day_diff) \
+                 for day_diff in range(0, (STOP - START).days+1)]
         
         date_str = [(date.strftime('%Y'), date.strftime('%j'))
                     for date in dates]
@@ -121,15 +85,8 @@ class ModisListing(Listing):
         logger.info(f'Setup listing processor...')
         #set processor
         self.proc = ModisListingProcessor()
-        self.proc.set_carrier(self.carrier)
-        self.proc.set_token(self.token)
-        self.proc.set_aoi(self.aoi)
-        self.proc.set_meta(self.meta)
-        self.proc.set_output_path(self.out)
-        self.proc.set_url()
-        self.proc.set_prefix()
-        self.proc.initialize_listing_data()
-        self.proc.initialize_listing_io()
+        self.proc.set_cfg(self.cfg)
+        self.proc.initialize_processor()
 
     
     def compile_file_listing(self) -> pd.DataFrame:
@@ -196,14 +153,8 @@ class SlstrListing(Listing):
         logger.info(f'Setup listing processor...')
         #set processor
         self.proc = SlstrListingProcessor()
-        self.proc.set_carrier(self.carrier)
-        self.proc.set_token(self.token)
-        self.proc.set_aoi(self.aoi)
-        self.proc.set_meta(self.meta)
-        self.proc.set_output_path(self.out)
-        self.proc.set_url()
-        self.proc.initialize_listing_data()
-        self.proc.initialize_listing_io()
+        self.proc.set_cfg(self.cfg)
+        self.proc.initialize_processor()
     
     
     def compile_file_listing(self):
