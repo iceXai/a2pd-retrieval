@@ -143,29 +143,19 @@ class Configuration(object):
     def get_listing_module(self) -> object:
         #sets the correct listing processor corresponding to the 
         #sensor/carrier
-        token = self.get_token()
-        carrier = self.get_carrier()
-        start = self.get_start_date()
-        stop = self.get_stop_date()
-        out = self.get_output_path()
-        return self.get_listing_class()(token, carrier, start, stop, out)
+        return self.get_listing_class()()
     
     """ Job::Retrieval """
     def get_retrieval_module(self) -> object:
         #sets the correct retrieval processor corresponding to the
         #sensor/carrier
-        token = self.get_token()
-        carrier = self.get_carrier()
-        out = self.get_output_path()
-        return self.get_retrieval_class()(token, carrier, out)
+        return self.get_retrieval_class()()
 
     """ Job::MetaData """
     def get_meta_module(self) -> object:
         #sets the correct meta data class corresponding to the
         #sensor/carrier
-        sensor = self.get_sensor()
-        version = self.get_version()
-        return self.get_meta_class()(sensor, version)
+        return self.get_meta_class()()
 
 
 
