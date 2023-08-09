@@ -9,11 +9,8 @@ from datetime import datetime, timedelta
 from loguru import logger
 
 from iotools import ListingIO
-from iotools import ModisSwathIO
 from data import ListingData
 from data import SwathData
-from meta import ModisSwathMeta
-from meta import SlstrSwathMeta
 from resampling import Resample
 
 import pandas as pd
@@ -22,6 +19,7 @@ import numpy as np
 import requests
 import os
 import sys
+import zipfile
 
 
 # In[] 
@@ -607,11 +605,10 @@ class RetrievalProcessor(ABC):
         #retrieve current swath id's
         GET_SWATH_NAME_ONLY = False
         SWATH = self.get_swath_id(GET_SWATH_NAME_ONLY)
-        
         #only download in case do not already exist
         SWATH_EXISTS = SWATH.split('/')[-1] in DOWNLOADED_FILES
         if not SWATH_EXISTS:
-            status = self.download_swath(SWATHS['mxd03'])
+            status = self.download_swath(SWATH)
         else:
             status = True
         
@@ -632,7 +629,7 @@ class RetrievalProcessor(ABC):
         """
         #solely the swath file name
         swath = url.split('/')[-1]
-
+        
         #status
         logger.info(f'Retrieving swath file: {swath}')
 
@@ -655,123 +652,7 @@ class RetrievalProcessor(ABC):
             self.error.increase_crit_counter()
             return False
         
-        
-
-class ModisRetrievalProcessor(RetrievalProcessor):
-    """
-    Handles the actual download process of the identified swaths from the 
-    file listing process
-    """
-    
-    """ Getters/Setters for swath handling """
-    def set_swath_id(self, swaths: str) -> None:
-        SWATHS = {'mxd03': swaths[0],'mxd02': swaths[1]}
-        self.swath.set_swath_id(SWATHS)
-        
-    
-    def get_swath_id(self, short: bool = True) -> tuple:
-        SWATHS = self.swath.get_swath_id()
-        if short:
-            SWATHS['mxd03'] = SWATHS['mxd03'].split('/')[-1]
-            SWATHS['mxd02'] = SWATHS['mxd02'].split('/')[-1]
-        return SWATHS
-    
-        
-    """ Retrieval procedure """
-    def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Parameters
-        ----------
-        df : pd.DataFrame
-            The raw listing dataframe with potentially multiple entries for 
-            swaths that are supposed to be resampled to several different 
-            AOI's
-
-        Returns
-        -------
-        pd.DataFrame
-            Reduced dataframe with only unique swaths
-        """
-        mxd03 = df['url_mxd03'].astype(str) + df['mxd03'].astype(str)
-        mxd02 = df['url_mxd02'].astype(str) + df['mxd02'].astype(str)
-        return pd.DataFrame({'mxd03': mxd03.unique(),
-                             'mxd02': mxd02.unique()})
-
-    
-    def check_for_existing_swaths(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Parameters
-        ----------
-        df : pd.DataFrame
-            Reduced swath listing after parsing to be handeled by the 
-            processor to check for already fully-processed h5 files
-        
-        Returns
-        -------
-        pd.DataFrame :
-            shortened listing in case of existing files
-        """
-        #retrieve processed files
-        processed_files = [f.name.split('_')[:4] for f in os.scandir(self.out) 
-                           if f.is_file()]
-        
-        for idx, mxd02, mxd03 in df.itertuples():
-            #temporarily set file id
-            self.set_swath_id((mxd03, mxd02))
-            #compile output swath-file name
-            sname = self.compile_output_swath_name()
-            #check for existance
-            if sname.split('_')[:4] not in processed_files:
-                break
-
-        #return updated listing
-        return df.iloc[idx:,:]
-    
-
-    def get_swath_files(self) -> bool:       
-        #retieve list of currently temporarily stored/downloaded files
-        downloaded_files = [f.name for f in os.scandir(self.rawout) 
-                            if f.is_file()]
-        #retrieve current swath id's
-        GET_SWATH_NAME_ONLY = False
-        SWATHS = self.get_swath_id(GET_SWATH_NAME_ONLY)
-        
-        #only download in case do not already exist
-        MXD03_EXISTS = SWATHS['mxd03'].split('/')[-1] in downloaded_files
-        if not MXD03_EXISTS:
-            status_mxd03 = self.download_swath(SWATHS['mxd03'])
-        else:
-            status_mxd03 = True
-        MXD02_EXISTS = SWATHS['mxd02'].split('/')[-1] in downloaded_files
-        if not MXD02_EXISTS:
-            status_mxd02 = self.download_swath(SWATHS['mxd02'])
-        else:
-            status_mxd02 = True
-            
-        return status_mxd03, status_mxd02
-    
-    
-    
-        
-        
-    def update_meta_info(self, swaths: tuple) -> None:
-        """
-        Parameters
-        ----------
-        swaths : tuple(str,str)
-            Tuple of current swath urls by order (mxd03, mxd02) that will be 
-            reduced to swath names
-
-        Returns
-        -------
-        None
-            Updates the meta data information on the to be used files 
-            (mxd03 or mxd02) for the variable processing
-        """
-        mxd03 = swaths[0].split('/')[-1]
-        mxd02 = swaths[1].split('/')[-1]
-        self.meta.update_input_specs((mxd03, mxd02))
-
+    """ Input """
     def get_variables(self) -> list:
         return self.meta.get_variables()
     
@@ -791,8 +672,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         self.swath.add_to_data(var, variable)
         
     def close_swath(self) -> None:
-        self.io.close()
-        
+        self.io.close()    
         
     """ Resample procedure """
     def identify_resample_aois(self, df: pd.DataFrame, swath: str) -> list:
@@ -812,7 +692,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
             List of AOI's for this swath
         """
         swath = swath.split('/')[-1]
-        self.overlapping_aois = df['aoi'].loc[df['mxd03']==swath].tolist()
+        self.overlapping_aois = df['aoi'].loc[df['file']==swath].tolist()
     
     def get_resample_variables(self) -> list:
         return self.meta.get_resample_variables()
@@ -834,7 +714,6 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         #add to data container
         resampled_data = self.resampling.get_resampled_data()
         self.swath.add_to_resampled_data(resampled_data)
-        
         
     """ Output """
     def save_swath(self, aoi: str = None) -> None:
@@ -871,23 +750,13 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         #set file-name parts
         DATE = self.get_date_from_swath_file()
         CARRIER = self.carrier.lower()[0:3]
-        SENSOR = 'modis'
+        SENSOR = self.cfg.get_sensor()
         #compile and return
         return f'{CARRIER}_{SENSOR}_{DATE}_{EXT}.h5'
     
-    
+    @abstractmethod
     def get_date_from_swath_file(self):
-        #get swath id
-        swath = self.get_swath_id()['mxd02']
-        #take raw date from swath id and convert it to datetime object
-        raw_yyjj = swath.split('.')[1]
-        raw_hhmm = swath.split('.')[2]
-        raw_date = datetime.strptime(raw_yyjj+raw_hhmm,'A%Y%j%H%M')
-        #transform it
-        yyjj = raw_date.strftime('%Y%j')
-        hhmm = raw_date.strftime('%H%M%S')
-        #return
-        return f'{yyjj}_{hhmm}'
+        pass
     
     
     def set_variable(self, var: str, aoi: str = None) -> None:
@@ -907,16 +776,12 @@ class ModisRetrievalProcessor(RetrievalProcessor):
     """ Cleanup """
     def cleanup(self):
         #get swath id
-        swaths = self.get_swath_id()
-        #remove swaths
-        mxd03 = swaths['mxd03']
-        logger.info(f'Removing downloaded file: {mxd03}')
-        self._remove_swath(mxd03)
-        mxd02 = swaths['mxd02']
-        logger.info(f'Removing downloaded file: {mxd02}')
-        self._remove_swath(mxd02)
+        swath = self.get_swath_id()
+        #remove swath
+        logger.info(f'Removing downloaded file: {swath}')
+        self.remove_swath(swath)
         
-    def _remove_swath(self, swath: str) -> None:
+    def remove_swath(self, swath: str) -> None:
         FILENAME = swath
         FILEPATH = os.path.join(self.rawout, FILENAME)
         try:
@@ -924,8 +789,186 @@ class ModisRetrievalProcessor(RetrievalProcessor):
             logger.info(f'Removal successful!')
         except:
             logger.error(f'Removal of {FILENAME} failed!')
+        
+   
+    
+class SlstrRetrievalProcessor(RetrievalProcessor):
+    """
+    Handles the actual download process of the identified swaths from the 
+    file listing process
+    """
+    def __init__(self):
+        #get constructor elements from parent class
+        super().__init__()
+        #zip file management
+        self.zip = ZipFileManager()
+    
+    """ Output """    
+    def get_date_from_swath_file(self):
+        #get swath id
+        swath = self.get_swath_id()
+        #take raw date from swath file name and convert it to datetime object
+        raw_date = swath.split('_')[7]
+        raw_date = datetime.strptime(raw_date,'%Y%m%dT%H%M%S')
+        #transform it
+        yyjj = raw_date.strftime('%Y%j')
+        hhmm = raw_date.strftime('%H%M%S')
+        #return
+        return f'{yyjj}_{hhmm}'
+    
+    
+    
+class ModisRetrievalProcessor(RetrievalProcessor):
+    """
+    Handles the actual download process of the identified swaths from the 
+    file listing process
+    """
+    
+    """ Getters/Setters for swath handling """
+    def set_swath_id(self, swaths: str) -> None:
+        SWATHS = {'mxd03': swaths[0],'mxd02': swaths[1]}
+        self.swath.set_swath_id(SWATHS)
+        
+    
+    def get_swath_id(self, short: bool = True) -> tuple:
+        SWATHS = self.swath.get_swath_id()
+        if short:
+            SWATHS['mxd03'] = SWATHS['mxd03'].split('/')[-1]
+            SWATHS['mxd02'] = SWATHS['mxd02'].split('/')[-1]
+        return SWATHS
+    
+        
+    """ Retrieval procedure """
+    def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        MODIS specific function dealing with the file duality of MXD03 and 
+        MXD02 necessary to get the full dataset
+        """
+        mxd03 = df['url_mxd03'].astype(str) + df['mxd03'].astype(str)
+        mxd02 = df['url_mxd02'].astype(str) + df['mxd02'].astype(str)
+        return pd.DataFrame({'mxd03': mxd03.unique(),
+                             'mxd02': mxd02.unique()})
 
+    
+    def check_for_existing_swaths(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        MODIS specific function dealing with the file duality of MXD03 and 
+        MXD02 necessary to get the full dataset
+        """
+        #retrieve processed files
+        processed_files = [f.name.split('_')[:4] for f in os.scandir(self.out) 
+                           if f.is_file()]
+        
+        for idx, mxd02, mxd03 in df.itertuples():
+            #temporarily set file id
+            self.set_swath_id((mxd03, mxd02))
+            #compile output swath-file name
+            sname = self.compile_output_swath_name()
+            #check for existance
+            if sname.split('_')[:4] not in processed_files:
+                break
 
+        #return updated listing
+        return df.iloc[idx:,:]
+    
+
+    def get_swath_file(self) -> bool:
+        """
+        MODIS specific function dealing with the file duality of MXD03 and 
+        MXD02 necessary to get the full dataset
+        """
+        #retieve list of currently temporarily stored/downloaded files
+        downloaded_files = [f.name for f in os.scandir(self.rawout) 
+                            if f.is_file()]
+        #retrieve current swath id's
+        GET_SWATH_NAME_ONLY = False
+        SWATHS = self.get_swath_id(GET_SWATH_NAME_ONLY)
+        
+        #only download in case do not already exist
+        MXD03_EXISTS = SWATHS['mxd03'].split('/')[-1] in downloaded_files
+        if not MXD03_EXISTS:
+            status_mxd03 = self.download_swath(SWATHS['mxd03'])
+        else:
+            status_mxd03 = True
+        MXD02_EXISTS = SWATHS['mxd02'].split('/')[-1] in downloaded_files
+        if not MXD02_EXISTS:
+            status_mxd02 = self.download_swath(SWATHS['mxd02'])
+        else:
+            status_mxd02 = True
+            
+        return status_mxd03, status_mxd02
+
+        
+    def update_meta_info(self, swaths: tuple) -> None:
+        """
+        Parameters
+        ----------
+        swaths : tuple(str,str)
+            Tuple of current swath urls by order (mxd03, mxd02) that will be 
+            reduced to swath names
+
+        Returns
+        -------
+        None
+            Updates the MODIS specific meta data information on the to be 
+            used files (mxd03 or mxd02) for the variable processing
+        """
+        mxd03 = swaths[0].split('/')[-1]
+        mxd02 = swaths[1].split('/')[-1]
+        self.meta.update_input_specs((mxd03, mxd02))
+        
+        
+    """ Resample procedure """
+    def identify_resample_aois(self, df: pd.DataFrame, swath: str) -> list:
+        """
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The raw listing data frame with potentially multiple entries for 
+            swaths that are supposed to be resampled to several different 
+            AOI's
+        swath : str
+            Name of current swath to identify applicable AOI's for resampling
+
+        Returns
+        -------
+        list :
+            List of AOI's for this swath
+        """
+        swath = swath.split('/')[-1]
+        self.overlapping_aois = df['aoi'].loc[df['mxd03']==swath].tolist()
+        
+        
+    """ Output """    
+    def get_date_from_swath_file(self):
+        #get swath id
+        swath = self.get_swath_id()['mxd02']
+        #take raw date from swath id and convert it to datetime object
+        raw_yyjj = swath.split('.')[1]
+        raw_hhmm = swath.split('.')[2]
+        raw_date = datetime.strptime(raw_yyjj+raw_hhmm,'A%Y%j%H%M')
+        #transform it
+        yyjj = raw_date.strftime('%Y%j')
+        hhmm = raw_date.strftime('%H%M%S')
+        #return
+        return f'{yyjj}_{hhmm}'
+    
+
+    """ Cleanup """
+    def cleanup(self):
+        #get swath id
+        swaths = self.get_swath_id()
+        #remove swaths
+        mxd03 = swaths['mxd03']
+        logger.info(f'Removing downloaded file: {mxd03}')
+        self.remove_swath(mxd03)
+        mxd02 = swaths['mxd02']
+        logger.info(f'Removing downloaded file: {mxd02}')
+        self.remove_swath(mxd02)
+
+    
+    
+    
 
 # In[]
 # In[]
@@ -955,3 +998,34 @@ class DownloadErrorManager(object):
             
     def reset_crit_counter(self) -> None:
         self.current_download_failures = 0
+        
+class ZipFileManager(object):
+    """
+    Conven ience class to handle the management of swath's downloaded as ZIP
+    files to reduce boilerplate code
+    """
+    def __init__(self):
+        pass
+    
+    def set_zip_path(self, outpath: str, swath: str) -> None:
+        #save zip file location and output path
+        self.outpath = outpath
+        self.zippath = os.path.join(outpath, swath)
+        
+    def load_zip_file(self) -> None:
+        #open zipfile and store content in dict
+        self.zipfile = zipfile.ZipFile(ZIPPATH, 'r')
+        self.zipdict = ZIPFILE.namelist()
+        
+    def extract_zip_file(self) -> None:
+        #extract file content and store folder location w/ zip folder
+        self.zipfile.extractall(self.outpath)
+        self.extpath = os.path.join(self.outpath, self.zipdict[0])
+        
+    def close_zip_file(self) -> None:
+        self.zipfile.close()
+        
+    def remove_extracted_content(self) -> None:
+        pass
+    
+    
