@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from loguru import logger
 
 from proc import ModisRetrievalProcessor
-#from proc import SlstrRetrievalProcessor
+from proc import SlstrRetrievalProcessor
 
 import os
 import sys
@@ -141,7 +141,7 @@ class ModisRetrieval(Retrieval):
             self.proc.set_swath_id((mxd03, mxd02))
             
             #download the swath files
-            DOWNLOAD_COMPLETED = self.proc.get_swath_files()
+            DOWNLOAD_COMPLETED = self.proc.get_swath_file()
 
             #continue with next entry in case something went wrong
             if not all(DOWNLOAD_COMPLETED):
@@ -167,7 +167,7 @@ class ModisRetrieval(Retrieval):
             self.cleanup()
             
 
-class SlstrsRetrieval(Retrieval):
+class SlstrRetrieval(Retrieval):
     """
     Sentinel3-A/B SLSTR retrieval child class tailored to the 
     sensor-specific processing
@@ -182,4 +182,26 @@ class SlstrsRetrieval(Retrieval):
     
     
     def download_and_process_swaths(self) -> None:
-        pass
+        #status
+        logger.info(f'Retrieve and process swaths...')
+        #parse swath listing to mitigate multiple downloads of the same 
+        #file due to several AOIs being specified
+        self.swaths = self.proc.parse_swath_listing(self.listing)
+
+        #check for previously or already downloaded and processed files
+        self.swaths = self.proc.check_for_existing_swaths(self.swaths)
+
+        #loop over all swath listing entries
+        for idx, swath in self.swaths.itertuples():          
+            #make processor aware of currently processed swaths
+            self.proc.set_swath_id(swath)
+            
+            #download the swath files
+            DOWNLOAD_COMPLETED = self.proc.get_swath_file()
+
+            #continue with next entry in case something went wrong
+            if not DOWNLOAD_COMPLETED:
+                continue
+
+            #load swath data
+            self.load_swath() 
