@@ -120,9 +120,7 @@ class ModisRetrieval(Retrieval):
     def setup_retrieval_processor(self) -> None:
         #status
         logger.info(f'Setup retrieval processor...')
-        self.proc = ModisRetrievalProcessor()
-        self.proc.set_cfg(self.cfg)
-        self.proc.initialize_processor()
+        self.proc = ModisRetrievalProcessor(self.cfg)
     
     
     def download_and_process_swaths(self) -> None:
@@ -176,10 +174,7 @@ class SlstrRetrieval(Retrieval):
     def setup_retrieval_processor(self) -> None:
         #status
         logger.info(f'Setup retrieval processor...')
-        self.proc = SlstrRetrievalProcessor()
-        self.proc.set_cfg(self.cfg)
-        self.proc.initialize_processor()
-    
+        self.proc = SlstrRetrievalProcessor(self.cfg)    
     
     def download_and_process_swaths(self) -> None:
         #status

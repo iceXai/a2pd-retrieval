@@ -455,9 +455,11 @@ class ModisListingProcessor(ListingProcessor):
         self.listing.add_to_listing(df)
        
 
+
 # In[]
 # In[]
 # In[]
+
 
 
 """
@@ -469,40 +471,53 @@ class RetrievalProcessor(ABC):
     Retrieval base class which all sensor-specific retrieval classes are 
     supposed to inherit/be a child class from
     """
-    def __init__(self):
-        #aoi
-        self.overlapping_aois = None
-        
-        #download error management
-        self.error = DownloadErrorManager()
-
-    """ Getters/Setters for Processor Setup """
-    def set_cfg(self, cfg: object) -> None:
+    def __init__(self, cfg: object):
+        #pass configuration
         self.cfg = cfg
         
-    def initialize_processor(self) -> None:
-        self.set_carrier()
-        self.set_token()
-        self.set_aoi()
-        self.set_meta()
-        self.set_output_path()
-        self.set_swath_data()
-        self.set_swath_io()  
+        #initialize base/sensor-specific modules
+        self.initialize_base_modules()
+        self.initialize_sensor_specific_modules()
         
-    def set_carrier(self) -> None:
+        #initialize resampling if necessary
+        APPLY_RESAMPLING = self.cfg.do_resampling()
+        if APPLY_RESAMPLING:
+            self.initialize_resample_module()
+        
+        #global variables
+        self.overlapping_aois = None
+        
+    """ Initializations """
+    def initialize_base_modules(self) -> None:
+        #basics
+        self._set_carrier()
+        self._set_token()
+        self._set_output_path()
+        #modules
+        self._set_aoi_handler()
+        self._set_swath_meta()
+        self._set_swath_data()
+        self._set_swath_io()
+        self._set_error_handler()
+        
+    @abstractmethod
+    def initialize_sensor_specific_modules(self) -> None:
+        pass
+    
+            
+    def initialize_resample_module(self) -> None:
+        self.resampling = Resample()
+        self.resampling.set_aoi(self.aoi)
+        self.resampling.set_data(self.swath)
+        
+    """ Internal Getters/Setters for Processor Setup """        
+    def _set_carrier(self) -> None:
         self.carrier = self.cfg.get_carrier()
         
-    def set_token(self) -> None:
+    def _set_token(self) -> None:
         self.token = self.cfg.get_token()
         
-    def set_aoi(self) -> None:
-        self.aoi = self.cfg.compile_aoi_data()
-        
-    def set_meta(self) -> None:
-        self.meta = self.cfg.get_meta_module()
-        self.meta.set_carrier(self.carrier)      
-        
-    def set_output_path(self) -> None:
+    def _set_output_path(self) -> None:
         #general output path
         OUTPATH = self.cfg.get_output_path()
         #raw output directory
@@ -519,31 +534,76 @@ class RetrievalProcessor(ABC):
         #status
         logger.info(f'Set temporary output directory: {RAWPATH}')
         self.rawout = RAWPATH
+
+    def _set_aoi_handler(self) -> None:
+        #initiate aoi_handler
+        self.aoi = self.cfg.compile_aoi_data()
         
-    def set_swath_data(self) -> None:
+    def _set_swath_meta(self) -> None:
+        #initiate meta data handler
+        self.meta = self.cfg.get_meta_module()
+        self.meta.set_carrier(self.carrier)      
+        
+    def _set_swath_data(self) -> None:
         #initiate swath data container
         self.swath = SwathData()
         
-    def set_swath_io(self) -> None:
+    def _set_swath_io(self) -> None:
         #initiate i/o handler
         SENSOR = self.cfg.get_sensor().capitalize()
         IO_CLASS = self.cfg.get_class('iotools', f'{SENSOR}SwathIO') 
         self.io = IO_CLASS(self.out)
         
-    def initialize_resampling(self) -> None:
-        self.resampling = Resample()
-        self.resampling.set_aoi(self.aoi)
-        self.resampling.set_data(self.swath)
+    def _set_error_handler() -> None:
+        #initiate download error handler
+        self.error = DownloadErrorHandler()
         
-    """ Getters/Setters for swath handling """
+    """ High-level API's """
+    @abstractmethod
     def set_swath_id(self, swath: str) -> None:
+        """
+        Parameters
+        ----------
+        swath : str
+            Swath name or id to be used for identification and processing
+
+        Returns
+        -------
+        None
+            API function to be called by the Retrieval Class to set the 
+            swath id for later usage.
+            Intention is to either implement this base version by a call 
+            to super().set_swath_id() or to override it in the sensor-specific 
+            RetrievalProcessor() child class
+        """
         self.swath.set_swath_id(swath)
-        
+     
+    @abstractmethod
     def get_swath_id(self, short: bool = True) -> tuple:
+        """
+        Parameters
+        ----------
+        short : bool
+            Should only the swath name be returned (True; default) or the 
+            full path (False)
+
+        Returns
+        -------
+        None
+            API function to be called by the Retrieval Class to get the 
+            swath id. 
+            Intention is to either implement this base version by a call 
+            to super().get_swath_id() or to override it in the sensor-specific 
+            RetrievalProcessor() child class
+        """
         SWATH = self.swath.get_swath_id()
         if short:
             SWATH = SWATH.split('/')[-1]
         return SWATH
+      
+
+
+
     
     """ Retrieval procedure """
     def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -797,12 +857,28 @@ class SlstrRetrievalProcessor(RetrievalProcessor):
     Handles the actual download process of the identified swaths from the 
     file listing process
     """
-    def __init__(self):
-        #get constructor elements from parent class
-        super().__init__()
-        #zip file management
-        self.zip = ZipFileManager()
-    
+
+    """ Sensor-specific initializations """
+    def initialize_sensor_specific_modules(self) -> None:
+        self._set_zip_hanlder()
+        self._set_retrieval_handler()
+        
+    def _set_zip_handler(self) -> None:
+        self.zip = ZipFileHandler()
+        
+    def _set_retrieval_handler(self) -> None:
+        self.retrieval = BaseRetrievalHandler()
+        
+    """ Getters/Setters for swath handling """
+    def set_swath_id(self, swath: str) -> None:
+        super().set_swath_id(swath)
+        
+    def get_swath_id(self, short: bool = True) -> str:
+        return super().get_swath_id(short)
+
+
+
+
     """ Output """    
     def get_date_from_swath_file(self):
         #get swath id
@@ -823,10 +899,17 @@ class ModisRetrievalProcessor(RetrievalProcessor):
     Handles the actual download process of the identified swaths from the 
     file listing process
     """
+
+    """ Sensor-specific initializations """
+    def initialize_sensor_specific_modules(self) -> None:
+        self._set_retrieval_handler()
+    
+    def _set_retrieval_handler(self) -> None:
+        self.retrieval = BaseRetrievalHandler()
     
     """ Getters/Setters for swath handling """
-    def set_swath_id(self, swaths: str) -> None:
-        SWATHS = {'mxd03': swaths[0],'mxd02': swaths[1]}
+    def set_swath_id(self, swath: tuple) -> None:
+        SWATHS = {'mxd03': swath[0],'mxd02': swath[1]}
         self.swath.set_swath_id(SWATHS)
         
     
@@ -837,7 +920,10 @@ class ModisRetrievalProcessor(RetrievalProcessor):
             SWATHS['mxd02'] = SWATHS['mxd02'].split('/')[-1]
         return SWATHS
     
-        
+
+
+
+      
     """ Retrieval procedure """
     def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -974,11 +1060,8 @@ class ModisRetrievalProcessor(RetrievalProcessor):
 # In[]
 # In[]
 
-"""
-Misc: Common Functions/Classes
-"""
 
-class DownloadErrorManager(object):
+class DownloadErrorHandler(object):
     """
     Convenience class to handle the download error management for swath and 
     listing retrieval to reduce boilerplate code
@@ -998,8 +1081,9 @@ class DownloadErrorManager(object):
             
     def reset_crit_counter(self) -> None:
         self.current_download_failures = 0
+
         
-class ZipFileManager(object):
+class ZipFileHandler(object):
     """
     Conven ience class to handle the management of swath's downloaded as ZIP
     files to reduce boilerplate code
