@@ -83,33 +83,36 @@ class SwathIO(ABC):
             Returns numpy array with corresponding data
         """
         pass
-
-    @abstractmethod
+    
+    def close(self) -> None:
+        try:
+            self.fh.end()
+        except:
+            self.fh.close()
+    
     def save(self, path: str) -> None:
-        """
-        Parameters
-        ----------
-        path : str
-            Path to the file/swath to be created and saved to
-
-        Returns
-        -------
-        None
-            Stores the specific file handle, e.g., within self.fh
-        """
-        pass
+        #create file and open file handle
+        self.fh = h5py.File(path,'w')
+        #set global attributes
+        AUTHOR = "Dr. Stephan Paul (AWI/iceXai)"
+        self.fh.attrs.create("author", AUTHOR)
+        EMAIL = "stephan.paul@posteo.net"
+        self.fh.attrs.create("contact", EMAIL)
+        TIMESTAMP = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.fh.attrs.create("created", TIMESTAMP)
     
-    @abstractmethod
-    def set_var(self, var: str, grp: str) -> None:
-        pass
+    def set_var(self, inpath: str, ds: np.array, attr: str) -> None:
+        #create dataset in file
+        h5ds = self.fh.create_dataset(inpath,
+                                      data=ds,
+                                      compression="gzip",
+                                      compression_opts=9)
+        #set data attributes
+        h5ds.attrs.create("long_name",attr)
+        h5ds.attrs.create("valid_range",[np.nanmin(ds),np.nanmax(ds)])
     
-    @abstractmethod
-    def close(self, path: str) -> None:
-        pass
-    
-    @abstractmethod
     def cleanup(self, path: str) -> None:
-        pass
+        os.remove(path)  
     
     
 class ModisSwathIO(SwathIO):
@@ -166,36 +169,7 @@ class ModisSwathIO(SwathIO):
         
         #return variable to caller
         return variable[:,:]
-        
-    def close(self) -> None:
-        try:
-            self.fh.end()
-        except:
-            self.fh.close()
-    
-    def save(self, path: str) -> None:
-        #create file and open file handle
-        self.fh = h5py.File(path,'w')
-        #set global attributes
-        AUTHOR = "Dr. Stephan Paul (AWI/iceXai)"
-        self.fh.attrs.create("author", AUTHOR)
-        EMAIL = "stephan.paul@posteo.net"
-        self.fh.attrs.create("contact", EMAIL)
-        TIMESTAMP = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        self.fh.attrs.create("created", TIMESTAMP)
-    
-    def set_var(self, inpath: str, ds: np.array, attr: str) -> None:
-        #create dataset in file
-        h5ds = self.fh.create_dataset(inpath,
-                                      data=ds,
-                                      compression="gzip",
-                                      compression_opts=9)
-        #set data attributes
-        h5ds.attrs.create("long_name",attr)
-        h5ds.attrs.create("valid_range",[np.nanmin(ds),np.nanmax(ds)])
-    
-    def cleanup(self, path: str) -> None:
-        os.remove(path)       
+             
 
     #calculate TB specific for this sensor?
     def _calculate_Tb(self, variable, wavelength):
@@ -221,15 +195,4 @@ class SlstrSwathIO(SwathIO):
     
     def get_var(self, var: str, grp: str, meta: list) -> np.array:
         pass
-
-    def save(self, path: str) -> None:
-        pass
     
-    def set_var(self, var: str, grp: str) -> None:
-        pass
-    
-    def close(self, path: str) -> None:
-        pass
-    
-    def cleanup(self, path: str) -> None:
-        pass
