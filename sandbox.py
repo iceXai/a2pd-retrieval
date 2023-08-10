@@ -6,7 +6,8 @@ from job import RetrievalJob
 
 job = RetrievalJob('agrs')
 job.validate()
-job.setup()
+#job.setup()
+#job.run()
 
 
 #print(job.cfg.get_sensor())
@@ -17,7 +18,6 @@ job.setup()
 
 #test = job.lst._get_date_strings()
 
-job.run()
 
 # geometa_file_name = f'MOD03_2022-09-01.txt'
 # url = f'https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMeta/61/TERRA/2022/{geometa_file_name}'
@@ -27,4 +27,35 @@ job.run()
 # print(r.content)
 
 
+from abc import ABC, abstractmethod
+class A(ABC):
+    @abstractmethod
+    def test(self, string = 'test'):
+        print(string)
+    
+    @abstractmethod  
+    def test2(self):
+        return 2
+        
+
+class B(A):
+    def test(self, string):
+        super().test()
+        super().test(string)
+    def test2(self):
+        return super().test2()
+
+class C(A):
+    def test(self, string):
+        print(string)
+    def test2(self):
+        return 4
+        
+b = B()
+b.test('blubb')
+x = b.test2(); print(str(x))
+
+c = C()
+c.test('bla')
+x = c.test2(); print(str(x))
 
