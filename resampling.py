@@ -12,16 +12,13 @@ import numpy as np
 
 # In[]
 
-
-"""
-Resampling to Grid
-"""
-
-class Resample(object):
+class ResampleHandler(object):
     """
     Handles all the resample process of the current tobe processed swath data
     """
-    def __init__(self):
+    def __init__(self, host_class: object):
+        #keep instance of the host class to use this as nestes class
+        self.ref = host_class
         #for the grouping/stacking process
         self.coord = {}
         self.stack = {}
@@ -33,11 +30,6 @@ class Resample(object):
     def get_resampled_data(self) -> dict:
         return self.resampled_aoi_data
     
-    def set_aoi(self, aoi: dict) -> None:
-        self.aoi = aoi
-        
-    def set_data(self, data: dict) -> None:
-        self.data = data
         
     """ Resampling """
     def add_data_to_group(self, var: str, lon: str, lat: str) -> None:
@@ -60,9 +52,9 @@ class Resample(object):
             Adds the data (names and coordinates) to the global dictionaries 
             to be grouped afterwards
         """
-        variable  = self.data.get_data(var)
-        longitude = self.data.get_data(lon)
-        latitude  = self.data.get_data(lat)
+        variable  = self.ref.data.get_data(var)
+        longitude = self.ref.data.get_data(lon)
+        latitude  = self.ref.data.get_data(lat)
         
         #check if respective group already exists
         key = f'{lon}{lat}'
@@ -95,7 +87,7 @@ class Resample(object):
         rsd = {}
     
         #retrieve aoi grid to resample to
-        aoi_grid = self.aoi.get_aoi(aoi).get_grid()
+        aoi_grid = self.ref.aoi.get_aoi(aoi).get_grid()
 
         #return reference-grid latitude/longitude
         ref_grid_lon, ref_grid_lat = aoi_grid.get_lonlats()

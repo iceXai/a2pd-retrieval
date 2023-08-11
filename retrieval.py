@@ -128,23 +128,27 @@ class ModisRetrieval(Retrieval):
         logger.info(f'Retrieve and process swaths...')
         #parse swath listing to mitigate multiple downloads of the same 
         #file due to several AOIs being specified
-        self.swaths = self.proc.parse_swath_listing(self.listing)
+        self.proc.parse_swath_listing(self.listing)
 
         #check for previously or already downloaded and processed files
-        self.swaths = self.proc.check_for_existing_swaths(self.swaths)
+        self.proc.check_for_existing_swaths()
+        
+        #receive the final, cleared-up swath listing
+        LISTING = self.proc.get_listing()
 
-        #loop over all swath listing entries
-        for mxd03, mxd02 in self.swaths.itertuples(index=False):          
+        #loop over all listing entries
+        for _, swath in LISTING.iterrows():          
             #make processor aware of currently processed swaths
-            self.proc.set_swath_id((mxd03, mxd02))
+            self.proc.set_swath_id(swath)
             
             #download the swath files
             DOWNLOAD_COMPLETED = self.proc.get_swath_file()
 
             #continue with next entry in case something went wrong
-            if not all(DOWNLOAD_COMPLETED):
+            if not DOWNLOAD_COMPLETED:
                 continue
             
+            #TODO needs to be moved somewhere else into the Processor?
             #update the processor meta data once for the currently used swaths
             self.proc.update_meta_info((mxd03,mxd02))
 
@@ -181,13 +185,16 @@ class SlstrRetrieval(Retrieval):
         logger.info(f'Retrieve and process swaths...')
         #parse swath listing to mitigate multiple downloads of the same 
         #file due to several AOIs being specified
-        self.swaths = self.proc.parse_swath_listing(self.listing)
+        self.proc.parse_swath_listing(self.listing)
 
         #check for previously or already downloaded and processed files
-        self.swaths = self.proc.check_for_existing_swaths(self.swaths)
+        self.proc.check_for_existing_swaths()
+        
+        #receive the final, cleared-up swath listing
+        LISTING = self.proc.get_listing()
 
-        #loop over all swath listing entries
-        for idx, swath in self.swaths.itertuples():          
+        #loop over all listing entries
+        for _, swath in LISTING.iterrows():          
             #make processor aware of currently processed swaths
             self.proc.set_swath_id(swath)
             
