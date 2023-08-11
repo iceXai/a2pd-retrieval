@@ -59,3 +59,47 @@ c = C()
 c.test('bla')
 x = c.test2(); print(str(x))
 
+print('----')
+
+class Z(ABC):
+    def __init__(self):
+        self.a = '1'
+        self.z = self.z(self)
+        
+    def init_X(self):
+        self.x = X(self)
+        
+    def show(self):
+        print(self.a)
+        
+    def show_z(self):
+        self.z.show()
+    
+    class z(object):
+        def __init__(self, outer_self):
+            self.outer_self = outer_self
+            self.a = '2'
+        def show(self):
+            print(self.a)
+            
+        def show_Z(self):
+            self.outer_self.show()
+            
+class X(object):
+    def __init__(self, other_self):
+        self.other_self = other_self
+        self.other_self.show()
+        
+    def set_outer_a(self):
+        self.other_self.a = '3'
+        self.other_self.show()
+
+
+test = Z()
+test.show()
+test.show_z()
+test.z.show_Z()
+print('----')
+test.init_X()
+test.x.set_outer_a()
+test.show()
