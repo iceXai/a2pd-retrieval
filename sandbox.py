@@ -27,79 +27,88 @@ job.validate()
 # print(r.content)
 
 
-from abc import ABC, abstractmethod
-class A(ABC):
-    @abstractmethod
-    def test(self, string = 'test'):
-        print(string)
+
+import pandas as pd
+
+d = {'a': [1,2], 'b': [2,3], 'c': ['bla','blubb']}
+df = pd.DataFrame(d)
+
+for i,e in df.iterrows():
+    print(e)
+
+# from abc import ABC, abstractmethod
+# class A(ABC):
+#     @abstractmethod
+#     def test(self, string = 'test'):
+#         print(string)
     
-    @abstractmethod  
-    def test2(self):
-        return 2
+#     @abstractmethod  
+#     def test2(self):
+#         return 2
         
 
-class B(A):
-    def test(self, string):
-        super().test()
-        super().test(string)
-    def test2(self):
-        return super().test2()
+# class B(A):
+#     def test(self, string):
+#         super().test()
+#         super().test(string)
+#     def test2(self):
+#         return super().test2()
 
-class C(A):
-    def test(self, string):
-        print(string)
-    def test2(self):
-        return 4
+# class C(A):
+#     def test(self, string):
+#         print(string)
+#     def test2(self):
+#         return 4
         
-b = B()
-b.test('blubb')
-x = b.test2(); print(str(x))
+# b = B()
+# b.test('blubb')
+# x = b.test2(); print(str(x))
 
-c = C()
-c.test('bla')
-x = c.test2(); print(str(x))
+# c = C()
+# c.test('bla')
+# x = c.test2(); print(str(x))
 
-print('----')
+# print('----')
 
-class Z(ABC):
-    def __init__(self):
-        self.a = '1'
-        self.z = self.z(self)
+# class Z(ABC):
+#     def __init__(self):
+#         self.a = '1'
+#         self.z = self.z(self)
         
-    def init_X(self):
-        self.x = X(self)
+#     def init_X(self):
+#         self.x = X(self)
         
-    def show(self):
-        print(self.a)
+#     def show(self):
+#         print(self.a)
         
-    def show_z(self):
-        self.z.show()
+#     def show_z(self):
+#         self.z.show()
     
-    class z(object):
-        def __init__(self, outer_self):
-            self.outer_self = outer_self
-            self.a = '2'
-        def show(self):
-            print(self.a)
+#     class z(object):
+#         def __init__(self, outer_self):
+#             self.outer_self = outer_self
+#             self.a = '2'
+#         def show(self):
+#             print(self.a)
             
-        def show_Z(self):
-            self.outer_self.show()
+#         def show_Z(self):
+#             self.outer_self.show()
             
-class X(object):
-    def __init__(self, other_self):
-        self.other_self = other_self
-        self.other_self.show()
+# class X(object):
+#     def __init__(self, other_self):
+#         self.other_self = other_self
+#         self.other_self.show()
         
-    def set_outer_a(self):
-        self.other_self.a = '3'
-        self.other_self.show()
+#     def set_outer_a(self):
+#         self.other_self.a = '3'
+#         self.other_self.show()
 
 
-test = Z()
-test.show()
-test.show_z()
-test.z.show_Z()
-print('----')
-test.init_X()
-test.x.set_outer_a()
-test.show()
+# test = Z()
+# test.show()
+# test.show_z()
+# test.z.show_Z()
+# print('----')
+# test.init_X()
+# test.x.set_outer_a()
+# test.show()
