@@ -647,32 +647,59 @@ class RetrievalProcessor(ABC):
         STATUS = self.retrieval.get_swath_file()
         return STATUS
 
-
-    
-    """ Retrieval procedure """
-
+    def load_swath(self) -> None:
+        """
+        API function to handle the swath loading by getting all available 
+        variables from the meta file, looping over them, opening the 
+        corresponding files and storing the data within the data container
+        """    
+        #loop through all downloaded variables and import corresponding 
+        #files/data
+        VARIABLES_TO_PROCESS = self.meta.get_variables()
         
-    """ Input """
-    def get_variables(self) -> list:
-        return self.meta.get_variables()
-    
-    def open_swath(self, var: str) -> None:
-        FILENAME = self.meta.get_var_input_specs(var)[0]
-        FILEPATH = os.path.join(self.rawout, FILENAME)
-        self.io.load(FILEPATH)
+        for VAR in VARIABLES_TO_PROCESS:
+            #open file link
+            self.swath.open_swath(VAR)
+            
+            #retrieve content from group/variable
+            self.swath.load_variable(VAR)
+            
+            #close file handle
+            self.swath.close_swath()
+            
+    def save_swath(self) -> None:
+        """
+        API function to handle the swath saving to h5 format by separating 
+        between resampling and non-resampling mode and putting variable by 
+        variable into the new file using the respective SwathHandler class
+        """
+        #creating the h5 output file with base global attributes 
+        RESAMPLING_APPLIED = self.cfg.do_resampling()
+        if RESAMPLING_APPLIED:
+            for aoi in self.overlapping_aois:
+                self.swath.create_swath(aoi)
+        else:
+            self.swath.create_swath()
         
-    def load_variable(self, var: str) -> None:
-        #get current variable/group name info
-        GRP, VAR = self.meta.get_var_input_specs(var)[1:]
-        #retrieve corresponding channel specifications
-        CHSPECS = self.meta.get_var_channel_specs(var)
-        #retrieve the actual variable data from the swath
-        variable = self.io.get_var(VAR, GRP, CHSPECS)
-        #store it to the data container using the same variable key handle
-        self.swath.add_to_data(var, variable)
+        #get all available variables
+        VARIABLES_TO_PROCESS = self.meta.get_variables()
         
-    def close_swath(self) -> None:
-        self.io.close()    
+        #set these into the new file
+        for VAR in VARIABLES_TO_PROCESS:
+            self.swath.set_variable(VAR)
+            
+        #close file connection
+        self.swath.close_swath()
+        
+    def cleanup(self) -> None:
+        """
+        API function to handle the clean-up of all downloaded files after 
+        processing to h5
+        """
+        self.swath.cleanup()
+        
+        
+        
         
     """ Resample procedure """
     def identify_resample_aois(self, df: pd.DataFrame, swath: str) -> list:
@@ -713,84 +740,10 @@ class RetrievalProcessor(ABC):
             self.resampling.resample(aoi)
         #add to data container
         resampled_data = self.resampling.get_resampled_data()
-        self.swath.add_to_resampled_data(resampled_data)
+        self.data.add_to_resampled_data(resampled_data)
         
-    """ Output """
-    def save_swath(self, aoi: str = None) -> None:
-        #wrapper function to handle the h5 output file-creation and data- 
-        #storage process
-        vars_to_process = self.get_variables()
-        self.create_swath(aoi)
-        for var in vars_to_process:
-            self.set_variable(var)
-            
-    
-    def save_resampled_swath(self) -> None:
-        #wrapper function to handle the h5 output file-creation and data- 
-        #storage process of the resampled data
-        for aoi in self.overlapping_aois:
-            self.save_swath(aoi)
-        
-        
-    def create_swath(self, aoi: str = None) -> None:
-        FILENAME = self.compile_output_swath_name(aoi)
-        FILEPATH = os.path.join(self.out, FILENAME)
-        #status
-        logger.info(f'Saving to file: {FILENAME}')
-        self.io.save(FILEPATH)
-    
-    
-    def compile_output_swath_name(self, aoi: str = None) -> str:
-        #correct processing state extension
-        if aoi is None:
-            EXT = 'raw'
-        else:
-            EXT = aoi
-        pass
-        #set file-name parts
-        DATE = self.get_date_from_swath_file()
-        CARRIER = self.carrier.lower()[0:3]
-        SENSOR = self.cfg.get_sensor()
-        #compile and return
-        return f'{CARRIER}_{SENSOR}_{DATE}_{EXT}.h5'
-    
-    @abstractmethod
-    def get_date_from_swath_file(self):
-        pass
-    
-    
-    def set_variable(self, var: str, aoi: str = None) -> None:
-        #get variable specific output specifications
-        GRP, VAR, ATTR = self.meta.get_var_output_specs(var)
-        #compile in-file specific group/variable path
-        INPATH = f'{GRP}/{VAR}'
-        #pick dataset
-        if aoi is None:
-            DS = self.swath.get_data(var)
-        else:
-            DS = self.swath.get_resampled_data(aoi, var)
-        #pass data to io
-        self.io.set_var(INPATH, DS, ATTR)
 
 
-    """ Cleanup """
-    def cleanup(self):
-        #get swath id
-        swath = self.get_swath_id()
-        #remove swath
-        logger.info(f'Removing downloaded file: {swath}')
-        self.remove_swath(swath)
-        
-    def remove_swath(self, swath: str) -> None:
-        FILENAME = swath
-        FILEPATH = os.path.join(self.rawout, FILENAME)
-        try:
-            self.io.cleanup(FILEPATH)
-            logger.info(f'Removal successful!')
-        except:
-            logger.error(f'Removal of {FILENAME} failed!')
-        
-   
     
 class SlstrRetrievalProcessor(RetrievalProcessor):
     """
@@ -815,21 +768,6 @@ class SlstrRetrievalProcessor(RetrievalProcessor):
         
 
 
-
-
-
-    """ Output """    
-    def get_date_from_swath_file(self):
-        #get swath id
-        swath = self.get_swath_id()
-        #take raw date from swath file name and convert it to datetime object
-        raw_date = swath.split('_')[7]
-        raw_date = datetime.strptime(raw_date,'%Y%m%dT%H%M%S')
-        #transform it
-        yyjj = raw_date.strftime('%Y%j')
-        hhmm = raw_date.strftime('%H%M%S')
-        #return
-        return f'{yyjj}_{hhmm}'
     
     
     
@@ -853,7 +791,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
 
 
       
-    """ Retrieval procedure """
+    
         
         
     """ Resample procedure """
@@ -876,35 +814,11 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         swath = swath.split('/')[-1]
         self.overlapping_aois = df['aoi'].loc[df['mxd03']==swath].tolist()
         
-        
-    """ Output """    
-    def get_date_from_swath_file(self):
-        #get swath id
-        swath = self.get_swath_id()['mxd02']
-        #take raw date from swath id and convert it to datetime object
-        raw_yyjj = swath.split('.')[1]
-        raw_hhmm = swath.split('.')[2]
-        raw_date = datetime.strptime(raw_yyjj+raw_hhmm,'A%Y%j%H%M')
-        #transform it
-        yyjj = raw_date.strftime('%Y%j')
-        hhmm = raw_date.strftime('%H%M%S')
-        #return
-        return f'{yyjj}_{hhmm}'
+
     
 
     """ Cleanup """
-    def cleanup(self):
-        #get swath id
-        swaths = self.get_swath_id()
-        #remove swaths
-        mxd03 = swaths['mxd03']
-        logger.info(f'Removing downloaded file: {mxd03}')
-        self.remove_swath(mxd03)
-        mxd02 = swaths['mxd02']
-        logger.info(f'Removing downloaded file: {mxd02}')
-        self.remove_swath(mxd02)
 
-    
     
     
 
@@ -912,7 +826,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
 # In[]
 # In[]
 
-
+""" Download Error's """
 class DownloadErrorHandler(object):
     """
     Convenience class to handle the download error management for swath and 
@@ -934,7 +848,8 @@ class DownloadErrorHandler(object):
     def reset_crit_counter(self) -> None:
         self.current_download_failures = 0
 
-        
+ 
+""" Zip File Handling """       
 class ZipFileHandler(object):
     """
     Conven ience class to handle the management of swath's downloaded as ZIP
@@ -965,6 +880,7 @@ class ZipFileHandler(object):
         pass
 
    
+""" Swath Handling """
 class BaseSwathHandler(ABC):
     def __init__(self, host_class: object):
         #keep instance of the host class to use this as nestes class
@@ -981,14 +897,114 @@ class BaseSwathHandler(ABC):
         if short:
             SWATH = SWATH.split('/')[-1]
         return SWATH
-
+    
+    def open_swath(self, var: str) -> None:
+        FILENAME = self.ref.meta.get_var_input_specs(var)[0]
+        FILEPATH = os.path.join(self.ref.rawout, FILENAME)
+        self.ref.io.load(FILEPATH)
         
-class ModisSwathHandler(BAseSwathHandler):
+    @abstractmethod
+    def load_variable(self, var: str) -> None:
+        #get current variable/group name info
+        GRP, VAR = self.ref.meta.get_var_input_specs(var)[1:]
+        #retrieve corresponding channel specifications
+        CHSPECS = self.ref.meta.get_var_channel_specs(var)
+        #retrieve the actual variable data from the swath
+        DATA = self.ref.io.get_var(VAR, GRP, CHSPECS)
+        #store it to the data container using the same variable key handle
+        self.ref.data.add_to_data(var, DATA)
+     
+    def close_swath(self) -> None:
+        self.ref.io.close() 
+        
+    def create_swath(self, aoi: str = None) -> None:
+        FILENAME = self._compile_output_swath_name(aoi)
+        FILEPATH = os.path.join(self.out, FILENAME)
+        #status
+        logger.info(f'Saving to file: {FILENAME}')
+        self.ref.io.save(FILEPATH)
+
+    def set_variable(self, var: str, aoi: str = None) -> None:
+        #get variable specific output specifications
+        GRP, VAR, ATTR = self.ref.meta.get_var_output_specs(var)
+        #compile in-file specific group/variable path
+        INPATH = f'{GRP}/{VAR}'
+        #pick dataset
+        if aoi is None:
+            DS = self.ref.data.get_data(var)
+        else:
+            DS = self.ref.data.get_resampled_data(aoi, var)
+        #pass data to io
+        self.ref.io.set_var(INPATH, DS, ATTR)    
+        
+    def _compile_output_swath_name(self, aoi: str = None) -> str:
+        #correct processing state extension
+        if aoi is None:
+            EXT = 'raw'
+        else:
+            EXT = aoi
+        pass
+        #set file-name parts
+        DATE = self._get_date_from_swath_file()
+        CARRIER = self.ref.cfg.get_carrier.lower()[0:3]
+        SENSOR = self.ref.cfg.get_sensor().lower()
+        #compile and return
+        return f'{CARRIER}_{SENSOR}_{DATE}_{EXT}.h5'
+    
+    @abstractmethod
+    def _get_date_from_swath_file(self) -> str:
+        pass
+    
+    @abstractmethod
+    def cleanup(self) -> None:
+        #get swath id
+        SWATH = self.get_swath_id()
+        #remove swath
+        logger.info(f'Removing downloaded file: {SWATH}')
+        self._remove_swath(SWATH)
+        
+    def _remove_swath(self, swath: str) -> None:
+        FILENAME = swath
+        FILEPATH = os.path.join(self.ref.rawout, FILENAME)
+        try:
+            self.ref.io.cleanup(FILEPATH)
+            logger.info(f'Removal successful!')
+        except:
+            logger.error(f'Removal of {FILENAME} failed!')
+        
+        
+
+class SlstrSwathHandler(BaseSwathHandler):
+    def set_swath_id(self, entry: pd.Series) -> None:
+        super().set_swath_id()
+        
+    def get_swath_id(self, short: bool = True) -> tuple:
+        super().get_swath_id()
+        
+    def load_variable(self, var: str) -> None:
+        super().load_variable(var)
+        
+    def _get_date_from_swath_file(self) -> str:
+        #get swath id
+        swath = self.get_swath_id()
+        #take raw date from swath file name and convert it to datetime object
+        raw_date = swath.split('_')[7]
+        raw_date = datetime.strptime(raw_date,'%Y%m%dT%H%M%S')
+        #transform it
+        yyjj = raw_date.strftime('%Y%j')
+        hhmm = raw_date.strftime('%H%M%S')
+        #return
+        return f'{yyjj}_{hhmm}'
+    
+    def cleanup(self) -> None:
+        super().cleanup()
+        
+        
+class ModisSwathHandler(BaseSwathHandler):
     def set_swath_id(self, entry: pd.Series) -> None:
         import pdb; pdb.set_trace()
         SWATHS = {'mxd03': swath[0],'mxd02': swath[1]}
         self.data.set_swath_id(SWATHS)
-        
     
     def get_swath_id(self, short: bool = True) -> tuple:
         SWATHS = self.ref.data.get_swath_id()
@@ -996,9 +1012,36 @@ class ModisSwathHandler(BAseSwathHandler):
             SWATHS['mxd03'] = SWATHS['mxd03'].split('/')[-1]
             SWATHS['mxd02'] = SWATHS['mxd02'].split('/')[-1]
         return SWATHS
+        
+    def load_variable(self, var: str) -> None:
+        super().load_variable(var)
+        
+    def _get_date_from_swath_file(self) -> str:
+        #get swath id
+        swath = self.get_swath_id()['mxd02']
+        #take raw date from swath id and convert it to datetime object
+        raw_yyjj = swath.split('.')[1]
+        raw_hhmm = swath.split('.')[2]
+        raw_date = datetime.strptime(raw_yyjj+raw_hhmm,'A%Y%j%H%M')
+        #transform it
+        yyjj = raw_date.strftime('%Y%j')
+        hhmm = raw_date.strftime('%H%M%S')
+        #return
+        return f'{yyjj}_{hhmm}'
+    
+    def cleanup(self) -> None:
+        #get swath id
+        SWATHS = self.get_swath_id()
+        #remove swaths
+        MXD03 = SWATHS['mxd03']
+        logger.info(f'Removing downloaded file: {MXD03}')
+        self._remove_swath(MXD03)
+        MXD02 = SWATHS['mxd02']
+        logger.info(f'Removing downloaded file: {MXD02}')
+        self._remove_swath(MXD02)
     
 
-
+""" Retrieval procedure """
 class BaseRetrievalHandler(ABC):
     def __init__(self, host_class: object):
         #keep instance of the host class to use this as nestes class
@@ -1194,4 +1237,9 @@ class ModisRetrievalHandler(BaseRetrievalHandler):
         mxd03 = swaths[0].split('/')[-1]
         mxd02 = swaths[1].split('/')[-1]
         self.ref.meta.update_input_specs((mxd03, mxd02))
-    
+
+
+""" Resample procedure """
+class ResampleHanlder(object):
+    pass
+
