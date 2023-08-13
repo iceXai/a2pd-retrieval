@@ -698,10 +698,41 @@ class RetrievalProcessor(ABC):
         """
         self.swath.cleanup()
         
+    def resample_swath(self) -> None:
+        """
+        API function to handle the resample call by checking the meta data, 
+        grouping the data, and sending to grouped data to the ResampleHandler 
+        class for resampling with the data to be stored in the data container
+        """
+        #loop through all variables in the data and send it to the 
+        #resample procedure
+        VARIABLES_TO_PROCESS = self.meta.get_resample_variables()
+        
+        for VAR in VARIABLES_TO_PROCESS: 
+            #get resample information from meta data
+            LON, LAT = self.meta.get_var_grid_specs(VAR)
+            #regroup/shuffle the data by their used lon/lat information
+            self.resampling.add_data_to_group(VAR, LON, LAT)
+
+        #stack the groups if necessary
+        self.resampling.add_groups_to_resample_stack()
+        #resample the data
+        for aoi in self.overlapping_aois:
+            #status
+            logger.info(f'Resampling to grid: {aoi}')
+            self.resampling.resample(aoi)
+        #add to data container
+        RESAMPLED_DATA = self.resampling.get_resampled_data()
+        self.data.add_to_resampled_data(RESAMPLED_DATA)
+        
         
         
         
     """ Resample procedure """
+    #TODO to be moved to the ResampleHandler class, taking listing (df) from 
+    #     self.ref.listing and swath from self.swath.get_swath_id() ? making 
+    #     all arguments unnecessary ... but must be different per sensor? 
+    #     rather move to SwathHandler class?!?
     def identify_resample_aois(self, df: pd.DataFrame, swath: str) -> list:
         """
         Parameters
@@ -720,27 +751,8 @@ class RetrievalProcessor(ABC):
         """
         swath = swath.split('/')[-1]
         self.overlapping_aois = df['aoi'].loc[df['file']==swath].tolist()
-    
-    def get_resample_variables(self) -> list:
-        return self.meta.get_resample_variables()
-    
-    def group_data_to_resample(self, var: str) -> None:
-        #get resample information from meta data
-        lon, lat = self.meta.get_var_grid_specs(var)
-        #regroup/shuffle the data by their used lon/lat information
-        self.resampling.add_data_to_group(var, lon, lat)
-    
-    def resample_swath(self) -> None:
-        #stack the groups if necessary
-        self.resampling.add_groups_to_resample_stack()
-        #resample the data
-        for aoi in self.overlapping_aois:
-            #status
-            logger.info(f'Resampling to grid: {aoi}')
-            self.resampling.resample(aoi)
-        #add to data container
-        resampled_data = self.resampling.get_resampled_data()
-        self.data.add_to_resampled_data(resampled_data)
+
+
         
 
 
@@ -815,11 +827,7 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         self.overlapping_aois = df['aoi'].loc[df['mxd03']==swath].tolist()
         
 
-    
 
-    """ Cleanup """
-
-    
     
 
 # In[]
@@ -1238,8 +1246,4 @@ class ModisRetrievalHandler(BaseRetrievalHandler):
         mxd02 = swaths[1].split('/')[-1]
         self.ref.meta.update_input_specs((mxd03, mxd02))
 
-
-""" Resample procedure """
-class ResampleHanlder(object):
-    pass
 
