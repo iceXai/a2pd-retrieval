@@ -773,7 +773,7 @@ class SlstrRetrievalProcessor(RetrievalProcessor):
         self.zip = ZipFileHandler()
         
     def _set_swath_handler(self) -> None:
-        self.swath = BaseSwathHandler()
+        self.swath = SlstrSwathHandler()
     
     def _set_retrieval_handler(self) -> None:
         self.retrieval = BaseRetrievalHandler()
