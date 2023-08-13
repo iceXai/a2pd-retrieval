@@ -11,7 +11,7 @@ from loguru import logger
 from iotools import ListingIO
 from data import ListingData
 from data import SwathData
-from resampling import Resample
+from resampling import ResampleHandler
 
 import pandas as pd
 import numpy as np
