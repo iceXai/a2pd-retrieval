@@ -557,7 +557,6 @@ class RetrievalProcessor(ABC):
         self.error = DownloadErrorHandler()
         
     """ High-level API's """
-    @abstractmethod
     def set_swath_id(self, entry: pd.Series) -> None:
         """
         Parameters
@@ -574,10 +573,8 @@ class RetrievalProcessor(ABC):
             to super().set_swath_id() or to override it in the sensor-specific 
             RetrievalProcessor() child class
         """
-        SWATH = entry['file']
-        self.data.set_swath_id(SWATH)
+        self.swath.set_swath_id(entry)
      
-    @abstractmethod
     def get_swath_id(self, short: bool = True) -> tuple:
         """
         Parameters
@@ -595,9 +592,7 @@ class RetrievalProcessor(ABC):
             to super().get_swath_id() or to override it in the sensor-specific 
             RetrievalProcessor() child class
         """
-        SWATH = self.data.get_swath_id()
-        if short:
-            SWATH = SWATH.split('/')[-1]
+        SWATH = self.swath.get_swath_id(short)
         return SWATH
       
     def parse_swath_listing(self, df: pd.DataFrame) -> None:
@@ -642,7 +637,6 @@ class RetrievalProcessor(ABC):
         """
         return self.listing
     
-    @abstractmethod
     def get_swath_file(self) -> bool:
         """
         Returns
@@ -807,20 +801,19 @@ class SlstrRetrievalProcessor(RetrievalProcessor):
     """ Sensor-specific initializations """
     def initialize_sensor_specific_modules(self) -> None:
         self._set_zip_hanlder()
+        self._set_swath_handler()
         self._set_retrieval_handler()
         
     def _set_zip_handler(self) -> None:
         self.zip = ZipFileHandler()
         
+    def _set_swath_handler(self) -> None:
+        self.swath = BaseSwathHandler()
+    
     def _set_retrieval_handler(self) -> None:
         self.retrieval = BaseRetrievalHandler()
         
-    """ Getters/Setters for swath handling """
-    def set_swath_id(self, swath: str) -> None:
-        super().set_swath_id(swath)
-        
-    def get_swath_id(self, short: bool = True) -> str:
-        return super().get_swath_id(short)
+
 
 
 
@@ -848,107 +841,19 @@ class ModisRetrievalProcessor(RetrievalProcessor):
 
     """ Sensor-specific initializations """
     def initialize_sensor_specific_modules(self) -> None:
+        self._set_swath_handler()
         self._set_retrieval_handler()
+        
+    def _set_swath_handler(self) -> None:
+        self.swath = ModisSwathHandler()
     
     def _set_retrieval_handler(self) -> None:
         self.retrieval = ModisRetrievalHandler()
     
-    """ Getters/Setters for swath handling """
-    def set_swath_id(self, entry: pd.Series) -> None:
-        import pdb; pdb.set_trace()
-        SWATHS = {'mxd03': swath[0],'mxd02': swath[1]}
-        self.data.set_swath_id(SWATHS)
-        
-    
-    def get_swath_id(self, short: bool = True) -> tuple:
-        SWATHS = self.data.get_swath_id()
-        if short:
-            SWATHS['mxd03'] = SWATHS['mxd03'].split('/')[-1]
-            SWATHS['mxd02'] = SWATHS['mxd02'].split('/')[-1]
-        return SWATHS
-    
-
 
 
       
     """ Retrieval procedure """
-    def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        MODIS specific function dealing with the file duality of MXD03 and 
-        MXD02 necessary to get the full dataset
-        """
-        mxd03 = df['url_mxd03'].astype(str) + df['mxd03'].astype(str)
-        mxd02 = df['url_mxd02'].astype(str) + df['mxd02'].astype(str)
-        return pd.DataFrame({'mxd03': mxd03.unique(),
-                             'mxd02': mxd02.unique()})
-
-    
-    def check_for_existing_swaths(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        MODIS specific function dealing with the file duality of MXD03 and 
-        MXD02 necessary to get the full dataset
-        """
-        #retrieve processed files
-        processed_files = [f.name.split('_')[:4] for f in os.scandir(self.out) 
-                           if f.is_file()]
-        
-        for idx, mxd02, mxd03 in df.itertuples():
-            #temporarily set file id
-            self.set_swath_id((mxd03, mxd02))
-            #compile output swath-file name
-            sname = self.compile_output_swath_name()
-            #check for existance
-            if sname.split('_')[:4] not in processed_files:
-                break
-
-        #return updated listing
-        return df.iloc[idx:,:]
-    
-
-    def get_swath_file(self) -> bool:
-        """
-        MODIS specific function dealing with the file duality of MXD03 and 
-        MXD02 necessary to get the full dataset
-        """
-        #retieve list of currently temporarily stored/downloaded files
-        downloaded_files = [f.name for f in os.scandir(self.rawout) 
-                            if f.is_file()]
-        #retrieve current swath id's
-        GET_SWATH_NAME_ONLY = False
-        SWATHS = self.get_swath_id(GET_SWATH_NAME_ONLY)
-        
-        #only download in case do not already exist
-        MXD03_EXISTS = SWATHS['mxd03'].split('/')[-1] in downloaded_files
-        if not MXD03_EXISTS:
-            status_mxd03 = self.download_swath(SWATHS['mxd03'])
-        else:
-            status_mxd03 = True
-        MXD02_EXISTS = SWATHS['mxd02'].split('/')[-1] in downloaded_files
-        if not MXD02_EXISTS:
-            status_mxd02 = self.download_swath(SWATHS['mxd02'])
-        else:
-            status_mxd02 = True
-            
-        return status_mxd03, status_mxd02
-
-        
-    def update_meta_info(self, swaths: tuple) -> None:
-        """
-        Parameters
-        ----------
-        swaths : tuple(str,str)
-            Tuple of current swath urls by order (mxd03, mxd02) that will be 
-            reduced to swath names
-
-        Returns
-        -------
-        None
-            Updates the MODIS specific meta data information on the to be 
-            used files (mxd03 or mxd02) for the variable processing
-        """
-        mxd03 = swaths[0].split('/')[-1]
-        mxd02 = swaths[1].split('/')[-1]
-        self.meta.update_input_specs((mxd03, mxd02))
         
         
     """ Resample procedure """
@@ -1059,7 +964,41 @@ class ZipFileHandler(object):
     def remove_extracted_content(self) -> None:
         pass
 
+   
+class BaseSwathHandler(ABC):
+    def __init__(self, host_class: object):
+        #keep instance of the host class to use this as nestes class
+        self.ref = host_class
+     
+    @abstractmethod
+    def set_swath_id(self, entry: pd.Series) -> None:
+        SWATH = entry['file']
+        self.ref.data.set_swath_id(SWATH)
+
+    @abstractmethod
+    def get_swath_id(self, short: bool = True) -> tuple:
+        SWATH = self.ref.data.get_swath_id()
+        if short:
+            SWATH = SWATH.split('/')[-1]
+        return SWATH
+
+        
+class ModisSwathHandler(BAseSwathHandler):
+    def set_swath_id(self, entry: pd.Series) -> None:
+        import pdb; pdb.set_trace()
+        SWATHS = {'mxd03': swath[0],'mxd02': swath[1]}
+        self.data.set_swath_id(SWATHS)
+        
     
+    def get_swath_id(self, short: bool = True) -> tuple:
+        SWATHS = self.ref.data.get_swath_id()
+        if short:
+            SWATHS['mxd03'] = SWATHS['mxd03'].split('/')[-1]
+            SWATHS['mxd02'] = SWATHS['mxd02'].split('/')[-1]
+        return SWATHS
+    
+
+
 class BaseRetrievalHandler(ABC):
     def __init__(self, host_class: object):
         #keep instance of the host class to use this as nestes class
@@ -1104,7 +1043,7 @@ class BaseRetrievalHandler(ABC):
         
         for idx, swath in df.itertuples():
             #temporarily set file id
-            self.ref.set_swath_id(swath)
+            self.ref.swath.set_swath_id(swath)
             #compile output swath-file name
             sname = self.ref.compile_output_swath_name()
             #check for existance
@@ -1125,12 +1064,14 @@ class BaseRetrievalHandler(ABC):
         DOWNLOADED_FILES = [f.name for f in os.scandir(self.ref.rawout) 
                             if f.is_file()]
         #retrieve current swath id's
-        GET_SWATH_NAME_ONLY = False
-        SWATH = self.ref.get_swath_id(GET_SWATH_NAME_ONLY)
+        GET_SWATH_NAME_ONLY = True
+        SWATH = self.ref.swath.get_swath_id(GET_SWATH_NAME_ONLY)
         #only download in case do not already exist
-        SWATH_EXISTS = SWATH.split('/')[-1] in DOWNLOADED_FILES
+        SWATH_EXISTS = SWATH in DOWNLOADED_FILES
+        GET_SWATH_NAME_ONLY = False
+        URL = self.ref.swath.get_swath_id(GET_SWATH_NAME_ONLY)
         if not SWATH_EXISTS:
-            status = self.download_swath(SWATH)
+            status = self.download_swath(URL)
         else:
             status = True
         
@@ -1216,22 +1157,24 @@ class ModisRetrievalHandler(BaseRetrievalHandler):
         downloaded_files = [f.name for f in os.scandir(self.ref.rawout) 
                             if f.is_file()]
         #retrieve current swath id's
-        GET_SWATH_NAME_ONLY = False
+        GET_SWATH_NAME_ONLY = True
         SWATHS = self.ref.get_swath_id(GET_SWATH_NAME_ONLY)
+        GET_SWATH_NAME_ONLY = False
+        URLS = self.ref.get_swath_id(GET_SWATH_NAME_ONLY)
         
         #only download in case do not already exist
-        MXD03_EXISTS = SWATHS['mxd03'].split('/')[-1] in downloaded_files
+        MXD03_EXISTS = SWATHS['mxd03'] in downloaded_files
         if not MXD03_EXISTS:
-            status_mxd03 = self.download_swath(SWATHS['mxd03'])
+            status_mxd03 = self.download_swath(URLS['mxd03'])
         else:
             status_mxd03 = True
-        MXD02_EXISTS = SWATHS['mxd02'].split('/')[-1] in downloaded_files
+        MXD02_EXISTS = SWATHS['mxd02'] in downloaded_files
         if not MXD02_EXISTS:
-            status_mxd02 = self.download_swath(SWATHS['mxd02'])
+            status_mxd02 = self.download_swath(URLS['mxd02'])
         else:
             status_mxd02 = True
             
-        return status_mxd03, status_mxd02
+        return all(status_mxd03, status_mxd02)
 
         
     def update_meta_info(self, swaths: tuple) -> None:
