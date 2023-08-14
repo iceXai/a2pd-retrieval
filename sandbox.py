@@ -6,8 +6,8 @@ from job import RetrievalJob
 
 job = RetrievalJob('agrs')
 job.validate()
-#job.setup()
-#job.run()
+job.setup()
+job.run()
 
 
 #print(job.cfg.get_sensor())
