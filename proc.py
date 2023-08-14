@@ -948,9 +948,9 @@ class SlstrSwathHandler(BaseSwathHandler):
         
     def _get_date_from_swath_file(self) -> str:
         #get swath id
-        swath = self.get_swath_id()
+        SWATH = self.get_swath_id()
         #take raw date from swath file name and convert it to datetime object
-        raw_date = swath.split('_')[7]
+        raw_date = SWATH.split('_')[7]
         raw_date = datetime.strptime(raw_date,'%Y%m%dT%H%M%S')
         #transform it
         yyjj = raw_date.strftime('%Y%j')
@@ -979,14 +979,30 @@ class ModisSwathHandler(BaseSwathHandler):
         return SWATHS
         
     def load_variable(self, var: str) -> None:
+        #update meta info on variables for MODIS
+        self._update_meta_info()
+        #call base class function
         super().load_variable(var)
+        
+    def _update_meta_info(self) -> None:
+        """
+        Returns
+        -------
+        None
+            Updates the MODIS specific meta data information on the to be 
+            used files (mxd03 or mxd02) for the variable processing
+        """
+        SWATHS = self.get_swath_id()
+        MXD03 = SWATHS[0]
+        MXD02 = SWATHS[1]
+        self.ref.meta.update_input_specs((MXD03, MXD02))
         
     def _get_date_from_swath_file(self) -> str:
         #get swath id
-        swath = self.get_swath_id()['mxd02']
+        SWATH = self.get_swath_id()['mxd02']
         #take raw date from swath id and convert it to datetime object
-        raw_yyjj = swath.split('.')[1]
-        raw_hhmm = swath.split('.')[2]
+        raw_yyjj = SWATH.split('.')[1]
+        raw_hhmm = SWATH.split('.')[2]
         raw_date = datetime.strptime(raw_yyjj+raw_hhmm,'A%Y%j%H%M')
         #transform it
         yyjj = raw_date.strftime('%Y%j')
@@ -1189,24 +1205,5 @@ class ModisRetrievalHandler(BaseRetrievalHandler):
             status_mxd02 = True
             
         return all(status_mxd03, status_mxd02)
-
-        
-    def update_meta_info(self, swaths: tuple) -> None:
-        """
-        Parameters
-        ----------
-        swaths : tuple(str,str)
-            Tuple of current swath urls by order (mxd03, mxd02) that will be 
-            reduced to swath names
-
-        Returns
-        -------
-        None
-            Updates the MODIS specific meta data information on the to be 
-            used files (mxd03 or mxd02) for the variable processing
-        """
-        mxd03 = swaths[0].split('/')[-1]
-        mxd02 = swaths[1].split('/')[-1]
-        self.ref.meta.update_input_specs((mxd03, mxd02))
 
 

@@ -6,7 +6,6 @@
 
 # In[] 
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta
 from loguru import logger
 
 from proc import ModisRetrievalProcessor
@@ -14,7 +13,6 @@ from proc import SlstrRetrievalProcessor
 
 import os
 import sys
-import requests
 
 import pandas as pd
 
@@ -25,11 +23,23 @@ class Retrieval(ABC):
     """
     Abstract base class that handles the swath retrieval and post-processing 
     """
-    def __init__(self):      
-        #store status
-        self.resampling = False
+    def __init__(self, cfg: object):
+        """
+        Parameters
+        ----------
+        cfg : object
+            Configuration module loading/handling the config file
+        """
+        self.cfg = cfg
+        #set processor
+        self._initialize_retrieval_processor()
+        
+    """ Internals """
+    @abstractmethod
+    def _initialize_retrieval_processor(self) -> None:
+        pass
     
-    """ Setup """    
+    """ API for setup """    
     def set_listing(self, listing: pd.DataFrame) -> None:
         """
         Parameters
@@ -41,89 +51,8 @@ class Retrieval(ABC):
         """
         self.listing = listing
         
-    def set_cfg(self, cfg: object) -> None:
-        """
-        Parameters
-        ----------
-        cfg : object
-            Configuration module loading/handling the config file
-
-        Returns
-        -------
-        None
-            Used to pass the configuration down to the listing module and all 
-            subsequent instances and modules
-        """
-        self.cfg = cfg  
-        
-    def apply_resampling(self) -> None:
-        self.proc.initialize_resampling()
-        self.resampling = True
-
-    """ Swath handling """
-    def load_swath(self) -> None:
-        #loop through all downloaded variables and import corresponding 
-        #files/data
-        variables_to_process = self.proc.get_variables()
-        
-        for var in variables_to_process:
-            #open file link
-            self.proc.open_swath(var)
-            
-            #retrieve content from group/variable
-            self.proc.load_variable(var)
-            
-            #close file handle
-            self.proc.close_swath()
-
-    def save_swath(self) -> None:
-        #creating the h5 output file with base global attributes and set
-        #all variables
-        if self.resampling:
-            self.proc.save_resampled_swath()
-        else:
-            self.proc.save_swath()
-            
-        #close file connection
-        self.proc.close_swath()
- 
-    def resample_swath(self) -> None:
-        #loop through all variables in the data and send it to the 
-        #resample procedure
-        variables_to_process = self.proc.get_resample_variables()
-        
-        for var in variables_to_process: 
-            self.proc.group_data_to_resample(var)
-
-        #apply the resampling
-        self.proc.resample_swath()
-    
-    def cleanup(self) -> None:
-        self.proc.cleanup()
-
-    """ Abstract methods """
-    @abstractmethod
-    def setup_retrieval_processor(self) -> None:
-        pass
-
-    @abstractmethod
-    def download_and_process_swaths(self) -> None:
-        pass
-
-
-class ModisRetrieval(Retrieval):
-    """
-    Terra/Aqua MODIS retrieval child class tailored to the 
-    sensor-specific processing
-    """
-        
-    def setup_retrieval_processor(self) -> None:
-        #status
-        logger.info(f'Setup retrieval processor...')
-        self.proc = ModisRetrievalProcessor(self.cfg)
-    
-    
-    def download_and_process_swaths(self) -> None:
+    """ Run """
+    def run(self) -> None:
         #status
         logger.info(f'Retrieve and process swaths...')
         #parse swath listing to mitigate multiple downloads of the same 
@@ -147,26 +76,34 @@ class ModisRetrieval(Retrieval):
             #continue with next entry in case something went wrong
             if not DOWNLOAD_COMPLETED:
                 continue
-            
-            #TODO needs to be moved somewhere else into the Processor?
-            #update the processor meta data once for the currently used swaths
-            self.proc.update_meta_info((mxd03,mxd02))
 
             #load swath data
-            self.load_swath()            
+            self.proc.load_swath()            
 
             #resample swath data if specified
-            if self.resampling:
+            APPLY_RESAMPLING = self.cfg.do_resampling()
+            if APPLY_RESAMPLING:
                 #id aoi's for current swath
-                self.proc.identify_resample_aois(self.listing, mxd03)
+                self.proc.identify_resample_aois()
                 #resample
-                self.resample_swath()
+                self.proc.resample_swath()
 
             #save swath data to h5 format
-            self.save_swath()
+            self.proc.save_swath()
 
             #clean-up afterwards
-            self.cleanup()
+            self.proc.cleanup()  
+            
+
+class ModisRetrieval(Retrieval):
+    """
+    Terra/Aqua MODIS retrieval child class tailored to the 
+    sensor-specific processing
+    """
+    def _initialize_retrieval_processor(self) -> None:
+        #status
+        logger.info(f'Setup retrieval processor...')
+        self.proc = ModisRetrievalProcessor(self.cfg) 
             
 
 class SlstrRetrieval(Retrieval):
@@ -174,36 +111,8 @@ class SlstrRetrieval(Retrieval):
     Sentinel3-A/B SLSTR retrieval child class tailored to the 
     sensor-specific processing
     """
-        
-    def setup_retrieval_processor(self) -> None:
+    def _initialize_retrieval_processor(self) -> None:
         #status
         logger.info(f'Setup retrieval processor...')
         self.proc = SlstrRetrievalProcessor(self.cfg)    
-    
-    def download_and_process_swaths(self) -> None:
-        #status
-        logger.info(f'Retrieve and process swaths...')
-        #parse swath listing to mitigate multiple downloads of the same 
-        #file due to several AOIs being specified
-        self.proc.parse_swath_listing(self.listing)
 
-        #check for previously or already downloaded and processed files
-        self.proc.check_for_existing_swaths()
-        
-        #receive the final, cleared-up swath listing
-        LISTING = self.proc.get_listing()
-
-        #loop over all listing entries
-        for _, swath in LISTING.iterrows():          
-            #make processor aware of currently processed swaths
-            self.proc.set_swath_id(swath)
-            
-            #download the swath files
-            DOWNLOAD_COMPLETED = self.proc.get_swath_file()
-
-            #continue with next entry in case something went wrong
-            if not DOWNLOAD_COMPLETED:
-                continue
-
-            #load swath data
-            self.load_swath() 
