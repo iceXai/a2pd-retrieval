@@ -61,7 +61,7 @@ class RetrievalJob(object):
         
         if self.cfg.do_swath_download():
             #initialize the correct retrieval module/processor
-            self.ret = self.cfg.get_retrieval_module(self.cfg)            
+            self.ret = self.cfg.get_retrieval_module()            
 
         
     def run(self) -> None:
