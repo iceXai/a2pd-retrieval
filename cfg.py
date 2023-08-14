@@ -149,7 +149,7 @@ class Configuration(object):
     def get_retrieval_module(self) -> object:
         #sets the correct retrieval processor corresponding to the
         #sensor/carrier
-        return self.get_retrieval_class()()
+        return self.get_retrieval_class()(self)
 
     """ Job::MetaData """
     def get_meta_module(self) -> object:
