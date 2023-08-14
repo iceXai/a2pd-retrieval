@@ -611,7 +611,8 @@ class RetrievalProcessor(ABC):
             API function to be called by the Retrieval() Class to parse and 
             store the reduced listing without double entries per swath file
         """
-        #receive raw listign from Listing class, parse, and store it
+        #receive raw listing from Listing class, parse, and store it
+        self.raw_listing = df
         self.listing = self.retrieval.parse_swath_listing(df)
         
     def check_for_existing_swaths(self) -> None:
@@ -698,6 +699,15 @@ class RetrievalProcessor(ABC):
         """
         self.swath.cleanup()
         
+    def identify_resample_aois(self) -> None:
+        """
+        API function to identify the current swath-specific AOI's that it 
+        covers and should be resampled to using the 'raw' listing, i.e., the
+        one with potentially multiple entries per swath as it may cover 
+        several AOI's. Stores an list of AOI's.
+        """    
+        self.swath.identify_resample_aois()
+        
     def resample_swath(self) -> None:
         """
         API function to handle the resample call by checking the meta data, 
@@ -725,36 +735,6 @@ class RetrievalProcessor(ABC):
         RESAMPLED_DATA = self.resampling.get_resampled_data()
         self.data.add_to_resampled_data(RESAMPLED_DATA)
         
-        
-        
-        
-    """ Resample procedure """
-    #TODO to be moved to the ResampleHandler class, taking listing (df) from 
-    #     self.ref.listing and swath from self.swath.get_swath_id() ? making 
-    #     all arguments unnecessary ... but must be different per sensor? 
-    #     rather move to SwathHandler class?!?
-    def identify_resample_aois(self, df: pd.DataFrame, swath: str) -> list:
-        """
-        Parameters
-        ----------
-        df : pd.DataFrame
-            The raw listing data frame with potentially multiple entries for 
-            swaths that are supposed to be resampled to several different 
-            AOI's
-        swath : str
-            Name of current swath to identify applicable AOI's for resampling
-
-        Returns
-        -------
-        list :
-            List of AOI's for this swath
-        """
-        swath = swath.split('/')[-1]
-        self.overlapping_aois = df['aoi'].loc[df['file']==swath].tolist()
-
-
-        
-
 
     
 class SlstrRetrievalProcessor(RetrievalProcessor):
@@ -776,11 +756,7 @@ class SlstrRetrievalProcessor(RetrievalProcessor):
         self.swath = SlstrSwathHandler()
     
     def _set_retrieval_handler(self) -> None:
-        self.retrieval = BaseRetrievalHandler()
-        
-
-
-    
+        self.retrieval = BaseRetrievalHandler()    
     
     
 class ModisRetrievalProcessor(RetrievalProcessor):
@@ -799,34 +775,6 @@ class ModisRetrievalProcessor(RetrievalProcessor):
     
     def _set_retrieval_handler(self) -> None:
         self.retrieval = ModisRetrievalHandler()
-    
-
-
-      
-    
-        
-        
-    """ Resample procedure """
-    def identify_resample_aois(self, df: pd.DataFrame, swath: str) -> list:
-        """
-        Parameters
-        ----------
-        df : pd.DataFrame
-            The raw listing data frame with potentially multiple entries for 
-            swaths that are supposed to be resampled to several different 
-            AOI's
-        swath : str
-            Name of current swath to identify applicable AOI's for resampling
-
-        Returns
-        -------
-        list :
-            List of AOI's for this swath
-        """
-        swath = swath.split('/')[-1]
-        self.overlapping_aois = df['aoi'].loc[df['mxd03']==swath].tolist()
-        
-
 
     
 
@@ -979,7 +927,13 @@ class BaseSwathHandler(ABC):
             logger.info(f'Removal successful!')
         except:
             logger.error(f'Removal of {FILENAME} failed!')
-        
+            
+    @abstractmethod
+    def identify_resample_aois(self) -> None:
+        SWATH = self.get_swath_id()
+        LISTING = self.ref.raw_listing
+        AOI_LIST = LISTING['aoi'].loc[LISTING['file']==SWATH].tolist()
+        self.ref.overlapping_aois = AOI_LIST
         
 
 class SlstrSwathHandler(BaseSwathHandler):
@@ -1006,6 +960,9 @@ class SlstrSwathHandler(BaseSwathHandler):
     
     def cleanup(self) -> None:
         super().cleanup()
+        
+    def identify_resample_aois(self) -> None:
+        super().identify_resample_aois()
         
         
 class ModisSwathHandler(BaseSwathHandler):
@@ -1047,6 +1004,12 @@ class ModisSwathHandler(BaseSwathHandler):
         MXD02 = SWATHS['mxd02']
         logger.info(f'Removing downloaded file: {MXD02}')
         self._remove_swath(MXD02)
+        
+    def identify_resample_aois(self) -> None:
+        SWATH = self.get_swath_id()['mxd03']
+        LISTING = self.ref.raw_listing
+        AOI_LIST = LISTING['aoi'].loc[LISTING['mxd03']==SWATH].tolist()
+        self.ref.overlapping_aois = AOI_LIST
     
 
 """ Retrieval procedure """
