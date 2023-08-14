@@ -750,7 +750,7 @@ class SlstrRetrievalProcessor(RetrievalProcessor):
         self._set_retrieval_handler()
         
     def _set_zip_handler(self) -> None:
-        self.zip = ZipFileHandler()
+        self.zip = ZipFileHandler(self.rawout)
         
     def _set_swath_handler(self) -> None:
         self.swath = SlstrSwathHandler(self)
@@ -808,32 +808,43 @@ class DownloadErrorHandler(object):
 """ Zip File Handling """       
 class ZipFileHandler(object):
     """
-    Conven ience class to handle the management of swath's downloaded as ZIP
+    Convenience class to handle the management of swath's downloaded as ZIP
     files to reduce boilerplate code
     """
-    def __init__(self):
-        pass
-    
-    def set_zip_path(self, outpath: str, swath: str) -> None:
-        #save zip file location and output path
+    def __init__(self, outpath: str):
         self.outpath = outpath
-        self.zippath = os.path.join(outpath, swath)
+    
+    def set_zip_path(self, swath: str) -> None:
+        #save zip file location and output path
+        self.zippath = os.path.join(self.outpath, swath)
+        
+    def get_zip_path(self) -> str:
+        return self.zippath
         
     def load_zip_file(self) -> None:
-        #open zipfile and store content in dict
+        #open zipfile and stores content pathing/folder structure
+        ZIPPATH = self.get_zip_path()
         self.zipfile = zipfile.ZipFile(ZIPPATH, 'r')
-        self.zipdict = ZIPFILE.namelist()
+        ZIPLIST = self.zipfile.namelist()
+        self.ziplist = [os.path.join(z[0],z[1]) 
+                        for z in [f.split('/') for f in ZIPLIST[1:]]]
+        self.zipdir = ZIPLIST[0]
         
     def extract_zip_file(self) -> None:
         #extract file content and store folder location w/ zip folder
         self.zipfile.extractall(self.outpath)
-        self.extpath = os.path.join(self.outpath, self.zipdict[0])
+        self.extpath = os.path.join(self.outpath, self.zipdir)
         
     def close_zip_file(self) -> None:
         self.zipfile.close()
         
     def remove_extracted_content(self) -> None:
-        pass
+        logger.info(f'Removing extracted zip-file content...')
+        RMLIST = [os.path.join(self.outpath, f) for f in self.ziplist]
+        for f in RMLIST:
+            os.remove(f)
+        logger.info(f'Removing extracted zip-file folder...')
+        os.remove(self.extpath)
 
    
 """ Swath Handling """
@@ -959,6 +970,9 @@ class SlstrSwathHandler(BaseSwathHandler):
         return f'{yyjj}_{hhmm}'
     
     def cleanup(self) -> None:
+        #remove extracted zipfile content
+        self.ref.zip.remove_extracted_content()
+        #remove the zip file that was downloaded
         super().cleanup()
         
     def identify_resample_aois(self) -> None:
@@ -1154,8 +1168,19 @@ class SlstrRetrievalHandler(BaseRetrievalHandler):
         return super().check_for_existing_swaths(df)
     
     def get_swath_file(self) -> bool:
-        return super().get_swath_file()
-    #TODO add unzipping here?!
+        #get swath file
+        STATUS =  super().get_swath_file()
+        #TODO add unzipping here?!
+        #get swath id to initialize zip handler
+        SWATH = self.ref.swath.get_swath_id()
+        self.ref.zip.set_zip_path(SWATH)
+        #load zip file
+        self.ref.zip.load_zip_file()
+        #extract zip file
+        self.ref.zip.extract_zip_file()
+        #close zip file connection
+        self.ref.zip.close_zip_file()
+        return STATUS
 
 
 class ModisRetrievalHandler(BaseRetrievalHandler):      
