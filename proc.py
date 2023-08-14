@@ -31,7 +31,7 @@ class ListingProcessor(ABC):
     """
     def __init__(self):    
         #download error management
-        self.error = DownloadErrorManager()
+        self.error = DownloadErrorHandler()
         
     """ Getters/Setters for Processor Setup """
     def set_cfg(self, cfg: object) -> None:
@@ -552,7 +552,7 @@ class RetrievalProcessor(ABC):
         IO_CLASS = self.cfg.get_class('iotools', f'{SENSOR}SwathIO') 
         self.io = IO_CLASS(self.out)
         
-    def _set_error_handler() -> None:
+    def _set_error_handler(self) -> None:
         #initiate download error handler
         self.error = DownloadErrorHandler()
         
@@ -745,7 +745,7 @@ class SlstrRetrievalProcessor(RetrievalProcessor):
 
     """ Sensor-specific initializations """
     def initialize_sensor_specific_modules(self) -> None:
-        self._set_zip_hanlder()
+        self._set_zip_handler()
         self._set_swath_handler()
         self._set_retrieval_handler()
         
@@ -753,10 +753,10 @@ class SlstrRetrievalProcessor(RetrievalProcessor):
         self.zip = ZipFileHandler()
         
     def _set_swath_handler(self) -> None:
-        self.swath = SlstrSwathHandler()
+        self.swath = SlstrSwathHandler(self)
     
     def _set_retrieval_handler(self) -> None:
-        self.retrieval = BaseRetrievalHandler()    
+        self.retrieval = SlstrRetrievalHandler(self)    
     
     
 class ModisRetrievalProcessor(RetrievalProcessor):
@@ -771,10 +771,10 @@ class ModisRetrievalProcessor(RetrievalProcessor):
         self._set_retrieval_handler()
         
     def _set_swath_handler(self) -> None:
-        self.swath = ModisSwathHandler()
+        self.swath = ModisSwathHandler(self)
     
     def _set_retrieval_handler(self) -> None:
-        self.retrieval = ModisRetrievalHandler()
+        self.retrieval = ModisRetrievalHandler(self)
 
     
 
@@ -844,7 +844,7 @@ class BaseSwathHandler(ABC):
      
     @abstractmethod
     def set_swath_id(self, entry: pd.Series) -> None:
-        SWATH = entry['file']
+        SWATH = entry[0]
         self.ref.data.set_swath_id(SWATH)
 
     @abstractmethod
@@ -902,7 +902,7 @@ class BaseSwathHandler(ABC):
         pass
         #set file-name parts
         DATE = self._get_date_from_swath_file()
-        CARRIER = self.ref.cfg.get_carrier.lower()[0:3]
+        CARRIER = self.ref.cfg.get_carrier().lower()[0:3]
         SENSOR = self.ref.cfg.get_sensor().lower()
         #compile and return
         return f'{CARRIER}_{SENSOR}_{DATE}_{EXT}.h5'
@@ -938,10 +938,10 @@ class BaseSwathHandler(ABC):
 
 class SlstrSwathHandler(BaseSwathHandler):
     def set_swath_id(self, entry: pd.Series) -> None:
-        super().set_swath_id()
+        super().set_swath_id(entry)
         
     def get_swath_id(self, short: bool = True) -> tuple:
-        super().get_swath_id()
+        return super().get_swath_id()
         
     def load_variable(self, var: str) -> None:
         super().load_variable(var)
@@ -1071,11 +1071,11 @@ class BaseRetrievalHandler(ABC):
                            for f in os.scandir(self.ref.out) 
                            if f.is_file()]
         
-        for idx, swath in df.itertuples():
+        for idx, swath in df.iterrows():
             #temporarily set file id
             self.ref.swath.set_swath_id(swath)
             #compile output swath-file name
-            sname = self.ref.compile_output_swath_name()
+            sname = self.ref.swath._compile_output_swath_name()
             #check for existance
             if sname.split('_')[:4] not in processed_files:
                 break
@@ -1146,6 +1146,18 @@ class BaseRetrievalHandler(ABC):
             return False
 
 
+class SlstrRetrievalHandler(BaseRetrievalHandler): 
+    def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
+        return super().parse_swath_listing(df)
+    
+    def check_for_existing_swaths(self, df: pd.DataFrame) -> pd.DataFrame:
+        return super().check_for_existing_swaths(df)
+    
+    def get_swath_file(self) -> bool:
+        return super().get_swath_file()
+    #TODO add unzipping here?!
+
+
 class ModisRetrievalHandler(BaseRetrievalHandler):      
     def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -1157,7 +1169,6 @@ class ModisRetrievalHandler(BaseRetrievalHandler):
         return pd.DataFrame({'mxd03': mxd03.unique(),
                              'mxd02': mxd02.unique()})
 
-    
     def check_for_existing_swaths(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         MODIS specific function dealing with the file duality of MXD03 and 
@@ -1167,16 +1178,17 @@ class ModisRetrievalHandler(BaseRetrievalHandler):
         processed_files = [f.name.split('_')[:4] for f in os.scandir(self.ref.out) 
                            if f.is_file()]
         
-        for idx, mxd02, mxd03 in df.itertuples():
+        for idx, swath in df.iterrows():
+            #temporarily set file id
+            self.ref.swath.set_swath_id(swath)
             #compile output swath-file name
-            sname = self.ref.compile_output_swath_name()
+            sname = self.ref.swath._compile_output_swath_name()
             #check for existance
             if sname.split('_')[:4] not in processed_files:
                 break
 
         #return updated listing
         return df.iloc[idx:,:]
-    
 
     def get_swath_file(self) -> bool:
         """
