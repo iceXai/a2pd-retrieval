@@ -61,18 +61,7 @@ class RetrievalJob(object):
         
         if self.cfg.do_swath_download():
             #initialize the correct retrieval module/processor
-            self.ret = self.cfg.get_retrieval_module()
-            
-            #passes the configuration along
-            self.ret.set_cfg(self.cfg)
-            
-            #setup the retrieval processor
-            self.ret.setup_retrieval_processor()
-        
-        if self.cfg.do_resampling():
-            #add the resampling module to the retrieval and processor module
-            self.ret.apply_resampling()
-            
+            self.ret = self.cfg.get_retrieval_module(self.cfg)            
 
         
     def run(self) -> None:
@@ -94,7 +83,7 @@ class RetrievalJob(object):
         self.ret.set_listing(listing)
         
         #run the retrieval processor
-        self.ret.download_and_process_swaths()
+        self.ret.run()
         
         #status
         logger.info('Job complete! :)')
