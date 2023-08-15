@@ -69,7 +69,7 @@ class Retrieval(ABC):
         for _, swath in LISTING.iterrows():          
             #make processor aware of currently processed swaths
             self.proc.set_swath_id(swath)
-            
+
             #download the swath files
             DOWNLOAD_COMPLETED = self.proc.get_swath_file()
 
