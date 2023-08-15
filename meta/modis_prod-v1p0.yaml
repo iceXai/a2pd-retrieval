@@ -10,20 +10,6 @@ urls:
         mxd03: https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/61/MYD03/
         meta: https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMeta/61/AQUA/
     
-variables:
-    #list of variables (keys) to be used
-    #consistent with following specifications
-    - lat
-    - lon
-    - sat_zen
-    - sat_azi
-    - sol_zen
-    - sol_azi
-    - ch20
-    - ch25
-    - ch31
-    - ch32
-    - ch33
     
 input_specs:
     #information about file, group, and variable names of the input data, e.g.,

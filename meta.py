@@ -40,10 +40,6 @@ class Meta(ABC):
         #returns the specified variables for the current sensor
         CARRIER = self.get_carrier()
         return self.meta['urls'][CARRIER]
-            
-    def get_variables(self) -> list:
-        #returns the variable tags to be used by all other instances
-        return self.meta['variables']
 
     def get_grp_data(self, grp: str) -> dict:
         return self.meta[grp]
@@ -51,9 +47,19 @@ class Meta(ABC):
     def get_var_data(self, grp: str, var: str) -> list:
         return self.meta[grp][var]
     
+    def get_input_variables(self) -> list:
+        #returns variables that have a grid definition
+        grp = 'input_specs'
+        return self.get_grp_data(grp).keys()
+    
     def get_resample_variables(self) -> list:
-        #returns a subset of variables that have a grid definition
+        #returns variables that have a grid definition
         grp = 'grid_specs'
+        return self.get_grp_data(grp).keys()
+    
+    def get_output_variables(self) -> list:
+        #returns variables that have a grid definition
+        grp = 'output_specs'
         return self.get_grp_data(grp).keys()
             
     def get_var_input_specs(self, var: str) -> list:
