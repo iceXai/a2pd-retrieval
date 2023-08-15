@@ -8,6 +8,7 @@
 from abc import ABC, abstractmethod
 from pyhdf.SD import SD, SDC
 from datetime import datetime, timedelta
+from loguru import logger
 
 import h5py
 import os
@@ -191,8 +192,12 @@ class SlstrSwathIO(SwathIO):
     Childclass for all SLSTR swath-related I/O
     """
     def load(self, path: str) -> None:
-        pass
+        self.fh = nc.Dataset(path, 'r')
     
     def get_var(self, var: str, grp: str, meta: list) -> np.array:
-        pass
+        if grp is None:
+            return self.fh.variables[var][:,:]
+        else:
+            return self.fh.groups[grp].variables[var][:,:]
+        
     
