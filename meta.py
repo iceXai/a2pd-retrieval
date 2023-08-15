@@ -131,7 +131,7 @@ class ModisSwathMeta(Meta):
 
     def update_input_specs(self, swaths: tuple) -> None:
         input_specs = self.get_grp_data('input_specs')
-        variables = self.get_variables()
+        variables = self.get_input_variables()
         for var in variables:
             idx = self.get_var_input_file_index(var)
             input_specs[var][0] = swaths[idx]
