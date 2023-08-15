@@ -55,7 +55,7 @@ class ResampleHandler(object):
         variable  = self.ref.data.get_data(var)
         longitude = self.ref.data.get_data(lon)
         latitude  = self.ref.data.get_data(lat)
-        
+
         #check if respective group already exists
         key = f'{lon}{lat}'
         if key not in self.coord.keys():
