@@ -395,8 +395,8 @@ class ModisListingProcessor(ListingProcessor):
             if len(aois) > 0:
                 #compile filename and date tag
                 HDF_FILE = lst_entry[0]
-                HDF_PARTS = hdf_file.split('.')
-                HDF_TAG = '.'.join(hdf_split[1:4])
+                HDF_PARTS = HDF_FILE.split('.')
+                HDF_TAG = '.'.join(HDF_PARTS[1:4])
                 #compile lists of aois/overlap fractions
                 AOI = [aoi for aoi in aois]
                 FRC = [frc for frc in frac]
@@ -575,12 +575,12 @@ class RetrievalProcessor(ABC):
         """
         self.swath.set_swath_id(entry)
      
-    def get_swath_id(self, short: bool = True) -> tuple:
+    def get_swath_id(self, swath_only: bool) -> tuple:
         """
         Parameters
         ----------
-        short : bool
-            Should only the swath name be returned (True; default) or the 
+        swath_only : bool
+            Should only the swath name be returned (True) or the 
             full path (False)
 
         Returns
@@ -592,7 +592,7 @@ class RetrievalProcessor(ABC):
             to super().get_swath_id() or to override it in the sensor-specific 
             RetrievalProcessor() child class
         """
-        SWATH = self.swath.get_swath_id(short)
+        SWATH = self.swath.get_swath_id(swath_only)
         return SWATH
       
     def parse_swath_listing(self, df: pd.DataFrame) -> None:
@@ -656,7 +656,7 @@ class RetrievalProcessor(ABC):
         """    
         #loop through all downloaded variables and import corresponding 
         #files/data
-        VARIABLES_TO_PROCESS = self.meta.get_variables()
+        VARIABLES_TO_PROCESS = self.meta.get_input_variables()
         
         for VAR in VARIABLES_TO_PROCESS:
             #open file link
@@ -675,20 +675,22 @@ class RetrievalProcessor(ABC):
         variable into the new file using the respective SwathHandler class
         """
         #creating the h5 output file with base global attributes 
+        VARIABLES_TO_PROCESS = self.meta.get_output_variables()
+        
+        #decide on resampling or not
         RESAMPLING_APPLIED = self.cfg.do_resampling()
         if RESAMPLING_APPLIED:
             for aoi in self.overlapping_aois:
                 self.swath.create_swath(aoi)
+                #set variables into the new file
+                for VAR in VARIABLES_TO_PROCESS:
+                    self.swath.set_variable(VAR, aoi)
         else:
             self.swath.create_swath()
-        
-        #get all available variables
-        VARIABLES_TO_PROCESS = self.meta.get_variables()
-        
-        #set these into the new file
-        for VAR in VARIABLES_TO_PROCESS:
-            self.swath.set_variable(VAR)
-            
+            #set variables into the new file
+            for VAR in VARIABLES_TO_PROCESS:
+                self.swath.set_variable(VAR)
+
         #close file connection
         self.swath.close_swath()
         
@@ -717,7 +719,7 @@ class RetrievalProcessor(ABC):
         #loop through all variables in the data and send it to the 
         #resample procedure
         VARIABLES_TO_PROCESS = self.meta.get_resample_variables()
-        
+
         for VAR in VARIABLES_TO_PROCESS: 
             #get resample information from meta data
             LON, LAT = self.meta.get_var_grid_specs(VAR)
@@ -835,6 +837,9 @@ class ZipFileHandler(object):
         self.zipfile.extractall(self.outpath)
         self.extpath = os.path.join(self.outpath, self.zipdir)
         
+    def get_unzip_path(self) -> str:
+        return self.extpath
+        
     def close_zip_file(self) -> None:
         self.zipfile.close()
         
@@ -844,7 +849,7 @@ class ZipFileHandler(object):
         for f in RMLIST:
             os.remove(f)
         logger.info(f'Removing extracted zip-file folder...')
-        os.remove(self.extpath)
+        os.rmdir(self.extpath)
 
    
 """ Swath Handling """
@@ -859,12 +864,13 @@ class BaseSwathHandler(ABC):
         self.ref.data.set_swath_id(SWATH)
 
     @abstractmethod
-    def get_swath_id(self, short: bool = True) -> tuple:
+    def get_swath_id(self, swath_only: bool) -> str:
         SWATH = self.ref.data.get_swath_id()
-        if short:
+        if swath_only:
             SWATH = SWATH.split('/')[-1]
         return SWATH
     
+    @abstractmethod
     def open_swath(self, var: str) -> None:
         FILENAME = self.ref.meta.get_var_input_specs(var)[0]
         FILEPATH = os.path.join(self.ref.rawout, FILENAME)
@@ -886,7 +892,7 @@ class BaseSwathHandler(ABC):
         
     def create_swath(self, aoi: str = None) -> None:
         FILENAME = self._compile_output_swath_name(aoi)
-        FILEPATH = os.path.join(self.out, FILENAME)
+        FILEPATH = os.path.join(self.ref.out, FILENAME)
         #status
         logger.info(f'Saving to file: {FILENAME}')
         self.ref.io.save(FILEPATH)
@@ -925,7 +931,7 @@ class BaseSwathHandler(ABC):
     @abstractmethod
     def cleanup(self) -> None:
         #get swath id
-        SWATH = self.get_swath_id()
+        SWATH = self.get_swath_id(swath_only=True)
         #remove swath
         logger.info(f'Removing downloaded file: {SWATH}')
         self._remove_swath(SWATH)
@@ -941,7 +947,7 @@ class BaseSwathHandler(ABC):
             
     @abstractmethod
     def identify_resample_aois(self) -> None:
-        SWATH = self.get_swath_id()
+        SWATH = self.get_swath_id(swath_only=True)
         LISTING = self.ref.raw_listing
         AOI_LIST = LISTING['aoi'].loc[LISTING['file']==SWATH].tolist()
         self.ref.overlapping_aois = AOI_LIST
@@ -951,15 +957,21 @@ class SlstrSwathHandler(BaseSwathHandler):
     def set_swath_id(self, entry: pd.Series) -> None:
         super().set_swath_id(entry)
         
-    def get_swath_id(self, short: bool = True) -> tuple:
-        return super().get_swath_id()
+    def get_swath_id(self, swath_only: bool) -> str:
+        return super().get_swath_id(swath_only)
+    
+    def open_swath(self, var: str) -> None:
+        FILENAME = self.ref.meta.get_var_input_specs(var)[0]
+        UNZIPPATH = self.ref.zip.get_unzip_path()
+        FILEPATH = os.path.join(UNZIPPATH, FILENAME)
+        self.ref.io.load(FILEPATH)
         
     def load_variable(self, var: str) -> None:
         super().load_variable(var)
         
     def _get_date_from_swath_file(self) -> str:
         #get swath id
-        SWATH = self.get_swath_id()
+        SWATH = self.get_swath_id(swath_only=True)
         #take raw date from swath file name and convert it to datetime object
         raw_date = SWATH.split('_')[7]
         raw_date = datetime.strptime(raw_date,'%Y%m%dT%H%M%S')
@@ -981,21 +993,25 @@ class SlstrSwathHandler(BaseSwathHandler):
         
 class ModisSwathHandler(BaseSwathHandler):
     def set_swath_id(self, entry: pd.Series) -> None:
-        import pdb; pdb.set_trace()
-        SWATHS = {'mxd03': swath[0],'mxd02': swath[1]}
-        self.data.set_swath_id(SWATHS)
+        SWATHS = {'mxd03': entry[0],'mxd02': entry[1]}
+        self.ref.data.set_swath_id(SWATHS)
     
-    def get_swath_id(self, short: bool = True) -> tuple:
-        SWATHS = self.ref.data.get_swath_id()
-        if short:
-            SWATHS['mxd03'] = SWATHS['mxd03'].split('/')[-1]
-            SWATHS['mxd02'] = SWATHS['mxd02'].split('/')[-1]
-        return SWATHS
-        
-    def load_variable(self, var: str) -> None:
+    def get_swath_id(self, swath_only: bool) -> tuple:
+        URLS = self.ref.data.get_swath_id()
+        if swath_only:
+            SWATHS = {}
+            SWATHS['mxd03'] = URLS['mxd03'].split('/')[-1]
+            SWATHS['mxd02'] = URLS['mxd02'].split('/')[-1]
+            return SWATHS
+        return URLS
+    
+    def open_swath(self, var: str) -> None:
         #update meta info on variables for MODIS
         self._update_meta_info()
         #call base class function
+        super().open_swath(var)
+        
+    def load_variable(self, var: str) -> None:
         super().load_variable(var)
         
     def _update_meta_info(self) -> None:
@@ -1006,14 +1022,14 @@ class ModisSwathHandler(BaseSwathHandler):
             Updates the MODIS specific meta data information on the to be 
             used files (mxd03 or mxd02) for the variable processing
         """
-        SWATHS = self.get_swath_id()
-        MXD03 = SWATHS[0]
-        MXD02 = SWATHS[1]
+        SWATHS = self.get_swath_id(swath_only=True)
+        MXD03 = SWATHS['mxd03']
+        MXD02 = SWATHS['mxd02']
         self.ref.meta.update_input_specs((MXD03, MXD02))
         
     def _get_date_from_swath_file(self) -> str:
         #get swath id
-        SWATH = self.get_swath_id()['mxd02']
+        SWATH = self.get_swath_id(swath_only=True)['mxd02']
         #take raw date from swath id and convert it to datetime object
         raw_yyjj = SWATH.split('.')[1]
         raw_hhmm = SWATH.split('.')[2]
@@ -1026,7 +1042,7 @@ class ModisSwathHandler(BaseSwathHandler):
     
     def cleanup(self) -> None:
         #get swath id
-        SWATHS = self.get_swath_id()
+        SWATHS = self.get_swath_id(swath_only=True)
         #remove swaths
         MXD03 = SWATHS['mxd03']
         logger.info(f'Removing downloaded file: {MXD03}')
@@ -1036,7 +1052,7 @@ class ModisSwathHandler(BaseSwathHandler):
         self._remove_swath(MXD02)
         
     def identify_resample_aois(self) -> None:
-        SWATH = self.get_swath_id()['mxd03']
+        SWATH = self.get_swath_id(swath_only=True)['mxd03']
         LISTING = self.ref.raw_listing
         AOI_LIST = LISTING['aoi'].loc[LISTING['mxd03']==SWATH].tolist()
         self.ref.overlapping_aois = AOI_LIST
@@ -1108,12 +1124,10 @@ class BaseRetrievalHandler(ABC):
         DOWNLOADED_FILES = [f.name for f in os.scandir(self.ref.rawout) 
                             if f.is_file()]
         #retrieve current swath id's
-        GET_SWATH_NAME_ONLY = True
-        SWATH = self.ref.swath.get_swath_id(GET_SWATH_NAME_ONLY)
+        SWATH = self.ref.swath.get_swath_id(swath_only=True)
         #only download in case do not already exist
         SWATH_EXISTS = SWATH in DOWNLOADED_FILES
-        GET_SWATH_NAME_ONLY = False
-        URL = self.ref.swath.get_swath_id(GET_SWATH_NAME_ONLY)
+        URL = self.ref.swath.get_swath_id(swath_only=False)
         if not SWATH_EXISTS:
             status = self.download_swath(URL)
         else:
@@ -1170,11 +1184,11 @@ class SlstrRetrievalHandler(BaseRetrievalHandler):
     def get_swath_file(self) -> bool:
         #get swath file
         STATUS =  super().get_swath_file()
-        #TODO add unzipping here?!
         #get swath id to initialize zip handler
-        SWATH = self.ref.swath.get_swath_id()
+        SWATH = self.ref.swath.get_swath_id(swath_only=True)
         self.ref.zip.set_zip_path(SWATH)
         #load zip file
+        #TODO exception handler for BadZipFile exception! return bad STATUS
         self.ref.zip.load_zip_file()
         #extract zip file
         self.ref.zip.extract_zip_file()
@@ -1223,12 +1237,11 @@ class ModisRetrievalHandler(BaseRetrievalHandler):
         #retieve list of currently temporarily stored/downloaded files
         downloaded_files = [f.name for f in os.scandir(self.ref.rawout) 
                             if f.is_file()]
+
         #retrieve current swath id's
-        GET_SWATH_NAME_ONLY = True
-        SWATHS = self.ref.get_swath_id(GET_SWATH_NAME_ONLY)
-        GET_SWATH_NAME_ONLY = False
-        URLS = self.ref.get_swath_id(GET_SWATH_NAME_ONLY)
-        
+        SWATHS = self.ref.swath.get_swath_id(swath_only=True)
+        URLS = self.ref.swath.get_swath_id(swath_only=False)
+
         #only download in case do not already exist
         MXD03_EXISTS = SWATHS['mxd03'] in downloaded_files
         if not MXD03_EXISTS:
@@ -1241,6 +1254,6 @@ class ModisRetrievalHandler(BaseRetrievalHandler):
         else:
             status_mxd02 = True
             
-        return all(status_mxd03, status_mxd02)
+        return all((status_mxd03, status_mxd02))
 
 
