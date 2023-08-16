@@ -24,46 +24,53 @@ import zipfile
 
 # In[] 
 
+
 class ListingProcessor(ABC):
     """
     Listing base class which all sensor-specific listing classes are supposed
     to inherit/be a child class from
     """
-    def __init__(self):    
-        #download error management
-        self.error = DownloadErrorHandler()
-        
-    """ Getters/Setters for Processor Setup """
-    def set_cfg(self, cfg: object) -> None:
+    def __init__(self, cfg: object):
+        #pass configuration
         self.cfg = cfg
         
-    def initialize_processor(self) -> None:
-        self.set_carrier()
-        self.set_token()
-        self.set_aoi()
-        self.set_meta()
-        self.set_url()
-        self.set_output_path()
-        self.set_listing_data()
-        self.set_listing_io()  
+        #initialize base/sensor-specific modules
+        self.initialize_base_modules()
+        self.initialize_sensor_specific_modules()
         
-    def set_carrier(self) -> None:
+    """ Initializations """
+    def initialize_base_modules(self) -> None:
+        #basics
+        self._set_carrier()
+        self._set_token()
+        self._set_url()
+        self._set_output_path()
+        #modules
+        self._set_aoi_handler()
+        self._set_listing_data()
+        self._set_listing_io()
+        self._set_error_handler()
+        
+    @abstractmethod
+    def initialize_sensor_specific_modules(self) -> None:
+        self.listing = BaseListingHandler(self)
+        self.process = BaseProcessHandler(self)
+        
+    """ Internal Getters/Setters for Processor Setup """        
+    def _set_carrier(self) -> None:
         self.carrier = self.cfg.get_carrier()
         
-    def set_token(self) -> None:
+    def _set_token(self) -> None:
         self.token = self.cfg.get_token()
         
-    def set_aoi(self) -> None:
-        self.aoi = self.cfg.compile_aoi_data()
+    def _set_url(self) -> None:
+        #initiate meta data handler
+        META = self.cfg.get_meta_module()
+        META.set_carrier(self.carrier)
+        #set url's
+        self.url = META.get_urls()  
         
-    def set_meta(self) -> None:
-        self.meta = self.cfg.get_meta_module()
-        self.meta.set_carrier(self.carrier)
-        
-    def set_url(self) -> None:
-        self.url = self.meta.get_urls()        
-        
-    def set_output_path(self) -> None:
+    def _set_output_path(self) -> None:
         #output directory
         LISTING_FOLDER = 'listing'
         
@@ -74,18 +81,41 @@ class ListingProcessor(ABC):
         #status
         logger.info(f'Set listing output directory: {OUTPATH}')
         self.lstout = OUTPATH
+
+    def _set_aoi_handler(self) -> None:
+        #initiate aoi_handler
+        self.aoi = self.cfg.compile_aoi_data()
         
-    def set_listing_data(self) -> None:
+    def _set_listing_data(self) -> None:
         #initiate listing data container
-        self.listing = ListingData()
+        self.data = ListingData()
         
-    def set_listing_io(self) -> None:
+    def _set_listing_io(self) -> None:
         #initiate i/o handler
         self.io = ListingIO(self.lstout)
         
+    def _set_error_handler(self) -> None:
+        #initiate download error handler
+        self.error = DownloadErrorHandler()
+
+    """ High-level API's """
+    def get_dates(self) -> list:
+        """
+        API function that handles the splitting-up of the datetime objects 
+        into single strings independent of the used carrier/sensor
+        """
+        #get start/stop dates
+        START = self.cfg.get_start_date()
+        STOP = self.cfg.get_stop_date()
+        # generate year (yy) and day-of-year (jj) strings for covered range
+        DATES = [START + timedelta(days = day_diff) \
+                 for day_diff in range(0, (STOP - START).days+1)]
         
-    """ URL/Listing File Name Management """
-    @abstractmethod
+        DATES_LIST = [(DATE.strftime('%Y'), DATE.strftime('%j'))
+                      for DATE in DATES]
+        #return to caller
+        return DATES_LIST
+    
     def set_current_url(self, yy: str, jj: str) -> None:
         """
         Parameters
@@ -98,22 +128,13 @@ class ListingProcessor(ABC):
         Returns
         -------
         None
-            Stores the current url's for the listing file retrievals after 
-            compiling the geoMeta file name (with current date) as well as 
-            the year and julian day of year extensions to the base url's'
+            API function to store the current url's for the listing file 
+            retrievals after compiling the geoMeta file name 
+            (with current date) as well as the year and julian day of year 
+            extensions to the base url's'
         """
-        pass
-    
-    def compile_ddmm_from_yyjj(self, yy: str, jj: str) -> tuple:
-        d = datetime.strptime(f'{yy}-{jj}', "%Y-%j")
-        dd = d.strftime('%d')
-        mm = d.strftime('%m')
-        return dd, mm
-    
-    def get_current_url(self, url_type: str) -> str:
-        return self.current_url[url_type]
-    
-    @abstractmethod
+        self.process.set_current_url(yy, jj)
+
     def set_current_lfn(self, yy: str, jj: str) -> None:
         """
         Parameters
@@ -126,13 +147,107 @@ class ListingProcessor(ABC):
         Returns
         -------
         None
-            Stores the current listing file name (lfn) with the format:
-            "[CARRIER]_[SENSOR]_listing_[yyyy]_[jj].csv" in self.current_lfn
+            API function to store the current listing file name (lfn) with 
+            the format:
+            "[CARRIER]_[SENSOR]_listing_[yyyy]_[jj].csv"
+        """
+        self.process.set_current_lfn(yy, jj)
+    
+    
+    
+    
+""" Swath Handling """
+class BaseProcessHandler(ABC):
+    def __init__(self, host_class: object):
+        #keep instance of the host class to use this as nestes class
+        self.ref = host_class
+    
+    @abstractmethod
+    def set_current_url(self, yy: str, jj: str) -> None:
+        #compile day and month of current date
+        dd, mm = self._compile_ddmm_from_yyjj(yy, jj)
+        #compile geometa filename
+        GEOMETA = self._compile_geometa_filename(yy, mm, dd)
+        #compile url's
+        meta_url = f'{self.ref.url["meta"]}{yy}/{GEOMETA}'
+        data_url = f'{self.ref.url["data"]}{yy}/{jj}/' 
+        #set current urls
+        self.current_url = {'meta': meta_url,
+                            'data': data_url,
+                            }
+    
+    def _compile_ddmm_from_yyjj(self, yy: str, jj: str) -> tuple:
+        d = datetime.strptime(f'{yy}-{jj}', "%Y-%j")
+        dd = d.strftime('%d')
+        mm = d.strftime('%m')
+        return dd, mm
+    
+    @abstractmethod
+    def _compile_geometa_filename(self, yy: str, mm: str, dd: str) -> str:
+        """
+        Parameters
+        ----------
+        yy : str
+            Current year in yyyy format
+        mm : str
+            Current month in mm format
+        dd : str
+            Current day in dd format
+
+        Returns
+        -------
+        str
+            Compiles and returns the current GeoMeta filename in its sensor 
+            specific format (https://ladsweb.modaps.eosdis.nasa.gov/archive/)
         """
         pass
-      
+            
+    def set_current_lfn(self, yy: str, jj: str) -> None:
+        CARRIER = self.ref.cfg.get_carrier().lower()
+        SENSOR = self.ref.cfg.get_sensor().lower()
+        self.current_lfn = f'{CARRIER}_{SENSOR}_listing_{yy}_{jj}.csv'
+    
+    def get_current_url(self, url_type: str) -> str:
+        return self.current_url[url_type]
+
     def get_current_lfn(self) -> str:
         return self.current_lfn
+    
+    
+class ModisProcessHandler(BaseProcessHandler):
+    def set_current_url(self, yy: str, jj: str) -> None:
+        #compile day and month of current date
+        dd, mm = self._compile_ddmm_from_yyjj(yy, jj)
+        #build url using the GeoMeta part and file name
+        GEOMETA = self._compile_geometa_filename(yy, mm, dd)
+        meta_url = f'{self.url["meta"]}{yy}/{GEOMETA}'
+        mxd3_url = f'{self.url["mxd03"]}{yy}/{jj}/' 
+        mxd2_url = f'{self.url["mxd02"]}{yy}/{jj}/' 
+        
+        #set current urls
+        self.current_url = {'meta': meta_url,
+                            'mxd03': mxd3_url,
+                            'mxd02': mxd2_url
+                            }
+    def _compile_geometa_filename(self, yy: str, mm: str, dd: str) -> str:
+        PREFIX = self.ref.prefix.upper()
+        return f'{PREFIX}03_{yy}-{mm}-{dd}.txt'
+
+
+class SlstrProcessHandler(BaseProcessHandler):
+    def set_current_url(self, yy: str, jj: str) -> None:
+        super().set_current_url(yy, jj)
+
+    def _compile_geometa_filename(self, yy: str, mm: str, dd: str) -> str:
+        CARRIER = self.ref.carrier.upper()
+        return f'{CARRIER}_SL_1_RBT_{yy}-{mm}-{dd}.txt'
+    
+    
+    
+    
+    
+    
+    
 
     
     """ Listing Procedure """
@@ -296,28 +411,7 @@ class ListingProcessor(ABC):
     
 
 class SlstrListingProcessor(ListingProcessor):
-    """ URL/Listing File Name Management """
-    def set_current_url(self, yy: str, jj: str) -> None:
-        #compile day and month of current date
-        dd, mm = self.compile_ddmm_from_yyjj(yy, jj)
-        
-        #build url using the GeoMeta part and file name
-        CARRIER = self.carrier.upper()
-        geometa_file_name = f'{CARRIER}_SL_1_RBT_{yy}-{mm}-{dd}.txt'
-        meta_url = f'{self.url["meta"]}{yy}/{geometa_file_name}'
-        data_url = f'{self.url["data"]}{yy}/{jj}/' 
-        
-        #set current urls
-        self.current_url = {'meta': meta_url,
-                            'data': data_url,
-                            }
-
-
-    def set_current_lfn(self, yy: str, jj: str) -> None:
-        #set curreent listing file name
-        self.current_lfn = f'{self.carrier}_slstr_listing_{yy}_{jj}.csv'
-        
-        
+    pass
     
 
 class ModisListingProcessor(ListingProcessor):    
@@ -342,26 +436,6 @@ class ModisListingProcessor(ListingProcessor):
 
 
     """ URL/Listing File Name Management """
-    def set_current_url(self, yy: str, jj: str) -> None:
-        #compile day and month of current date
-        dd, mm = self.compile_ddmm_from_yyjj(yy, jj)
-        
-        #build url using the GeoMeta part and file name
-        geometa_file_name = f'{self.prefix}03_{yy}-{mm}-{dd}.txt'
-        meta_url = f'{self.url["meta"]}{yy}/{geometa_file_name}'
-        mxd3_url = f'{self.url["mxd03"]}{yy}/{jj}/' 
-        mxd2_url = f'{self.url["mxd02"]}{yy}/{jj}/' 
-        
-        #set current urls
-        self.current_url = {'meta': meta_url,
-                            'mxd03': mxd3_url,
-                            'mxd02': mxd2_url
-                            }
-    
-    
-    def set_current_lfn(self, yy: str, jj: str) -> None:
-        #set curreent listing file name
-        self.current_lfn = f'{self.carrier}_modis_listing_{yy}_{jj}.csv'
 
     
     """ Listing Procedure """
