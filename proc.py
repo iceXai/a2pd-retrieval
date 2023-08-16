@@ -53,7 +53,7 @@ class ListingProcessor(ABC):
         
     @abstractmethod
     def initialize_sensor_specific_modules(self) -> None:
-        self.listing = BaseListingHandler(self)
+        self.listing = BaseListingRetrievalHandler(self)
         self.process = BaseProcessHandler(self)
         
     """ Internal Getters/Setters for Processor Setup """        
@@ -153,10 +153,61 @@ class ListingProcessor(ABC):
         """
         self.process.set_current_lfn(yy, jj)
     
+    def check_for_existing_listing(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            API function returning the status of whether a current listing 
+            file does already exist
+        """
+        #compile path to potential listing
+        path = os.path.join(self.lstout, self.process.get_current_lfn())
+        #check for existance and return to caller
+        return os.path.isfile(path)
+    
+    def load_listing(self) -> None:
+        """
+        API function dealing with the loading of an existing listing file 
+        into the data container
+        """
+        self.process.load_listing()
+    
+    def save_listing(self) -> None:
+        """
+        API function dealing with the saving of an retrieved loading into 
+        the data container
+        """
+        self.process.save_listing()
+    
+    def get_listing(self) -> pd.DataFrame:
+        """
+        API function dealing with the returning of a finished file listing
+        from the data container
+        """
+        return self.process.get_listing()
+        
+    def get_geometa_file(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            API function to download/retrieve the respective geoMeta file
+            from LAADS; returning the status on it's success calling the 
+            respective ListingHandler() class
+        """
+        return self.listing.get_geometa_file()
+
+    def process_geometa_file(self) -> None:
+        """
+        API function to process the retrieved respective geoMeta file from 
+        LAADS, identify AOI overlaps, and compile retrieval URL's to be used 
+        by the Retrieval() classes
+        """
+        self.listing.process_geometa_file()
     
     
-    
-""" Swath Handling """
+""" Process Handling """
 class BaseProcessHandler(ABC):
     def __init__(self, host_class: object):
         #keep instance of the host class to use this as nestes class
@@ -213,6 +264,26 @@ class BaseProcessHandler(ABC):
     def get_current_lfn(self) -> str:
         return self.current_lfn
     
+    def save_listing(self) -> None:
+        N = self.ref.data.get_number_of_entries()
+        if N > 0:
+            LISTING_FILE = self.get_current_lfn()
+            self.ref.io.set_listing_file_name(LISTING_FILE)
+            LISTING_DATA = self.ref.data.get_listing()
+            self.ref.io.to_csv(LISTING_DATA)
+        else:
+            logger.critical(f'No listing available/retrievable!')
+            sys.exit()       
+        
+    def load_listing(self) -> None:
+        LISTING_FILE = self.get_current_lfn()
+        self.ref.io.set_listing_file_name(LISTING_FILE)
+        LOADED_LISTING_FILE = self.ref.io.from_csv()
+        self.ref.data.add_to_listing(LOADED_LISTING_FILE)
+        
+    def get_listing(self) -> pd.DataFrame:
+        return self.ref.data.get_listing()
+    
     
 class ModisProcessHandler(BaseProcessHandler):
     def set_current_url(self, yy: str, jj: str) -> None:
@@ -245,46 +316,57 @@ class SlstrProcessHandler(BaseProcessHandler):
     
     
     
+class BaseListingRetrievalHandler(ABC):
+    def __init__(self, host_class: object):
+        #keep instance of the host class to use this as nestes class
+        self.ref = host_class
+        #allocate dict for temporary listing
+        self.temporary_listing = {}
     
-    
-    
-
-    
-    """ Listing Procedure """
-    def check_for_existing_listing(self) -> bool:
-        path = os.path.join(self.lstout, self.get_current_lfn())
-        return os.path.isfile(path)
-    
-    
+    @abstractmethod
     def get_geometa_file(self) -> bool:
-        return self.get_listing_file('meta')
-
-    def get_listing_file(self, url_type: str) -> bool:
+        #set current url type to use
+        self._set_current_url_type('meta')
+        #call retrieval function and return its status
+        return self.get_listing_file()
+    
+    def _set_current_url_type(self, url_type) -> None:
+        self.current_url_type = url_type
+        
+    def _get_current_url_type(self) -> str:
+        return self.current_url_type
+    
+    def get_listing_file(self) -> bool:
         """
-        Parameters
-        ----------
-        url_type : str
-            Type of url to be retrieved; according to the url dict, i.e.,
-            'meta', 'data', or other sensor-specific ones like 'mxd03', 
-            and 'mxd02' - needs to correspond to whatever is set with
-            self.set_current_url()
-
         Returns
         -------
         bool
             True/False on the retrieval process completion.
         """
-        
+        URL_TYPE = self._get_current_url_type()
         #get url to download from
-        download_url = self.get_current_url(url_type)
+        URL = self.ref.process.get_current_url(URL_TYPE)
         
         #call download function
-        status = self.download_listing(download_url)
-                
-        #return status
-        return status
-    
-    def download_listing(self, url: str) -> bool:
+        REQUEST_OBJ = self.download_listing(URL)
+        
+        if REQUEST_OBJ.status_code == 200:
+            LISTING = self._parse_byte_listing(REQUEST_OBJ.content)
+            self.temporary_listing[URL_TYPE] = LISTING
+            #status
+            logger.info(f'Retrieval complete!')
+            #reset counter
+            self.ref.error.reset_crit_counter()
+            return True
+        else:
+            #status
+            logger.info(f'Retrieval incomplete!')
+            logger.error(f'Error with file listing retrieval!')
+            #increase coutner
+            self.ref.error.increase_crit_counter()
+            return False
+        
+    def download_listing(self, url: str) -> object:
         """
         Parameters
         ----------
@@ -300,32 +382,24 @@ class SlstrProcessHandler(BaseProcessHandler):
         logger.info(f'Retrieving listing file...')
         
         #requests call
-        headers = {'Authorization': "Bearer {}".format(self.token)}
+        headers = {'Authorization': "Bearer {}".format(self.ref.token)}
         r = requests.get(url, headers=headers)
 
-        if r.status_code == 200:
-            self.temporary_listing = self.parse_byte_listing(r.content)
-            #status
-            logger.info(f'Retrieval complete!')
-            #reset counter
-            self.error.reset_crit_counter()
-            return True
-        else:
-            #status
-            logger.info(f'Retrieval incomplete!')
-            logger.error(f'Error with file listing retrieval!')
-            #increase coutner
-            self.error.increase_crit_counter()
-            return False
+        #return request object
+        return r
         
+    def _parse_byte_listing(self, byte_listing) -> list:
+        return byte_listing.decode('UTF-8').split('\n')
+    
+    @abstractmethod
     def process_geometa_file(self) -> None:
         """
         Processes the downloaded geoMeta file from LAADS by identifying 
         matches with the predefined AOI's and neatly compiling all necessary
-        information for retrieval process
+        information for the retrieval process
         """
         #parse listing
-        self.parse_geometa_listing()
+        self._parse_geometa_listing()
         
         #allocate dataframe for listing storage
         df = pd.DataFrame()
@@ -333,7 +407,7 @@ class SlstrProcessHandler(BaseProcessHandler):
         #loop over entries
         for lst_entry in self.geometa:
             #check for overlap with specified aoi's
-            aois, frac = self.validate_aoi_overlap(lst_entry)
+            aois, frac = self._validate_aoi_overlap(lst_entry)
             
             #process in case of overlap
             if len(aois) > 0:
@@ -343,7 +417,7 @@ class SlstrProcessHandler(BaseProcessHandler):
                 AOI = [aoi for aoi in aois]
                 FRC = [frc for frc in frac]
                 #compose dict
-                d = {'url': self.get_current_url('data'),
+                d = {'url': self.ref.process.get_current_url('data'),
                      'file': SWATH,
                      'aoi': AOI,
                      'frac': FRC,
@@ -354,30 +428,31 @@ class SlstrProcessHandler(BaseProcessHandler):
         #update listing
         df = df.reset_index().drop('index', axis=1)
         #store in data container
-        self.listing.add_to_listing(df)
+        self.ref.data.add_to_listing(df)
     
-    def parse_geometa_listing(self) -> None:         
+    def _parse_geometa_listing(self) -> None:         
         #listing file consists of various meta information w/ 
         #line[0]:=file_name; line[9:12]:=RingLON; 
         #line[13:16]:=RingLAT       
         lst = [[s[0], s[9], s[10], s[11], s[12], s[13], s[14], s[15], s[16]]
-               for s in [e.split(',') for e in self.temporary_listing[3:-1]]]
+               for s in [e.split(',') 
+                         for e in self.temporary_listing['meta'][3:-1]]]
         
         #update temporary listing
         self.geometa = lst
         
-    def validate_aoi_overlap(self, lst_entry: list) -> (bool, list, list):
+    def _validate_aoi_overlap(self, lst_entry: list) -> (list, list):
         #check for overlap to exclude non-matching links from listing
         AOIS = []
         FRAC = []
         
         #get aois to process
-        aois_to_check = self.aoi.get_aois()
+        aois_to_check = self.ref.aoi.get_aois()
         
         #check for overlap of bounding box with predefined aoi polygons
         for aoi in aois_to_check:    
             #check for overlap
-            grid = self.aoi.get_aoi(aoi)
+            grid = self.ref.aoi.get_aoi(aoi)
             overlap, frac = grid.check_overlap_with_aoi(lst_entry)
             if overlap and frac >= 5.0:
                 AOIS.append(aoi)
@@ -385,28 +460,16 @@ class SlstrProcessHandler(BaseProcessHandler):
         
         #return
         return AOIS, FRAC
-        
-    
-    """ I/O Management """    
-    def save_listing(self) -> None:
-        N = self.listing.get_number_of_entries()
-        if N > 0:
-            self.io.set_listing_file_name(self.get_current_lfn())
-            self.io.to_csv(self.listing.get_listing())
-        else:
-            logger.critical(f'No listing available/retrievable!')
-            sys.exit()       
-        
-    def load_listing(self) -> None:
-        self.io.set_listing_file_name(self.get_current_lfn())
-        self.listing.add_to_listing(self.io.from_csv())
-        
-    def get_listing(self) -> pd.DataFrame:
-        return self.listing.get_listing()
-    
-    def parse_byte_listing(self, byte_listing) -> list:
-        return byte_listing.decode('UTF-8').split('\n')
-    
+
+
+class SlstrListingRetrievalHandler(BaseListingRetrievalHandler):
+    pass
+
+
+class ModisListingRetrievalHandler(BaseListingRetrievalHandler):
+    pass
+
+
     
     
 
