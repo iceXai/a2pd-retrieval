@@ -1,13 +1,20 @@
 
 # In[]
 from job import RetrievalJob
+from clargparser import CommandLineArgParser
 
 # In[]
 
-job = RetrievalJob('agrs')
-job.validate()
-job.setup()
-job.run()
+clarg = CommandLineArgParser()
+#clarg.parse_command_line_arguments()
+clarg.set_test_cfg_arg('config.yaml')
+
+args = clarg.get_args()
+
+job = RetrievalJob(args)
+#job.validate()
+#job.setup()
+#job.run()
 
 
 #print(job.cfg.get_sensor())
