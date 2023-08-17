@@ -20,11 +20,11 @@ Configuration
 """
 
 class Configuration(object):
-    def __init__(self):
+    def __init__(self, cfg_file_name: str):
         #status
         logger.info('Load configuration file...')
         #loads the yaml file and reads it content
-        with open(os.path.join(os.getcwd(), 'cfg', 'config.yaml')) as f:
+        with open(os.path.join(os.getcwd(), 'cfg', cfg_file_name)) as f:
             self.config = yaml.safe_load(f)
         #configure the logger
         self.configure_logger()

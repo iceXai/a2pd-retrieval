@@ -11,17 +11,21 @@ Modules
 """
 from loguru import logger
 
+import argparse
+import os
+import sys
+
 import cfg
 
 
 # In[]
 
 """
-Job setup
+Retrieval Job setup and execution
 """
 
 class RetrievalJob(object):
-    def __init__(self, args) -> None:
+    def __init__(self, args: dict) -> None:
         """
         Parses all user input arguments into the job processor
 
@@ -29,12 +33,28 @@ class RetrievalJob(object):
         -------
         None.
 
-        """        
-        #calls and initiates the configuration
-        self.cfg = cfg.Configuration()
+        """
+        #parse arguments
+        self.args = args      
+
     
-    def validate(self) -> None:
-        pass
+    def validate(self) -> bool:
+        #set initial status
+        STATUS = False
+        
+        #validate configuration file existence
+        CFG_FILE = args['cfg']
+        CFG_PATH = os.path.join(os.getcwd(), 'cfg', CFG_FILE)
+        if not os.path.isfile(CFG_PATH):
+            logger.critical('No configuration file found!')
+            sys.exit()
+        #after initial validation of file existance initiate the configuration
+        self.cfg = cfg.Configuration(CFG_FILE)
+        #make initial sanity checks
+        #TODO implement validator class to do all of this?
+        #return status
+        return True
+        
     
     def setup(self) -> None:
         """
