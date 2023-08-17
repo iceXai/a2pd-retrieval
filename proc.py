@@ -54,7 +54,7 @@ class ListingProcessor(ABC):
     @abstractmethod
     def initialize_sensor_specific_modules(self) -> None:
         self.listing = BaseListingRetrievalHandler(self)
-        self.process = BaseProcessHandler(self)
+        self.process = BaseListingProcessHandler(self)
         
     """ Internal Getters/Setters for Processor Setup """        
     def _set_carrier(self) -> None:
@@ -206,9 +206,48 @@ class ListingProcessor(ABC):
         """
         self.listing.process_geometa_file()
     
+
+class SlstrListingProcessor(RetrievalProcessor):
+    """
+    Handles the actual retrieval of the file listing for SLSTR
+    """
+
+    """ Sensor-specific initializations """
+    def initialize_sensor_specific_modules(self) -> None:
+        self._set_process_handler()
+        self._set_listing_handler()
+        
+    def _set_process_handler(self) -> None:
+        self.process = SlstrListingProcessHandler(self)
     
+    def _set_listing_handler(self) -> None:
+        self.listing = SlstrListingRetrievalHandler(self)    
+    
+    
+class ModisListingProcessor(RetrievalProcessor):
+    """
+    Handles the actual retrieval of the file listing for MODIS
+    """
+
+    """ Sensor-specific initializations """
+    def initialize_sensor_specific_modules(self) -> None:
+        self._set_process_handler()
+        self._set_listing_handler()
+        
+    def _set_process_handler(self) -> None:
+        self.process = ModisListingProcessHandler(self)
+    
+    def _set_listing_handler(self) -> None:
+        self.listing = ModisListingRetrievalHandler(self)   
+
+
+# In[]
+# In[]
+# In[]
+
+
 """ Process Handling """
-class BaseProcessHandler(ABC):
+class BaseListingProcessHandler(ABC):
     def __init__(self, host_class: object):
         #keep instance of the host class to use this as nestes class
         self.ref = host_class
@@ -285,7 +324,7 @@ class BaseProcessHandler(ABC):
         return self.ref.data.get_listing()
     
     
-class ModisProcessHandler(BaseProcessHandler):
+class ModisListingProcessHandler(BaseProcessHandler):
     def set_current_url(self, yy: str, jj: str) -> None:
         #compile day and month of current date
         dd, mm = self._compile_ddmm_from_yyjj(yy, jj)
@@ -305,7 +344,7 @@ class ModisProcessHandler(BaseProcessHandler):
         return f'{PREFIX}03_{yy}-{mm}-{dd}.txt'
 
 
-class SlstrProcessHandler(BaseProcessHandler):
+class SlstrListingProcessHandler(BaseProcessHandler):
     def set_current_url(self, yy: str, jj: str) -> None:
         super().set_current_url(yy, jj)
 
@@ -313,9 +352,8 @@ class SlstrProcessHandler(BaseProcessHandler):
         CARRIER = self.ref.carrier.upper()
         return f'{CARRIER}_SL_1_RBT_{yy}-{mm}-{dd}.txt'
     
-    
-    
-    
+       
+""" Listing Retrieval """
 class BaseListingRetrievalHandler(ABC):
     def __init__(self, host_class: object):
         #keep instance of the host class to use this as nestes class
@@ -463,53 +501,31 @@ class BaseListingRetrievalHandler(ABC):
 
 
 class SlstrListingRetrievalHandler(BaseListingRetrievalHandler):
-    pass
+    def get_geometa_file(self) -> bool:
+        return super().get_geometa_file()
+    
+    def process_geometa_file(self) -> None:
+        super().process_geometa_file()
 
 
 class ModisListingRetrievalHandler(BaseListingRetrievalHandler):
-    pass
-
-
-    
-    
-
-class SlstrListingProcessor(ListingProcessor):
-    pass
-    
-
-class ModisListingProcessor(ListingProcessor):    
-    """ Getters/Setters for Processor Setup """
-    def initialize_processor(self) -> None:
-        self.set_carrier()
-        self.set_token()
-        self.set_aoi()
-        self.set_meta()
-        self.set_url()
-        self.set_prefix()
-        self.set_output_path()
-        self.set_listing_data()
-        self.set_listing_io() 
-        
-    def set_prefix(self) -> None:
+    def get_geometa_file(self) -> bool:
         """
-        Additional function dealing with the carrier-dependent file prefix:
-        Aqua -> MYD, Terra -> MOD!
+        Due to the duality of needed data/sources for MODIS, within the 
+        geoMeta API, two retrievals are initiated to also lok-up all 
+        available MXD021KM files on LAADS for the given day to match
+        with the geoMeta files
         """
-        self.prefix = self.meta.get_data_prefix() 
-
-
-    """ URL/Listing File Name Management """
-
-    
-    """ Listing Procedure """
-    def get_mxd02_file(self) -> bool:
-        """
-        Additional function to retrieve the MXD021KM files from another 
-        position on the server to identify corresponding MXD02 files to 
-        the MXD03 files available in the geoMeta data
-        """
-        return self.get_listing_file('mxd02')
-
+        #set current url type to use
+        self._set_current_url_type('meta')
+        #call retrieval function and return its status
+        STATUS_GEOMETA = self.get_listing_file()
+        #set current url type to use
+        self._set_current_url_type('mxd02')
+        #call retrieval function and return its status
+        STATUS_MXD02 = self.get_listing_file()
+        #return status
+        return (STATUS_GEOMETA, STATUS_MXD02)
     
     def process_geometa_file(self) -> None:
         """
@@ -518,7 +534,7 @@ class ModisListingProcessor(ListingProcessor):
         datetags stored in the listing dataframe
         """
         #parse listing
-        self.parse_geometa_listing()
+        self._parse_geometa_listing()
         
         #allocate dataframe for listing storage
         df = pd.DataFrame()
@@ -526,7 +542,7 @@ class ModisListingProcessor(ListingProcessor):
         #loop over entries
         for lst_entry in self.geometa:
             #check for overlap with specified aoi's
-            aois, frac = self.validate_aoi_overlap(lst_entry)
+            aois, frac = self._validate_aoi_overlap(lst_entry)
             
             #process in case of overlap
             if len(aois) > 0:
@@ -539,7 +555,7 @@ class ModisListingProcessor(ListingProcessor):
                 FRC = [frc for frc in frac]
                 #compose dict
                 d = {'tag': HDF_TAG,
-                     'url_mxd03': self.get_current_url('mxd03'),
+                     'url_mxd03': self.ref.process.get_current_url('mxd03'),
                      'mxd03': HDF_FILE,
                      'aoi': AOI,
                      'frac': FRC,
@@ -548,49 +564,36 @@ class ModisListingProcessor(ListingProcessor):
                 df = pd.concat([df, pd.DataFrame(d)])
             
         #update listing
-        self.geometa = df.reset_index().drop('index', axis=1)
-    
-
-    def process_mxd02_listing_file(self) -> None:
-        """
-        Processes the the webcrawl information to retrieve all available 
-        MXD021KM files for the given date in the LAADS archive by parsing the 
-        data and matching it to the MXD03 data by their corresponding datetags
-        """
-        #parse listing
-        self.parse_mxd02_listing()
+        df_geometa = df.reset_index().drop('index', axis=1)
         
-        #match it with mxd03 list
-        self.get_processed_mxd02_listing()
-            
-                
-    def parse_mxd02_listing(self) -> None:
-        #create list of file links 
-        SEARCH_STR = '<a class="btn btn-default" href="/archive/allData/'
-        lst = [line.split('"')[3].split('/')[-1] \
-               for line in self.temporary_listing if SEARCH_STR in line]
-
-        #update temporary listing
-        self.mxd02 = lst       
-     
-    
-    def get_processed_mxd02_listing(self) -> None:
+        #parse mxd02 listing
+        self._parse_mxd02_listing()
+        
         #create search tags for mxd02
         tags = ['.'.join(lst_entry.split('.')[1:4])
                 for lst_entry in self.mxd02]
         
         #compile df
-        df_to_join = pd.DataFrame({'tag': tags,
-                                   'url_mxd02': self.get_current_url('mxd02'),
-                                   'mxd02': self.mxd02})
+        df_mxd02 = pd.DataFrame({'tag': tags,
+                                 'url_mxd02': self.ref.process.('mxd02'),
+                                 'mxd02': self.mxd02})
         
         #join them on tags and rearrange them
-        df = self.geometa.join(df_to_join.set_index('tag'), on='tag')
+        df = df_geometa.join(df_to_join.set_index('tag'), on='tag')
         df.drop('tag', axis=1, inplace=True)
         df = df[['url_mxd03', 'mxd03', 'url_mxd02', 'mxd02', 'aoi', 'frac']]
         #store in data container
         self.listing.add_to_listing(df)
-       
+
+    def _parse_mxd02_listing(self) -> None:
+        #create list of file links 
+        SEARCH_STR = '<a class="btn btn-default" href="/archive/allData/'
+        LST = [line.split('"')[3].split('/')[-1] \
+               for line in self.temporary_listing['mxd02'] 
+               if SEARCH_STR in line]
+        #update temporary listing
+        self.mxd02 = LST
+
 
 
 # In[]
