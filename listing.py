@@ -43,7 +43,7 @@ class Listing(ABC):
         #status
         logger.info(f'Compile file listing...')        
         #retrieve date strings for specified processing period
-        date_str = self.proc.get_date_strings()
+        date_str = self.proc.get_dates()
         
         #loop over all dates
         for yy, jj in date_str:

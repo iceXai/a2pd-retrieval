@@ -207,7 +207,7 @@ class ListingProcessor(ABC):
         self.listing.process_geometa_file()
     
 
-class SlstrListingProcessor(RetrievalProcessor):
+class SlstrListingProcessor(ListingProcessor):
     """
     Handles the actual retrieval of the file listing for SLSTR
     """
@@ -224,7 +224,7 @@ class SlstrListingProcessor(RetrievalProcessor):
         self.listing = SlstrListingRetrievalHandler(self)    
     
     
-class ModisListingProcessor(RetrievalProcessor):
+class ModisListingProcessor(ListingProcessor):
     """
     Handles the actual retrieval of the file listing for MODIS
     """
@@ -324,15 +324,15 @@ class BaseListingProcessHandler(ABC):
         return self.ref.data.get_listing()
     
     
-class ModisListingProcessHandler(BaseProcessHandler):
+class ModisListingProcessHandler(BaseListingProcessHandler):
     def set_current_url(self, yy: str, jj: str) -> None:
         #compile day and month of current date
         dd, mm = self._compile_ddmm_from_yyjj(yy, jj)
         #build url using the GeoMeta part and file name
         GEOMETA = self._compile_geometa_filename(yy, mm, dd)
-        meta_url = f'{self.url["meta"]}{yy}/{GEOMETA}'
-        mxd3_url = f'{self.url["mxd03"]}{yy}/{jj}/' 
-        mxd2_url = f'{self.url["mxd02"]}{yy}/{jj}/' 
+        meta_url = f'{self.ref.url["meta"]}{yy}/{GEOMETA}'
+        mxd3_url = f'{self.ref.url["mxd03"]}{yy}/{jj}/' 
+        mxd2_url = f'{self.ref.url["mxd02"]}{yy}/{jj}/' 
         
         #set current urls
         self.current_url = {'meta': meta_url,
@@ -340,11 +340,15 @@ class ModisListingProcessHandler(BaseProcessHandler):
                             'mxd02': mxd2_url
                             }
     def _compile_geometa_filename(self, yy: str, mm: str, dd: str) -> str:
-        PREFIX = self.ref.prefix.upper()
+        #initiate meta data handler
+        META = self.ref.cfg.get_meta_module()
+        META.set_carrier(self.ref.carrier)
+        #get prefix
+        PREFIX = META.get_data_prefix().upper()
         return f'{PREFIX}03_{yy}-{mm}-{dd}.txt'
 
 
-class SlstrListingProcessHandler(BaseProcessHandler):
+class SlstrListingProcessHandler(BaseListingProcessHandler):
     def set_current_url(self, yy: str, jj: str) -> None:
         super().set_current_url(yy, jj)
 
@@ -553,9 +557,11 @@ class ModisListingRetrievalHandler(BaseListingRetrievalHandler):
                 #compile lists of aois/overlap fractions
                 AOI = [aoi for aoi in aois]
                 FRC = [frc for frc in frac]
+                #get url's
+                URLS = self.ref.process.get_current_url('mxd03')
                 #compose dict
                 d = {'tag': HDF_TAG,
-                     'url_mxd03': self.ref.process.get_current_url('mxd03'),
+                     'url_mxd03': URLS,
                      'mxd03': HDF_FILE,
                      'aoi': AOI,
                      'frac': FRC,
@@ -570,20 +576,23 @@ class ModisListingRetrievalHandler(BaseListingRetrievalHandler):
         self._parse_mxd02_listing()
         
         #create search tags for mxd02
-        tags = ['.'.join(lst_entry.split('.')[1:4])
+        TAGS = ['.'.join(lst_entry.split('.')[1:4])
                 for lst_entry in self.mxd02]
         
+        #get url's
+        URLS = self.ref.process.get_current_url('mxd02')
+        
         #compile df
-        df_mxd02 = pd.DataFrame({'tag': tags,
-                                 'url_mxd02': self.ref.process.('mxd02'),
+        df_mxd02 = pd.DataFrame({'tag': TAGS,
+                                 'url_mxd02': URLS,
                                  'mxd02': self.mxd02})
         
         #join them on tags and rearrange them
-        df = df_geometa.join(df_to_join.set_index('tag'), on='tag')
+        df = df_geometa.join(df_mxd02.set_index('tag'), on='tag')
         df.drop('tag', axis=1, inplace=True)
         df = df[['url_mxd03', 'mxd03', 'url_mxd02', 'mxd02', 'aoi', 'frac']]
         #store in data container
-        self.listing.add_to_listing(df)
+        self.ref.data.add_to_listing(df)
 
     def _parse_mxd02_listing(self) -> None:
         #create list of file links 
