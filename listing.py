@@ -11,8 +11,6 @@ from loguru import logger
 from proc import ModisListingProcessor
 from proc import SlstrListingProcessor
 
-import pandas as pd
-
 
 # In[]
 
