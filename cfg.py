@@ -143,7 +143,7 @@ class Configuration(object):
     def get_listing_module(self) -> object:
         #sets the correct listing processor corresponding to the 
         #sensor/carrier
-        return self.get_listing_class()()
+        return self.get_listing_class()(self)
     
     """ Job::Retrieval """
     def get_retrieval_module(self) -> object:
@@ -151,7 +151,7 @@ class Configuration(object):
         #sensor/carrier
         return self.get_retrieval_class()(self)
 
-    """ Job::MetaData """
+    """ Proc::MetaData """
     def get_meta_module(self) -> object:
         #sets the correct meta data class corresponding to the
         #sensor/carrier
