@@ -51,8 +51,8 @@ class Retrieval(ABC):
         """
         self.listing = listing
         
-    """ Run """
-    def run(self) -> None:
+    """ API for run """
+    def retrieve_and_process(self) -> None:
         #status
         logger.info(f'Retrieve and process swaths...')
         #parse swath listing to mitigate multiple downloads of the same 
