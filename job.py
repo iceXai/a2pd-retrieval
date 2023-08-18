@@ -39,6 +39,15 @@ class RetrievalJob(object):
 
     
     def validate(self) -> bool:
+        """
+        Validates the user input, for now, the provided configuration file, 
+        it's existence and its setup
+        
+        Returns
+        -------
+        bool
+            All user input valid or not?
+        """
         #set initial status
         STATUS = False
         
@@ -52,6 +61,7 @@ class RetrievalJob(object):
         self.cfg = cfg.Configuration(CFG_FILE)
         #make initial sanity checks
         #TODO implement validator class to do all of this?
+        
         #return status
         return True
         
