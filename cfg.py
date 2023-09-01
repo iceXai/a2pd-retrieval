@@ -31,15 +31,15 @@ class Configuration(object):
             
     """ Logger Setup """
     def configure_logger(self) -> None:
-        path = self.get_output_path()
+        path = self.output_path
         LOG_PATH = os.path.join(path,'log')
         if not os.path.isdir(LOG_PATH):
             os.makedirs(LOG_PATH)
-        CARRIER = self.get_carrier()
-        SENSOR = self.get_sensor()
-        VERSION = self.get_version()
-        START = self.get_start_date().strftime('%Y%j')
-        END = self.get_stop_date().strftime('%Y%j')
+        CARRIER = self.carrier
+        SENSOR = self.sensor
+        VERSION = self.version
+        START = self.start_date.strftime('%Y%j')
+        END = self.stop_date.strftime('%Y%j')
         NAME = f'{CARRIER}_{SENSOR}_{VERSION}_{START}-{END}.log'
         logger.add(f'{LOG_PATH}/{NAME}')
         
@@ -51,27 +51,32 @@ class Configuration(object):
 
     
     """ Configfile::Authentication """
-    def get_token(self) -> str:
+    @property
+    def token(self) -> str:
         #returns LAADS token for download authentication
         return self.config['authentication']['token']
     
     
     """ Configfile::Metadata """
-    def get_sensor(self) -> str:
+    @property
+    def sensor(self) -> str:
         #returns the specified sensor
         return self.config['meta']['sensor'].lower()
     
-    def get_carrier(self) -> str:
+    @property
+    def carrier(self) -> str:
         #returns the carrier of the sensor
         return self.config['meta']['carrier'].lower()
     
-    def get_version(self) -> str:
+    @property
+    def version(self) -> str:
         #returns the version needed for the meta class
         return self.config['meta']['version'].lower()
     
     
     """ Configfile::Output """
-    def get_output_path(self) -> str:
+    @property
+    def output_path(self) -> str:
         #get output path
         path = self.config['output']['path']
         #check for existence and create otherwise
@@ -82,34 +87,39 @@ class Configuration(object):
     
     
     """ Configfile::Date """
-    def get_start_date(self) -> datetime.date:
+    @property
+    def start_date(self) -> datetime.date:
         #returns the start date/time as datetime.date object
         return self.config['date']['start']
-        
-    def get_stop_date(self) -> datetime.date:
+    
+    @property
+    def stop_date(self) -> datetime.date:
         #returns the end date/time as datetime.date object
         return self.config['date']['stop']
     
 
-    """ Configfile::AOI """    
-    def get_aois(self) -> list:
+    """ Configfile::AOI """
+    @property
+    def user_aois(self) -> list:
         #returns list of aois to be used on the current job
         return self.config['meta']['aoi']
     
     def compile_aoi_data(self) -> None:
         #returns the user specified aoi's
-        user_aois = self.get_aois()
+        USER_AOIS = self.user_aois
         #initiates and populates the AOI Data Handler
-        aoi = AoiData(user_aois)
+        AOI = AoiData(USER_AOIS)
         #returns to caller
-        return aoi
+        return AOI
     
     
-    """ Configfile::Processing Modules """    
+    """ Configfile::Processing Modules """
+    @property
     def do_resampling(self) -> bool:
         #returns the status whether to resample the data or not
         return self.config['processing']['resampling']['apply']
     
+    @property
     def do_swath_download(self) -> bool:
         #returns the status of the actual file retrieval
         return self.config['processing']['retrieval']['apply']
@@ -132,7 +142,7 @@ class Configuration(object):
     
     def get_meta_class(self) -> object:
         #returns the appropriate meta class
-        sensor = self.get_sensor().capitalize()
+        sensor = self.sensor.capitalize()
         class_name = f'{sensor}SwathMeta'
         module_name = 'meta'
         #status
@@ -155,10 +165,6 @@ class Configuration(object):
     def get_meta_module(self) -> object:
         #sets the correct meta data class corresponding to the
         #sensor/carrier
-        SENSOR = self.get_sensor()
-        VERSION = self.get_version()
+        SENSOR = self.sensor
+        VERSION = self.version
         return self.get_meta_class()(SENSOR, VERSION)
-
-
-
-    #[...] more necessary getters/setters

@@ -52,7 +52,7 @@ class RetrievalJob(object):
         STATUS = False
         
         #validate configuration file existence
-        CFG_FILE = args['cfg']
+        CFG_FILE = self.args['cfg']
         CFG_PATH = os.path.join(os.getcwd(), 'cfg', CFG_FILE)
         if not os.path.isfile(CFG_PATH):
             logger.critical('No configuration file found!')
@@ -83,7 +83,8 @@ class RetrievalJob(object):
         #initialize the correct listing module/processor
         self.lst = self.cfg.get_listing_module()
         
-        if self.cfg.do_swath_download():
+        APPLY_RETRIEVAL = self.cfg.do_swath_download
+        if APPLY_RETRIEVAL:
             #initialize the correct retrieval module/processor
             self.ret = self.cfg.get_retrieval_module()            
         
@@ -102,11 +103,13 @@ class RetrievalJob(object):
         #run the listing processor to compile the file listing
         listing = self.lst.compile_file_listing()
         
-        #pass along listing information to retrieval processor
-        self.ret.set_listing(listing)
-        
-        #run the retrieval processor to retrieve and process all swaths
-        self.ret.retrieve_and_process()
+        APPLY_RETRIEVAL = self.cfg.do_swath_download
+        if APPLY_RETRIEVAL:
+            #pass along listing information to retrieval processor
+            self.ret.set_listing(listing)
+            
+            #run the retrieval processor to retrieve and process all swaths
+            self.ret.retrieve_and_process()
         
         #status
         logger.info('Job complete! :)')

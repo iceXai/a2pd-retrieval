@@ -12,9 +12,9 @@ clarg.set_test_cfg_arg('config.yaml')
 args = clarg.get_args()
 
 job = RetrievalJob(args)
-#job.validate()
-#job.setup()
-#job.run()
+job.validate()
+job.setup()
+job.run()
 
 
 #print(job.cfg.get_sensor())

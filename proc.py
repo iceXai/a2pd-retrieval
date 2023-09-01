@@ -58,10 +58,10 @@ class ListingProcessor(ABC):
         
     """ Internal Getters/Setters for Processor Setup """        
     def _set_carrier(self) -> None:
-        self.carrier = self.cfg.get_carrier()
+        self.carrier = self.cfg.carrier
         
     def _set_token(self) -> None:
-        self.token = self.cfg.get_token()
+        self.token = self.cfg.token
         
     def _set_url(self) -> None:
         #initiate meta data handler
@@ -75,7 +75,7 @@ class ListingProcessor(ABC):
         LISTING_FOLDER = 'listing'
         
         #create listing directory if necessary
-        OUTPATH = os.path.join(self.cfg.get_output_path(), LISTING_FOLDER)
+        OUTPATH = os.path.join(self.cfg.output_path, LISTING_FOLDER)
         if not os.path.isdir(OUTPATH):
             os.makedirs(OUTPATH) 
         #status
@@ -105,8 +105,8 @@ class ListingProcessor(ABC):
         into single strings independent of the used carrier/sensor
         """
         #get start/stop dates
-        START = self.cfg.get_start_date()
-        STOP = self.cfg.get_stop_date()
+        START = self.cfg.start_date
+        STOP = self.cfg.stop_date
         # generate year (yy) and day-of-year (jj) strings for covered range
         DATES = [START + timedelta(days = day_diff) \
                  for day_diff in range(0, (STOP - START).days+1)]
@@ -293,8 +293,8 @@ class BaseListingProcessHandler(ABC):
         pass
             
     def set_current_lfn(self, yy: str, jj: str) -> None:
-        CARRIER = self.ref.cfg.get_carrier().lower()
-        SENSOR = self.ref.cfg.get_sensor().lower()
+        CARRIER = self.ref.cfg.carrier.lower()
+        SENSOR = self.ref.cfg.sensor.lower()
         self.current_lfn = f'{CARRIER}_{SENSOR}_listing_{yy}_{jj}.csv'
     
     def get_current_url(self, url_type: str) -> str:
@@ -629,7 +629,7 @@ class RetrievalProcessor(ABC):
         self.initialize_sensor_specific_modules()
         
         #initialize resampling if necessary
-        APPLY_RESAMPLING = self.cfg.do_resampling()
+        APPLY_RESAMPLING = self.cfg.do_resampling
         if APPLY_RESAMPLING:
             self.initialize_resample_module()
         
@@ -659,14 +659,14 @@ class RetrievalProcessor(ABC):
         
     """ Internal Getters/Setters for Processor Setup """        
     def _set_carrier(self) -> None:
-        self.carrier = self.cfg.get_carrier()
+        self.carrier = self.cfg.carrier
         
     def _set_token(self) -> None:
-        self.token = self.cfg.get_token()
+        self.token = self.cfg.token
         
     def _set_output_path(self) -> None:
         #general output path
-        OUTPATH = self.cfg.get_output_path()
+        OUTPATH = self.cfg.output_path
         #raw output directory
         RAW_FOLDER = 'tmp'
         #status
@@ -697,7 +697,7 @@ class RetrievalProcessor(ABC):
         
     def _set_swath_io(self) -> None:
         #initiate i/o handler
-        SENSOR = self.cfg.get_sensor().capitalize()
+        SENSOR = self.cfg.sensor.capitalize()
         IO_CLASS = self.cfg.get_class('iotools', f'{SENSOR}SwathIO') 
         self.io = IO_CLASS(self.out)
         
@@ -827,7 +827,7 @@ class RetrievalProcessor(ABC):
         VARIABLES_TO_PROCESS = self.meta.get_output_variables()
         
         #decide on resampling or not
-        RESAMPLING_APPLIED = self.cfg.do_resampling()
+        RESAMPLING_APPLIED = self.cfg.do_resampling
         if RESAMPLING_APPLIED:
             for aoi in self.overlapping_aois:
                 self.swath.create_swath(aoi)
@@ -1068,8 +1068,8 @@ class BaseSwathHandler(ABC):
         pass
         #set file-name parts
         DATE = self._get_date_from_swath_file()
-        CARRIER = self.ref.cfg.get_carrier().lower()[0:3]
-        SENSOR = self.ref.cfg.get_sensor().lower()
+        CARRIER = self.ref.cfg.carrier.lower()[0:3]
+        SENSOR = self.ref.cfg.sensor.lower()
         #compile and return
         return f'{CARRIER}_{SENSOR}_{DATE}_{EXT}.h5'
     
