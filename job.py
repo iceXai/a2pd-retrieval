@@ -83,10 +83,10 @@ class RetrievalJob(object):
         #initialize the correct listing module/processor
         self.lst = self.cfg.setup_listing_module()
         
-        APPLY_RETRIEVAL = self.cfg.do_swath_download
+        APPLY_RETRIEVAL = self.cfg.apply_swath_download
         if APPLY_RETRIEVAL:
             #initialize the correct retrieval module/processor
-            self.ret = self.cfg.get_retrieval_module()            
+            self.ret = self.cfg.setup_retrieval_module()            
         
     def run(self) -> None:
         """
@@ -103,7 +103,7 @@ class RetrievalJob(object):
         #run the listing processor to compile the file listing
         listing = self.lst.compile_file_listing()
         
-        APPLY_RETRIEVAL = self.cfg.do_swath_download
+        APPLY_RETRIEVAL = self.cfg.apply_swath_download
         if APPLY_RETRIEVAL:
             #pass along listing information to retrieval processor
             self.ret.set_listing(listing)

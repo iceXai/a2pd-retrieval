@@ -115,12 +115,12 @@ class Configuration(object):
     
     """ Configfile::Processing Modules """
     @property
-    def do_resampling(self) -> bool:
+    def apply_resampling(self) -> bool:
         #returns the status whether to resample the data or not
         return self.config['resampling']['apply']
     
     @property
-    def do_swath_download(self) -> bool:
+    def apply_swath_download(self) -> bool:
         #returns the status of the actual file retrieval
         return self.config['retrieval']['apply']
     
@@ -133,16 +133,16 @@ class Configuration(object):
         module_name = 'proc'
         class_name = 'ListingProcessor'
         return self.get_class(module_name, class_name)
+
+    def get_retrieval_class(self) -> object:
+        module_name = 'retrieval'
+        class_name = 'Retrieval'
+        return self.get_class(module_name, class_name)
     
-    @property
-    def retrieval_modules(self) -> list:
-        #returns the specified retrieval modules
-        return self.config['retrieval']['modules']
-        
-        # module_name = 'retrieval'
-        # #status
-        # logger.info(f'Set retrieval class {class_name}...')
-        # return self.get_class(module_name, class_name)
+    def get_retrievalprocessor_class(self) -> object:
+        module_name = 'proc'
+        class_name = 'RetrievalProcessor'
+        return self.get_class(module_name, class_name)
     
     def get_meta_class(self) -> object:
         #returns the appropriate meta class
@@ -163,14 +163,23 @@ class Configuration(object):
         logger.info(f'Initiate listing class...')
         #sets the correct listing class/processor corresponding to the 
         #sensor/carrier
-        listing_proc = self.get_listingprocessor_class()(self, **listing_modules)
-        return self.get_listing_class()(self, listing_proc)
+        listing_proc = self.get_listingprocessor_class()
+        listing_proc = listing_proc(self, **listing_modules)
+        return self.get_listing_class()(listing_proc)
     
     """ Job::Retrieval """
-    def get_retrieval_module(self) -> object:
+    def setup_retrieval_module(self) -> object:
+        retrieval_modules = self.config['retrieval']['modules']
+        for key in retrieval_modules:
+            class_name = retrieval_modules[key]
+            retrieval_modules[key] = self.get_class('proc', class_name)
+        #status
+        logger.info(f'Initiate retrieval class...')
         #sets the correct retrieval processor corresponding to the
         #sensor/carrier
-        return self.get_retrieval_class()(self)
+        retrieval_proc = self.get_retrievalprocessor_class()
+        retrieval_proc = retrieval_proc(self, **retrieval_modules)
+        return self.get_retrieval_class()(retrieval_proc)
 
     """ Proc::MetaData """
     def get_meta_module(self) -> object:
