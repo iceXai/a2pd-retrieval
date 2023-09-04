@@ -25,18 +25,21 @@ import zipfile
 # In[] 
 
 
-class ListingProcessor(ABC):
+class ListingProcessor(object):
     """
     Listing base class which all sensor-specific listing classes are supposed
     to inherit/be a child class from
     """
-    def __init__(self, cfg: object):
+    def __init__(self, cfg: object, **kwargs):
         #pass configuration
         self.cfg = cfg
         
+        #pass listing/retrieval handler classes
+        self.listing = kwargs['retrieval']
+        self.process = kwargs['process']
+       
         #initialize base/sensor-specific modules
         self.initialize_base_modules()
-        self.initialize_sensor_specific_modules()
         
     """ Initializations """
     def initialize_base_modules(self) -> None:
@@ -50,11 +53,6 @@ class ListingProcessor(ABC):
         self._set_listing_data()
         self._set_listing_io()
         self._set_error_handler()
-        
-    @abstractmethod
-    def initialize_sensor_specific_modules(self) -> None:
-        self.listing = BaseListingRetrievalHandler(self)
-        self.process = BaseListingProcessHandler(self)
         
     """ Internal Getters/Setters for Processor Setup """        
     def _set_carrier(self) -> None:
@@ -206,40 +204,6 @@ class ListingProcessor(ABC):
         """
         self.listing.process_geometa_file()
     
-
-class SlstrListingProcessor(ListingProcessor):
-    """
-    Handles the actual retrieval of the file listing for SLSTR
-    """
-
-    """ Sensor-specific initializations """
-    def initialize_sensor_specific_modules(self) -> None:
-        self._set_process_handler()
-        self._set_listing_handler()
-        
-    def _set_process_handler(self) -> None:
-        self.process = SlstrListingProcessHandler(self)
-    
-    def _set_listing_handler(self) -> None:
-        self.listing = SlstrListingRetrievalHandler(self)    
-    
-    
-class ModisListingProcessor(ListingProcessor):
-    """
-    Handles the actual retrieval of the file listing for MODIS
-    """
-
-    """ Sensor-specific initializations """
-    def initialize_sensor_specific_modules(self) -> None:
-        self._set_process_handler()
-        self._set_listing_handler()
-        
-    def _set_process_handler(self) -> None:
-        self.process = ModisListingProcessHandler(self)
-    
-    def _set_listing_handler(self) -> None:
-        self.listing = ModisListingRetrievalHandler(self)   
-
 
 # In[]
 # In[]

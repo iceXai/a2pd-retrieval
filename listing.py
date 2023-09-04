@@ -5,36 +5,27 @@
 
 
 # In[] 
-from abc import ABC, abstractmethod
 from loguru import logger
-
-from proc import ModisListingProcessor
-from proc import SlstrListingProcessor
 
 
 # In[]
 
-class Listing(ABC):
+class Listing(object):
     """
     Abstract base class that handles the suitable (a.k.a., inside a specified 
     AOI) file identification process and the compilation of a list with 
     corresponding file URL's
     """
-    def __init__(self, cfg: object):
+    def __init__(self, processor: object):
         """
         Parameters
         ----------
-        cfg : object
-            Configuration module loading/handling the config file
+        processor : object
+            The sensor specific ListingProcessor() class
         """
-        self.cfg = cfg
-        #set processor
-        self._initialize_listing_processor()
-    
-    """ Internals """
-    @abstractmethod
-    def _initialize_listing_processor(self) -> None:
-        pass
+        #status
+        logger.info(f'Setup retrieval processor...')
+        self.proc = processor
     
     """ API for run """
     def compile_file_listing(self) -> None:
@@ -74,55 +65,5 @@ class Listing(ABC):
             
         #returns the completed listing to the caller
         return self.proc.get_listing()
-
-
-# In[]    
-    
-class ModisListing(Listing):
-    """
-    Terra/Aqua MODIS listing child class tailored to the 
-    sensor-specific processing
-    """
-    def _initialize_listing_processor(self) -> None:
-        #status
-        logger.info(f'Setup retrieval processor...')
-        self.proc = ModisListingProcessor(self.cfg) 
-            
-
-# In[]
-
-class SlstrListing(Listing):
-    """
-    Sentinel3-A/B SLSTR listing child class tailored to the 
-    sensor-specific processing
-    """
-    def _initialize_listing_processor(self) -> None:
-        #status
-        logger.info(f'Setup retrieval processor...')
-        self.proc = SlstrListingProcessor(self.cfg) 
-    
-
-# In[]
-
-class OlciListing(Listing):
-    """
-    Sentinel3-A/B OLCI listing child class tailored to the 
-    sensor-specific processing
-    """
-    def _initialize_listing_processor(self) -> None:
-        pass
- 
-
-# In[]
-
-class ViirsListing(Listing):
-    """
-    Suomi-NPP/NOOA20 VIIRS listing child class tailored to the 
-    sensor-specific processing
-    """
-    def _initialize_listing_processor(self) -> None:
-        pass
-
-
          
  
