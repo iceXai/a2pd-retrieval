@@ -81,7 +81,7 @@ class RetrievalJob(object):
         logger.info('Setting-up job processor...')
         
         #initialize the correct listing module/processor
-        self.lst = self.cfg.get_listing_module()
+        self.lst = self.cfg.setup_listing_module()
         
         APPLY_RETRIEVAL = self.cfg.do_swath_download
         if APPLY_RETRIEVAL:

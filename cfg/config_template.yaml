@@ -21,13 +21,28 @@ date:
     start: 2020-09-01
     stop:  2020-10-31
 
-processing:
-    # processing modules to be used and loaded for the job [True/False]
-    listing: 
-        name: ModisListing
-    retrieval: 
-        name: ModisRetrieval
-        apply: True
-    resampling: 
-        name: Resampling
-        apply: True
+listing:
+    # Listing is always applied but the necessary modules need to be specified,
+    # i.e., the corresponding: 
+    # - [SENSOR]ListingProcessHandler
+    # - [SENSOR]ListingRetrievalHandler
+    modules: 
+        process: ModisListingProcessHandler
+        retrieval: ModisListingRetrievalHandler
+
+retrieval:
+    # Specify whether file retrieval should be performed [True/False] as well as
+    # the necessary modules ,i.e., the corresponding: 
+    # - [SENSOR]SwathHandler
+    # - [SENSOR]RetrievalHandler
+    apply: True
+    modules:
+        swath: ModisSwathHandler
+        retrieval: ModisRetrievalHandler
+    
+resampling:
+    # Specify whether resampling should be performed [True/False] using the 
+    # given module
+    apply: True
+    modules: 
+        base: Resampling

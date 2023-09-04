@@ -117,28 +117,32 @@ class Configuration(object):
     @property
     def do_resampling(self) -> bool:
         #returns the status whether to resample the data or not
-        return self.config['processing']['resampling']['apply']
+        return self.config['resampling']['apply']
     
     @property
     def do_swath_download(self) -> bool:
         #returns the status of the actual file retrieval
-        return self.config['processing']['retrieval']['apply']
-        
+        return self.config['retrieval']['apply']
+    
     def get_listing_class(self) -> object:
-        #returns the specified listing class
-        class_name = self.config['processing']['listing']['name']
         module_name = 'listing'
-        #status
-        logger.info(f'Set listing class {class_name}...')
+        class_name = 'Listing'
         return self.get_class(module_name, class_name)
     
-    def get_retrieval_class(self) -> object:
-        #returns the specified download class
-        class_name = self.config['processing']['retrieval']['name']
-        module_name = 'retrieval'
-        #status
-        logger.info(f'Set retrieval class {class_name}...')
+    def get_listingprocessor_class(self) -> object:
+        module_name = 'proc'
+        class_name = 'ListingProcessor'
         return self.get_class(module_name, class_name)
+    
+    @property
+    def retrieval_modules(self) -> list:
+        #returns the specified retrieval modules
+        return self.config['retrieval']['modules']
+        
+        # module_name = 'retrieval'
+        # #status
+        # logger.info(f'Set retrieval class {class_name}...')
+        # return self.get_class(module_name, class_name)
     
     def get_meta_class(self) -> object:
         #returns the appropriate meta class
@@ -150,10 +154,17 @@ class Configuration(object):
         return self.get_class(module_name, class_name)
     
     """ Job::Listing """
-    def get_listing_module(self) -> object:
-        #sets the correct listing processor corresponding to the 
+    def setup_listing_module(self) -> object:
+        listing_modules = self.config['listing']['modules']
+        for key in listing_modules:
+            class_name = listing_modules[key]
+            listing_modules[key] = self.get_class('proc', class_name)
+        #status
+        logger.info(f'Initiate listing class...')
+        #sets the correct listing class/processor corresponding to the 
         #sensor/carrier
-        return self.get_listing_class()(self)
+        listing_proc = self.get_listingprocessor_class()(self, **listing_modules)
+        return self.get_listing_class()(self, listing_proc)
     
     """ Job::Retrieval """
     def get_retrieval_module(self) -> object:
