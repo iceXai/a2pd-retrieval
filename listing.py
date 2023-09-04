@@ -12,16 +12,15 @@ from loguru import logger
 
 class Listing(object):
     """
-    Abstract base class that handles the suitable (a.k.a., inside a specified 
-    AOI) file identification process and the compilation of a list with 
-    corresponding file URL's
+    Framework class for the Listing Process, setting up the processor class
+    and defining the the general listing process
     """
     def __init__(self, processor: object):
         """
         Parameters
         ----------
         processor : object
-            The sensor specific ListingProcessor() class
+            The sensor-specific initialized ListingProcessor() class
         """
         #status
         logger.info(f'Setup retrieval processor...')
