@@ -5,11 +5,7 @@
 
 
 # In[] 
-from abc import ABC, abstractmethod
 from loguru import logger
-
-from proc import ModisRetrievalProcessor
-from proc import SlstrRetrievalProcessor
 
 import os
 import sys
@@ -19,25 +15,21 @@ import pandas as pd
 
 # In[]
 
-class Retrieval(ABC):
+class Retrieval(object):
     """
-    Abstract base class that handles the swath retrieval and post-processing 
+    Framework class for the Retrieval Process, setting up the processor class
+    and defining the the general retrieval/resampling process
     """
-    def __init__(self, cfg: object):
+    def __init__(self, processor: object):
         """
         Parameters
         ----------
-        cfg : object
-            Configuration module loading/handling the config file
+        processor : object
+            The sensor-specific initialized RetrievalProcessor() class
         """
-        self.cfg = cfg
-        #set processor
-        self._initialize_retrieval_processor()
-        
-    """ Internals """
-    @abstractmethod
-    def _initialize_retrieval_processor(self) -> None:
-        pass
+        #status
+        logger.info(f'Setup retrieval processor...')
+        self.proc = processor
     
     """ API for setup """    
     def set_listing(self, listing: pd.DataFrame) -> None:
@@ -81,7 +73,7 @@ class Retrieval(ABC):
             self.proc.load_swath()            
 
             #resample swath data if specified
-            APPLY_RESAMPLING = self.cfg.do_resampling
+            APPLY_RESAMPLING = self.cfg.apply_resampling
             if APPLY_RESAMPLING:
                 #id aoi's for current swath
                 self.proc.identify_resample_aois()
@@ -93,26 +85,4 @@ class Retrieval(ABC):
 
             #clean-up afterwards
             self.proc.cleanup()  
-            
-
-class ModisRetrieval(Retrieval):
-    """
-    Terra/Aqua MODIS retrieval child class tailored to the 
-    sensor-specific processing
-    """
-    def _initialize_retrieval_processor(self) -> None:
-        #status
-        logger.info(f'Setup retrieval processor...')
-        self.proc = ModisRetrievalProcessor(self.cfg) 
-            
-
-class SlstrRetrieval(Retrieval):
-    """
-    Sentinel3-A/B SLSTR retrieval child class tailored to the 
-    sensor-specific processing
-    """
-    def _initialize_retrieval_processor(self) -> None:
-        #status
-        logger.info(f'Setup retrieval processor...')
-        self.proc = SlstrRetrievalProcessor(self.cfg)    
 

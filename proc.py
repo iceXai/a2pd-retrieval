@@ -27,8 +27,8 @@ import zipfile
 
 class ListingProcessor(object):
     """
-    Listing base class which all sensor-specific listing classes are supposed
-    to inherit/be a child class from
+    Listing processor class handling the actual file listing for all sensors 
+    with high-level API's for the Listing class
     """
     def __init__(self, cfg: object, **kwargs):
         #pass configuration
@@ -579,21 +579,24 @@ class ModisListingRetrievalHandler(BaseListingRetrievalHandler):
 Processing::Swath Download
 """
 
-class RetrievalProcessor(ABC):
+class RetrievalProcessor(object):
     """
-    Retrieval base class which all sensor-specific retrieval classes are 
-    supposed to inherit/be a child class from
+    Retrieval processor class handling the actual file/swath retrieval for all 
+    sensors with high-level API's for the Retrieval class
     """
-    def __init__(self, cfg: object):
+    def __init__(self, cfg: object, **kwargs):
         #pass configuration
         self.cfg = cfg
         
+        #pass listing/retrieval handler classes
+        self.swath = kwargs['swath']
+        self.retrieval = kwargs['retrieval']
+        
         #initialize base/sensor-specific modules
         self.initialize_base_modules()
-        self.initialize_sensor_specific_modules()
         
         #initialize resampling if necessary
-        APPLY_RESAMPLING = self.cfg.do_resampling
+        APPLY_RESAMPLING = self.cfg.apply_resampling
         if APPLY_RESAMPLING:
             self.initialize_resample_module()
         
@@ -612,14 +615,10 @@ class RetrievalProcessor(ABC):
         self._set_swath_data()
         self._set_swath_io()
         self._set_error_handler()
+        self._set_zip_handler()
         
-    @abstractmethod
-    def initialize_sensor_specific_modules(self) -> None:
-        self.retrieval = BaseRetrievalHandler(self)
-            
     def initialize_resample_module(self) -> None:
         self.resampling = ResampleHandler(self)
-
         
     """ Internal Getters/Setters for Processor Setup """        
     def _set_carrier(self) -> None:
@@ -668,6 +667,9 @@ class RetrievalProcessor(ABC):
     def _set_error_handler(self) -> None:
         #initiate download error handler
         self.error = DownloadErrorHandler()
+        
+    def _set_zip_handler(self) -> None:
+        self.zip = ZipFileHandler(self.rawout)
         
     """ High-level API's """
     def set_swath_id(self, entry: pd.Series) -> None:
@@ -851,47 +853,6 @@ class RetrievalProcessor(ABC):
         self.data.add_to_resampled_data(RESAMPLED_DATA)
         
 
-    
-class SlstrRetrievalProcessor(RetrievalProcessor):
-    """
-    Handles the actual download process of the identified swaths from the 
-    file listing process
-    """
-
-    """ Sensor-specific initializations """
-    def initialize_sensor_specific_modules(self) -> None:
-        self._set_zip_handler()
-        self._set_swath_handler()
-        self._set_retrieval_handler()
-        
-    def _set_zip_handler(self) -> None:
-        self.zip = ZipFileHandler(self.rawout)
-        
-    def _set_swath_handler(self) -> None:
-        self.swath = SlstrSwathHandler(self)
-    
-    def _set_retrieval_handler(self) -> None:
-        self.retrieval = SlstrRetrievalHandler(self)    
-    
-    
-class ModisRetrievalProcessor(RetrievalProcessor):
-    """
-    Handles the actual download process of the identified swaths from the 
-    file listing process
-    """
-
-    """ Sensor-specific initializations """
-    def initialize_sensor_specific_modules(self) -> None:
-        self._set_swath_handler()
-        self._set_retrieval_handler()
-        
-    def _set_swath_handler(self) -> None:
-        self.swath = ModisSwathHandler(self)
-    
-    def _set_retrieval_handler(self) -> None:
-        self.retrieval = ModisRetrievalHandler(self)
-
-    
 
 # In[]
 # In[]
