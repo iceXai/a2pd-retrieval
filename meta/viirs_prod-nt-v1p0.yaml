@@ -1,0 +1,75 @@
+# Meta File for the VIIRS sensor (snpp/jpss1)
+urls:
+    #retrieval url's for the different data types per sensor
+    snpp:
+        mod02: https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/5110/VNP02MOD/
+        mod03: https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/5110/VNP03MOD/
+        meta: https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMetaVIIRS/5110/NPP/
+    jpss1:
+        mod02: https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/5201/VJ102MOD/
+        mod03: https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/5201/VJ103MOD/
+        meta: https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMetaVIIRS/5200/NOAA-20/
+    
+    
+input_specs:
+    #information about file, group, and variable names of the input data, e.g.,
+    #[file, grp, var]
+    lat: [mxd03, null, Latitude]
+    lon: [mxd03, null, Longitude]
+    sat_zen: [mxd03, null, SensorZenith]
+    sat_azi: [mxd03, null, SensorAzimuth]
+    sol_zen: [mxd03, null, SolarZenith]
+    sol_azi: [mxd03, null, SolarAzimuth]
+    ch20: [mxd02, null, EV_1KM_Emissive]
+    ch25: [mxd02, null, EV_1KM_Emissive]
+    ch31: [mxd02, null, EV_1KM_Emissive]
+    ch32: [mxd02, null, EV_1KM_Emissive]
+    ch33: [mxd02, null, EV_1KM_Emissive]
+    
+grid_specs:
+    #information about the reference longitude/latitude grid reference internal
+    #names for the resampling process, e.g.,
+    #[lon, lat]
+    sat_zen: [lon, lat]
+    sat_azi: [lon, lat]
+    sol_zen: [lon, lat]
+    sol_azi: [lon, lat]
+    ch20: [lon, lat]
+    ch25: [lon, lat]
+    ch31: [lon, lat]
+    ch32: [lon, lat]
+    ch33: [lon, lat]
+
+channel_specs:
+    #define channel specifications such as scale/offset internal names and the 
+    #channel index within the file data stack whereever applicable, e.g.,
+    #[index, scale, offset, wavelength]
+    lat: [null, null, null, null]
+    lon: [null, null, null, null]
+    sat_zen: [null, scale_factor, null, null]
+    sat_azi: [null, scale_factor, null, null]
+    sol_zen: [null, scale_factor, null, null]
+    sol_azi: [null, scale_factor, null, null] 
+    ch20: [0, radiance_scales, radiance_offsets, 3.7500e-06]
+    ch25: [5, radiance_scales, radiance_offsets, 4.5155e-06]
+    ch31: [10, radiance_scales, radiance_offsets, 11.030e-06]
+    ch32: [11, radiance_scales, radiance_offsets, 12.020e-06]
+    ch33: [12, radiance_scales, radiance_offsets, 13.335e-06]
+
+output_specs:
+    #define output structure of the data in the h5 file by providing 
+    #for each variable name an in-file group name, an in-file variable
+    #name as well as an attribute long name, e.g., 
+    #[file_grp_name, file_var_name, attr_long_name]
+    lat: [mod03, lat, mod03_latitude]
+    lon: [mod03, lon, mod03_longitude]
+    sat_zen: [mod03, sat_zen, mod03_sensor_zenith_angle]
+    sat_azi: [mod03, sat_azi, mod03_sensor_azimuth_angle]
+    sol_zen: [mod03, sol_zen, mod03_solar_zenith_angle]
+    sol_azi: [mod03, sol_azi, mod03_solar_azimuth_angle]
+    ch20: [mod02, ch20, mod02_ch20_brightness_temperature_data]
+    ch25: [mod02, ch25, mod02_ch25_brightness_temperature_data]
+    ch31: [mod02, ch31, mod02_ch31_brightness_temperature_data]
+    ch32: [mod02, ch32, mod02_ch32_brightness_temperature_data]
+    ch33: [mod02, ch33, mod02_ch33_brightness_temperature_data]
+    

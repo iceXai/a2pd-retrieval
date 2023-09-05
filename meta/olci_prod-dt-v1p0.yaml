@@ -1,12 +1,12 @@
-# Meta File for the SLSTR sensor (s3a/s3b)
+# Meta File for the OLCI sensor (s3a/s3b)
 urls:
     #retrieval url's for the different data types per sensor
     s3a:
-        data: https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/450/S3A_SL_1_RBT/
-        meta: https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMetaSentinel3A/450/SLSTR/
+        data: https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/450/S3A_OL_1_EFR/
+        meta: https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMetaSentinel3A/450/OLCI/
     s3b:
-        data: https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/450/S3B_SL_1_RBT/
-        meta: https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMetaSentinel3B/450/SLSTR/
+        data: https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/450/S3B_OL_1_EFR/
+        meta: https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMetaSentinel3B/450/OLCI/
 
         
 input_specs:
