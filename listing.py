@@ -23,7 +23,7 @@ class Listing(object):
             The sensor-specific initialized ListingProcessor() class
         """
         #status
-        logger.info(f'Setup retrieval processor...')
+        logger.info(f'Setup listing processor...')
         self.proc = processor
     
     """ API for run """

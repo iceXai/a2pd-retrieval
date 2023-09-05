@@ -73,7 +73,7 @@ class Retrieval(object):
             self.proc.load_swath()            
 
             #resample swath data if specified
-            APPLY_RESAMPLING = self.cfg.apply_resampling
+            APPLY_RESAMPLING = self.proc.cfg.apply_resampling
             if APPLY_RESAMPLING:
                 #id aoi's for current swath
                 self.proc.identify_resample_aois()

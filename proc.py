@@ -30,13 +30,13 @@ class ListingProcessor(object):
     Listing processor class handling the actual file listing for all sensors 
     with high-level API's for the Listing class
     """
-    def __init__(self, cfg: object, **kwargs):
+    def __init__(self, config: object, process: object, retrieval: object):
         #pass configuration
-        self.cfg = cfg
+        self.cfg = config
         
-        #pass listing/retrieval handler classes
-        self.listing = kwargs['retrieval']
-        self.process = kwargs['process']
+        #pass listing process/retrieval handler classes
+        self.listing = retrieval(self)
+        self.process = process(self)
        
         #initialize base/sensor-specific modules
         self.initialize_base_modules()
@@ -82,7 +82,7 @@ class ListingProcessor(object):
 
     def _set_aoi_handler(self) -> None:
         #initiate aoi_handler
-        self.aoi = self.cfg.compile_aoi_data()
+        self.aoi = self.cfg.aoi_data
         
     def _set_listing_data(self) -> None:
         #initiate listing data container
@@ -584,13 +584,13 @@ class RetrievalProcessor(object):
     Retrieval processor class handling the actual file/swath retrieval for all 
     sensors with high-level API's for the Retrieval class
     """
-    def __init__(self, cfg: object, **kwargs):
+    def __init__(self, config: object, swath: object, retrieval: object):
         #pass configuration
-        self.cfg = cfg
+        self.cfg = config
         
         #pass listing/retrieval handler classes
-        self.swath = kwargs['swath']
-        self.retrieval = kwargs['retrieval']
+        self.swath = swath(self)
+        self.retrieval = retrieval(self)
         
         #initialize base/sensor-specific modules
         self.initialize_base_modules()
@@ -647,7 +647,7 @@ class RetrievalProcessor(object):
 
     def _set_aoi_handler(self) -> None:
         #initiate aoi_handler
-        self.aoi = self.cfg.compile_aoi_data()
+        self.aoi = self.cfg.aoi_data
         
     def _set_swath_meta(self) -> None:
         #initiate meta data handler
@@ -793,7 +793,7 @@ class RetrievalProcessor(object):
         VARIABLES_TO_PROCESS = self.meta.get_output_variables()
         
         #decide on resampling or not
-        RESAMPLING_APPLIED = self.cfg.do_resampling
+        RESAMPLING_APPLIED = self.cfg.apply_resampling
         if RESAMPLING_APPLIED:
             for aoi in self.overlapping_aois:
                 self.swath.create_swath(aoi)

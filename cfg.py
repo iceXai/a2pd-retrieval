@@ -28,6 +28,8 @@ class Configuration(object):
             self.config = yaml.safe_load(f)
         #configure the logger
         self.configure_logger()
+        #aois
+        self.aoidata = None
             
     """ Logger Setup """
     def configure_logger(self) -> None:
@@ -110,8 +112,14 @@ class Configuration(object):
         #initiates and populates the AOI Data Handler
         AOI = AoiData(USER_AOIS)
         #returns to caller
-        return AOI
+        self.aoidata = AOI
     
+    @property
+    def aoi_data(self) -> AoiData:
+        if self.aoidata is None:
+            self.compile_aoi_data()
+        return self.aoidata
+
     
     """ Configfile::Processing Modules """
     @property
@@ -149,8 +157,6 @@ class Configuration(object):
         sensor = self.sensor.capitalize()
         class_name = f'{sensor}SwathMeta'
         module_name = 'meta'
-        #status
-        logger.info(f'Set meta class {class_name}...')
         return self.get_class(module_name, class_name)
     
     """ Job::Listing """
