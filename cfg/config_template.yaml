@@ -1,6 +1,6 @@
-# Configuration File for the MODIS/SLSTR/OLCI file retrieval wrapper
+# Configuration File for the MODIS/SLSTR/OLCI/VIIRS file retrieval wrapper
 meta:
-    # meta information on sensor/carrier [MODIS/SLSTR/OLCI/VIIRS; terra/aqua/s3a/s3b], 
+    # meta information on sensor/carrier [MODIS/SLSTR/OLCI/VIIRS; terra/aqua/s3a/s3b/snpp/jpss1], 
     # aois [as python list, e.g., [berkner, brunt, dibble]], and its meta-data version
     # [full/production/experimental] to be used
     sensor: MODIS
