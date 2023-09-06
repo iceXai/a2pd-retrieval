@@ -200,4 +200,16 @@ class SlstrSwathIO(SwathIO):
         else:
             return self.fh.groups[grp].variables[var][:,:]
         
+
+class OlciSwathIO(SwathIO):
+    """
+    Childclass for all OLCI swath-related I/O
+    """
+    def load(self, path: str) -> None:
+        self.fh = nc.Dataset(path, 'r')
     
+    def get_var(self, var: str, grp: str, meta: list) -> np.array:
+        if grp is None:
+            return self.fh.variables[var][:,:]
+        else:
+            return self.fh.groups[grp].variables[var][:,:]

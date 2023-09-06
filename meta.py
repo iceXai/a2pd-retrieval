@@ -143,3 +143,11 @@ class SlstrSwathMeta(Meta):
     sensor-specific data processing
     """      
     pass
+
+
+class OlciSwathMeta(Meta):
+    """
+    Sentinel3-A/B OLCI meta information child class tailored to the 
+    sensor-specific data processing
+    """      
+    pass

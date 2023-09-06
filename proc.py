@@ -320,6 +320,15 @@ class SlstrListingProcessHandler(BaseListingProcessHandler):
         CARRIER = self.ref.carrier.upper()
         return f'{CARRIER}_SL_1_RBT_{yy}-{mm}-{dd}.txt'
     
+    
+class OlciListingProcessHandler(BaseListingProcessHandler):
+    def set_current_url(self, yy: str, jj: str) -> None:
+        super().set_current_url(yy, jj)
+
+    def _compile_geometa_filename(self, yy: str, mm: str, dd: str) -> str:
+        CARRIER = self.ref.carrier.upper()
+        return f'{CARRIER}_OL_1_EFR_{yy}-{mm}-{dd}.txt'
+    
        
 """ Listing Retrieval """
 class BaseListingRetrievalHandler(ABC):
@@ -409,7 +418,6 @@ class BaseListingRetrievalHandler(ABC):
         
         #allocate dataframe for listing storage
         df = pd.DataFrame()
-        
         #loop over entries
         for lst_entry in self.geometa:
             #check for overlap with specified aoi's
@@ -430,7 +438,6 @@ class BaseListingRetrievalHandler(ABC):
                               }
                 #append to df
                 df = pd.concat([df, pd.DataFrame(d)])
-            
         #update listing
         df = df.reset_index().drop('index', axis=1)
         #store in data container
@@ -475,6 +482,14 @@ class SlstrListingRetrievalHandler(BaseListingRetrievalHandler):
     def process_geometa_file(self) -> None:
         super().process_geometa_file()
 
+
+class OlciListingRetrievalHandler(BaseListingRetrievalHandler):
+    def get_geometa_file(self) -> bool:
+        return super().get_geometa_file()
+    
+    def process_geometa_file(self) -> None:
+        super().process_geometa_file()
+        
 
 class ModisListingRetrievalHandler(BaseListingRetrievalHandler):
     def get_geometa_file(self) -> bool:
@@ -995,8 +1010,9 @@ class BaseSwathHandler(ABC):
         DATE = self._get_date_from_swath_file()
         CARRIER = self.ref.cfg.carrier.lower()[0:3]
         SENSOR = self.ref.cfg.sensor.lower()
+        VERSION = self.ref.cfg.version.lower()
         #compile and return
-        return f'{CARRIER}_{SENSOR}_{DATE}_{EXT}.h5'
+        return f'{CARRIER}_{SENSOR}_{DATE}_{VERSION}_{EXT}.h5'
     
     @abstractmethod
     def _get_date_from_swath_file(self) -> str:
@@ -1028,6 +1044,44 @@ class BaseSwathHandler(ABC):
         
 
 class SlstrSwathHandler(BaseSwathHandler):
+    def set_swath_id(self, entry: pd.Series) -> None:
+        super().set_swath_id(entry)
+        
+    def get_swath_id(self, swath_only: bool) -> str:
+        return super().get_swath_id(swath_only)
+    
+    def open_swath(self, var: str) -> None:
+        FILENAME = self.ref.meta.get_var_input_specs(var)[0]
+        UNZIPPATH = self.ref.zip.get_unzip_path()
+        FILEPATH = os.path.join(UNZIPPATH, FILENAME)
+        self.ref.io.load(FILEPATH)
+        
+    def load_variable(self, var: str) -> None:
+        super().load_variable(var)
+        
+    def _get_date_from_swath_file(self) -> str:
+        #get swath id
+        SWATH = self.get_swath_id(swath_only=True)
+        #take raw date from swath file name and convert it to datetime object
+        raw_date = SWATH.split('_')[7]
+        raw_date = datetime.strptime(raw_date,'%Y%m%dT%H%M%S')
+        #transform it
+        yyjj = raw_date.strftime('%Y%j')
+        hhmm = raw_date.strftime('%H%M%S')
+        #return
+        return f'{yyjj}_{hhmm}'
+    
+    def cleanup(self) -> None:
+        #remove extracted zipfile content
+        self.ref.zip.remove_extracted_content()
+        #remove the zip file that was downloaded
+        super().cleanup()
+        
+    def identify_resample_aois(self) -> None:
+        super().identify_resample_aois()
+
+
+class OlciSwathHandler(BaseSwathHandler):
     def set_swath_id(self, entry: pd.Series) -> None:
         super().set_swath_id(entry)
         
@@ -1249,6 +1303,29 @@ class BaseRetrievalHandler(ABC):
 
 
 class SlstrRetrievalHandler(BaseRetrievalHandler): 
+    def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
+        return super().parse_swath_listing(df)
+    
+    def check_for_existing_swaths(self, df: pd.DataFrame) -> pd.DataFrame:
+        return super().check_for_existing_swaths(df)
+    
+    def get_swath_file(self) -> bool:
+        #get swath file
+        STATUS =  super().get_swath_file()
+        #get swath id to initialize zip handler
+        SWATH = self.ref.swath.get_swath_id(swath_only=True)
+        self.ref.zip.set_zip_path(SWATH)
+        #load zip file
+        #TODO exception handler for BadZipFile exception! return bad STATUS
+        self.ref.zip.load_zip_file()
+        #extract zip file
+        self.ref.zip.extract_zip_file()
+        #close zip file connection
+        self.ref.zip.close_zip_file()
+        return STATUS
+    
+    
+class OlciRetrievalHandler(BaseRetrievalHandler): 
     def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
         return super().parse_swath_listing(df)
     
