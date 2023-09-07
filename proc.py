@@ -1024,16 +1024,25 @@ class BaseSwathHandler(ABC):
         SWATH = self.get_swath_id(swath_only=True)
         #remove swath
         logger.info(f'Removing downloaded file: {SWATH}')
-        self._remove_swath(SWATH)
+        SUCCESS = self._remove_swath(SWATH)
+        if SUCCESS:
+            logger.info(f'Removal successful!')
+        else:
+            logger.error(f'Removal of {SWATH} failed!')
+        #clear data container
+        self._cleanup_data_container()
         
-    def _remove_swath(self, swath: str) -> None:
+    def _remove_swath(self, swath: str) -> bool:
         FILENAME = swath
         FILEPATH = os.path.join(self.ref.rawout, FILENAME)
         try:
             self.ref.io.cleanup(FILEPATH)
-            logger.info(f'Removal successful!')
+            return True
         except:
-            logger.error(f'Removal of {FILENAME} failed!')
+            return False
+        
+    def _cleanup_data_container(self) -> None:
+        self.ref.data.cleanup()      
             
     @abstractmethod
     def identify_resample_aois(self) -> None:
@@ -1178,6 +1187,8 @@ class ModisSwathHandler(BaseSwathHandler):
         MXD02 = SWATHS['mxd02']
         logger.info(f'Removing downloaded file: {MXD02}')
         self._remove_swath(MXD02)
+        #clear data container
+        self._cleanup_data_container()
         
     def identify_resample_aois(self) -> None:
         SWATH = self.get_swath_id(swath_only=True)['mxd03']
