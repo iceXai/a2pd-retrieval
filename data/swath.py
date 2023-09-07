@@ -44,4 +44,8 @@ class SwathData(object):
             return None
     
     def get_resampled_data(self, aoi_key: str, var_key: str) -> dict:
-        return self.resampled_data[aoi_key][var_key]    
+        return self.resampled_data[aoi_key][var_key]
+    
+    def cleanup(self) -> None:
+        self.data = {}
+        self.resampled_data = None
