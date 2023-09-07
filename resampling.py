@@ -78,8 +78,15 @@ class ResampleHandler(object):
                                   'dset': self.names[key],
                                   'data': np.stack(self.stack[key],axis=2)
                                   }
-        #return
+        #return and clean-up
         self.resample_stack = stack
+        self._reset_grouping_data()
+
+        
+    def _reset_grouping_data(self) -> None:
+        self.coord = {}
+        self.stack = {}
+        self.names = {}
         
         
     def resample(self, aoi: str) -> dict:
