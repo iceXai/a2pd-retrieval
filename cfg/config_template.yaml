@@ -23,22 +23,22 @@ date:
 
 listing:
     # Listing is always applied but the necessary modules need to be specified,
-    # i.e., the corresponding: 
-    # - [SENSOR]ListingProcessHandler
-    # - [SENSOR]ListingRetrievalHandler
+    # while the sensor-specific version will be chosen automatically
+    # - ListingProcessHandler
+    # - ListingRetrievalHandler
     modules: 
-        process: ModisListingProcessHandler
-        retrieval: ModisListingRetrievalHandler
+        process: ListingProcessHandler
+        retrieval: ListingRetrievalHandler
 
 retrieval:
     # Specify whether file retrieval should be performed [True/False] as well as
-    # the necessary modules ,i.e., the corresponding: 
-    # - [SENSOR]SwathHandler
-    # - [SENSOR]RetrievalHandler
+    # the necessary modules, with sensor-specific versions will be chosen automatically
+    # - SwathHandler
+    # - RetrievalHandler
     apply: True
     modules:
-        swath: ModisSwathHandler
-        retrieval: ModisRetrievalHandler
+        swath: SwathHandler
+        retrieval: RetrievalHandler
     
 resampling:
     # Specify whether resampling should be performed [True/False] using the 

@@ -163,7 +163,9 @@ class Configuration(object):
     def setup_listing_module(self) -> object:
         listing_modules = self.config['listing']['modules']
         for key in listing_modules:
-            class_name = listing_modules[key]
+            sensor = self.sensor.capitalize()
+            module = listing_modules[key]
+            class_name = f'{sensor}{module}'
             listing_modules[key] = self.get_class('proc', class_name)
         #status
         logger.info(f'Initiate listing class...')
@@ -177,7 +179,9 @@ class Configuration(object):
     def setup_retrieval_module(self) -> object:
         retrieval_modules = self.config['retrieval']['modules']
         for key in retrieval_modules:
-            class_name = retrieval_modules[key]
+            sensor = self.sensor.capitalize()
+            module = retrieval_modules[key]
+            class_name = f'{sensor}{module}'
             retrieval_modules[key] = self.get_class('proc', class_name)
         #status
         logger.info(f'Initiate retrieval class...')
