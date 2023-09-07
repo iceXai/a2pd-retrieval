@@ -61,6 +61,8 @@ class RetrievalJob(object):
         self.cfg = cfg.Configuration(CFG_FILE)
         #make initial sanity checks
         #TODO implement validator class to do all of this?
+        #     - meta version exists
+        #     - sensor correct with carrier combo and supported
         
         #return status
         return True
