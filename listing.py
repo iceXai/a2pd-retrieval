@@ -43,8 +43,9 @@ class Listing(object):
             self.proc.set_current_lfn(yy, jj)
 
             #check whether listing for specified date already exists
+            OVERRIDE = self.proc.check_for_override_listing()
             LISTING_EXISTS = self.proc.check_for_existing_listing()
-            if LISTING_EXISTS:
+            if LISTING_EXISTS and not OVERRIDE:
                 logger.info(f'File listing does already exist!')
                 self.proc.load_listing()
                 continue

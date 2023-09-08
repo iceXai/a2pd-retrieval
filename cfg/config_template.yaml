@@ -26,6 +26,7 @@ listing:
     # while the sensor-specific version will be chosen automatically
     # - ListingProcessHandler
     # - ListingRetrievalHandler
+    override: False
     modules: 
         process: ListingProcessHandler
         retrieval: ListingRetrievalHandler

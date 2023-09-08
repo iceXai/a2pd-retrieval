@@ -129,6 +129,11 @@ class Configuration(object):
         return self.config['resampling']['apply']
     
     @property
+    def override_listing(self) -> bool:
+        #returns the status whether to override existing listings or not
+        return self.config['listing']['override']
+    
+    @property
     def apply_swath_download(self) -> bool:
         #returns the status of the actual file retrieval
         return self.config['retrieval']['apply']

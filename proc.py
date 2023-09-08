@@ -150,6 +150,17 @@ class ListingProcessor(object):
             "[CARRIER]_[SENSOR]_listing_[yyyy]_[jj].csv"
         """
         self.process.set_current_lfn(yy, jj)
+        
+    def check_for_override_listing(self) -> bool:
+        """
+        Returns
+        -------
+        bool
+            API function returning the status of overriding existing 
+            listing files 
+        """
+        return self.cfg.override_listing
+        
     
     def check_for_existing_listing(self) -> bool:
         """
@@ -157,7 +168,7 @@ class ListingProcessor(object):
         -------
         bool
             API function returning the status of whether a current listing 
-            file does already exist
+            file does already exist or not
         """
         #compile path to potential listing
         path = os.path.join(self.lstout, self.process.get_current_lfn())
