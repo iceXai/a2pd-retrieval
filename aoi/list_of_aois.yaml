@@ -3,6 +3,7 @@ aois:
     #list of supported aois with corresponding
     #grid-specification file
     amundsen: amundsen_grid.yaml
+    arctic: arctic_grid.yaml
     atka: atka_grid.yaml
     barrier: barrier_grid.yaml
     berkner: berkner_grid.yaml
