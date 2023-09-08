@@ -15,7 +15,8 @@ import argparse
 import os
 import sys
 
-import cfg
+from cfg import Configuration
+from cfg import CFGValidator
 
 
 # In[]
@@ -38,19 +39,16 @@ class RetrievalJob(object):
         self.args = args      
 
     
-    def validate(self) -> bool:
+    def validate(self) -> None:
         """
         Validates the user input, for now, the provided configuration file, 
         it's existence and its setup
         
         Returns
         -------
-        bool
-            All user input valid or not?
-        """
-        #set initial status
-        STATUS = False
+        None.
         
+        """      
         #validate configuration file existence
         CFG_FILE = self.args['cfg']
         CFG_PATH = os.path.join(os.getcwd(), 'cfg', CFG_FILE)
@@ -58,15 +56,11 @@ class RetrievalJob(object):
             logger.critical('No configuration file found!')
             sys.exit()
         #after initial validation of file existance initiate the configuration
-        self.cfg = cfg.Configuration(CFG_FILE)
+        self.cfg = Configuration(CFG_FILE)
+        #initiate Validator
+        validator = CFGValidator(self.cfg)
         #make initial sanity checks
-        #TODO implement validator class to do all of this?
-        #     - meta version exists
-        #     - sensor correct with carrier combo and supported
-        
-        #return status
-        return True
-        
+        validator.validate()
     
     def setup(self) -> None:
         """
