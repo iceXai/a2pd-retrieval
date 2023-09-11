@@ -1,11 +1,13 @@
 # Configuration File for the MODIS/SLSTR/OLCI/VIIRS file retrieval wrapper
 meta:
     # meta information on sensor/carrier [MODIS/SLSTR/OLCI/VIIRS; terra/aqua/s3a/s3b/snpp/jpss1], 
-    # aois [as python list, e.g., [berkner, brunt, dibble]], and its meta-data version
+    # aois [as python list, e.g., [berkner, brunt, dibble]], the aoi scale factor derivating 
+    # from the nominal 1km x 1km reslution of the grids, and its meta-data version
     # [full/production/experimental] to be used
     sensor: MODIS
     carrier: terra
     aoi: [berkner, brunt, dibble]
+    scale: 1.0
     version: production
 
 output:

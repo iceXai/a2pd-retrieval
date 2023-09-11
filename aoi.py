@@ -17,51 +17,16 @@ from osgeo import gdal
 from loguru import logger
 
 
-# In[]
-class AoiData(object):
-    def __init__(self, aois: list):
-        #status
-        logger.info('Compile AOI grid specifications...')
-        #loads the yaml reference file
-        with open(os.path.join(os.getcwd(), 'aoi', 'list_of_aois.yaml')) as f:
-            refaois = yaml.safe_load(f)
-        self.refs = refaois['aois']
-        #allocate container
-        self.aoi_dict = {}
-        #loop over all user specified aoi's
-        for aoi in aois:
-            #status
-            logger.info(f'Initiate AOI: {aoi}')
-            #get file name of grid file
-            aoi = aoi.lower()
-            fn = self.get_aoi_grid_file(aoi)
-            #get aoi grid
-            grid = self.initiate_aoi_grid(fn)
-            #store it
-            self.aoi_dict[aoi] = grid
-        
-    def get_aoi_grid_file(self, aoi: str) -> str:
-        return self.refs[aoi]
-    
-    def initiate_aoi_grid(self, grid_file: str) -> object:
-        return AoiGrid(grid_file)
-    
-    def get_aois(self) -> list:
-        return self.aoi_dict.keys()
-    
-    def get_aoi(self, aoi: str) -> object:
-        return self.aoi_dict[aoi]
-
 
 # In[]
 class AoiGrid(object):
-    def __init__(self, grid_file: str):
+    def __init__(self, grid_file: str, scl: float):
         #loads the yaml reference file
         with open(os.path.join(os.getcwd(), 'aoi', grid_file)) as f:
             self.grid_def = yaml.safe_load(f)
 
         #set the aoi grid
-        self.set_grid()
+        self.set_grid(scl)
         #set derived aoi polygon
         self.set_aoi_poly()
         #set the target EPSG code for any projection needed in the 
@@ -103,13 +68,13 @@ class AoiGrid(object):
         EXTENT = self.get_grid_spec('area_extent')
         return tuple([float(e) for e in EXTENT[1:-1].split(',')])
         
-    def set_grid(self) -> None:
+    def set_grid(self, scale_factor: float) -> None:
         ID       = self.get_area_id()
         LONGNAME = self.get_description()
         PROJID   = self.get_proj_id()
         PROJ     = self.get_projection()
-        WIDTH    = self.get_width()
-        HEIGHT   = self.get_height()
+        WIDTH    = self.get_width() * scale_factor
+        HEIGHT   = self.get_height() * scale_factor
         EXTENT   = self.get_area_extent()
         #pyresample area definition
         self.grid = pr.geometry.AreaDefinition(ID, LONGNAME, PROJID, PROJ,
@@ -259,3 +224,39 @@ class AoiGrid(object):
         
         #return to caller
         return OVERLAP, FRACTION
+
+
+# In[]
+class AoiData(object):
+    def __init__(self, aois: list, scale_factor: float):
+        #status
+        logger.info('Compile AOI grid specifications...')
+        #loads the yaml reference file
+        with open(os.path.join(os.getcwd(), 'aoi', 'list_of_aois.yaml')) as f:
+            refaois = yaml.safe_load(f)
+        self.refs = refaois['aois']
+        #allocate container
+        self.aoi_dict = {}
+        #loop over all user specified aoi's
+        for aoi in aois:
+            #status
+            logger.info(f'Initiate AOI: {aoi}')
+            #get file name of grid file
+            aoi = aoi.lower()
+            fn = self.get_aoi_grid_file(aoi)
+            #get aoi grid
+            grid = self.initiate_aoi_grid(fn, scale_factor)
+            #store it
+            self.aoi_dict[aoi] = grid
+        
+    def get_aoi_grid_file(self, aoi: str) -> str:
+        return self.refs[aoi]
+    
+    def initiate_aoi_grid(self, grid_file: str, scl: float) -> AoiGrid:
+        return AoiGrid(grid_file, scl)
+    
+    def get_aois(self) -> list:
+        return self.aoi_dict.keys()
+    
+    def get_aoi(self, aoi: str) -> object:
+        return self.aoi_dict[aoi]

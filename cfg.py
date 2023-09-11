@@ -107,11 +107,18 @@ class Configuration(object):
         #returns list of aois to be used on the current job
         return self.config['meta']['aoi']
     
+    @property
+    def aoi_scale_factor(self) -> float:
+        #returns the scale if present or 1.0 as default
+        return self.config['meta'].get('scale', 1.0)
+    
     def compile_aoi_data(self) -> None:
         #returns the user specified aoi's
         USER_AOIS = self.user_aois
+        #and scale
+        SCALE_FACTOR = self.aoi_scale_factor
         #initiates and populates the AOI Data Handler
-        AOI = AoiData(USER_AOIS)
+        AOI = AoiData(USER_AOIS, SCALE_FACTOR)
         #returns to caller
         self.aoidata = AOI
     
