@@ -222,7 +222,7 @@ class ListingProcessor(object):
 
 
 """ Process Handling """
-class BaseListingProcessHandler(ABC):
+class ListingProcessHandler(ABC):
     def __init__(self, host_class: object):
         #keep instance of the host class to use this as nestes class
         self.ref = host_class
@@ -299,7 +299,7 @@ class BaseListingProcessHandler(ABC):
         return self.ref.data.get_listing()
     
     
-class ModisListingProcessHandler(BaseListingProcessHandler):
+class ModisListingProcessHandler(ListingProcessHandler):
     def set_current_url(self, yy: str, jj: str) -> None:
         #compile day and month of current date
         dd, mm = self._compile_ddmm_from_yyjj(yy, jj)
@@ -323,7 +323,7 @@ class ModisListingProcessHandler(BaseListingProcessHandler):
         return f'{PREFIX}03_{yy}-{mm}-{dd}.txt'
 
 
-class SlstrListingProcessHandler(BaseListingProcessHandler):
+class SlstrListingProcessHandler(ListingProcessHandler):
     def set_current_url(self, yy: str, jj: str) -> None:
         super().set_current_url(yy, jj)
 
@@ -332,7 +332,7 @@ class SlstrListingProcessHandler(BaseListingProcessHandler):
         return f'{CARRIER}_SL_1_RBT_{yy}-{mm}-{dd}.txt'
     
     
-class OlciListingProcessHandler(BaseListingProcessHandler):
+class OlciListingProcessHandler(ListingProcessHandler):
     def set_current_url(self, yy: str, jj: str) -> None:
         super().set_current_url(yy, jj)
 
@@ -342,7 +342,7 @@ class OlciListingProcessHandler(BaseListingProcessHandler):
     
        
 """ Listing Retrieval """
-class BaseListingRetrievalHandler(ABC):
+class ListingRetrievalHandler(ABC):
     def __init__(self, host_class: object):
         #keep instance of the host class to use this as nestes class
         self.ref = host_class
@@ -446,7 +446,7 @@ class BaseListingRetrievalHandler(ABC):
                      'file': SWATH,
                      'aoi': AOI,
                      'frac': FRC,
-                              }
+                     }
                 #append to df
                 df = pd.concat([df, pd.DataFrame(d)])
         #update listing
@@ -486,7 +486,7 @@ class BaseListingRetrievalHandler(ABC):
         return AOIS, FRAC
 
 
-class SlstrListingRetrievalHandler(BaseListingRetrievalHandler):
+class SlstrListingRetrievalHandler(ListingRetrievalHandler):
     def get_geometa_file(self) -> bool:
         return super().get_geometa_file()
     
@@ -494,7 +494,7 @@ class SlstrListingRetrievalHandler(BaseListingRetrievalHandler):
         super().process_geometa_file()
 
 
-class OlciListingRetrievalHandler(BaseListingRetrievalHandler):
+class OlciListingRetrievalHandler(ListingRetrievalHandler):
     def get_geometa_file(self) -> bool:
         return super().get_geometa_file()
     
@@ -502,7 +502,7 @@ class OlciListingRetrievalHandler(BaseListingRetrievalHandler):
         super().process_geometa_file()
         
 
-class ModisListingRetrievalHandler(BaseListingRetrievalHandler):
+class ModisListingRetrievalHandler(ListingRetrievalHandler):
     def get_geometa_file(self) -> bool:
         """
         Due to the duality of needed data/sources for MODIS, within the 
