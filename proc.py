@@ -953,7 +953,7 @@ class ZipFileHandler(object):
 
    
 """ Swath Handling """
-class BaseSwathHandler(ABC):
+class SwathHandler(ABC):
     def __init__(self, host_class: object):
         #keep instance of the host class to use this as nestes class
         self.ref = host_class
@@ -1063,7 +1063,7 @@ class BaseSwathHandler(ABC):
         self.ref.overlapping_aois = AOI_LIST
         
 
-class SlstrSwathHandler(BaseSwathHandler):
+class SlstrSwathHandler(SwathHandler):
     def set_swath_id(self, entry: pd.Series) -> None:
         super().set_swath_id(entry)
         
@@ -1101,7 +1101,7 @@ class SlstrSwathHandler(BaseSwathHandler):
         super().identify_resample_aois()
 
 
-class OlciSwathHandler(BaseSwathHandler):
+class OlciSwathHandler(SwathHandler):
     def set_swath_id(self, entry: pd.Series) -> None:
         super().set_swath_id(entry)
         
@@ -1139,7 +1139,7 @@ class OlciSwathHandler(BaseSwathHandler):
         super().identify_resample_aois()
         
         
-class ModisSwathHandler(BaseSwathHandler):
+class ModisSwathHandler(SwathHandler):
     def set_swath_id(self, entry: pd.Series) -> None:
         SWATHS = {'mxd03': entry[0],'mxd02': entry[1]}
         self.ref.data.set_swath_id(SWATHS)
@@ -1209,7 +1209,7 @@ class ModisSwathHandler(BaseSwathHandler):
     
 
 """ Retrieval procedure """
-class BaseRetrievalHandler(ABC):
+class RetrievalHandler(ABC):
     def __init__(self, host_class: object):
         #keep instance of the host class to use this as nestes class
         self.ref = host_class
@@ -1324,7 +1324,7 @@ class BaseRetrievalHandler(ABC):
             return False
 
 
-class SlstrRetrievalHandler(BaseRetrievalHandler): 
+class SlstrRetrievalHandler(RetrievalHandler): 
     def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
         return super().parse_swath_listing(df)
     
@@ -1347,7 +1347,7 @@ class SlstrRetrievalHandler(BaseRetrievalHandler):
         return STATUS
     
     
-class OlciRetrievalHandler(BaseRetrievalHandler): 
+class OlciRetrievalHandler(RetrievalHandler): 
     def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
         return super().parse_swath_listing(df)
     
@@ -1370,7 +1370,7 @@ class OlciRetrievalHandler(BaseRetrievalHandler):
         return STATUS
 
 
-class ModisRetrievalHandler(BaseRetrievalHandler):      
+class ModisRetrievalHandler(RetrievalHandler):      
     def parse_swath_listing(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         MODIS specific function dealing with the file duality of MXD03 and 
