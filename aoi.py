@@ -11,9 +11,11 @@ import numpy as np
 import os
 import yaml
 
-from osgeo import ogr
-from osgeo import osr
-from osgeo import gdal
+from pyproj import CRS
+from pyproj import Transformer
+from shapely.geometry import Polygon
+from shapely.ops import transform
+
 from loguru import logger
 
 
@@ -27,104 +29,97 @@ class AoiGrid(object):
 
         #set the aoi grid
         self.set_grid(scl)
-        #set derived aoi polygon
+        #set transformer for CRS transformation
+        self.set_transformer()
+        #transform AOI
         self.set_aoi_poly()
-        #set the target EPSG code for any projection needed in the 
-        #overlap check
-        self.set_target_epsg()
-        
-    def get_gdal_version(self) -> int:
-        GDAL_VERSION = gdal.__version__[0]
-        return int(GDAL_VERSION)
         
     def get_meta_spec(self, specification: str) -> str:
         return self.grid_def['meta'][specification]
-
-    def get_hemisphere(self) -> str:
-        return self.get_meta_spec('hemisphere').lower()
-        
+            
     def get_grid_spec(self, specification: str) -> str:
         return self.grid_def['grid'][specification]
     
-    def get_area_id(self) -> str:
+    @property
+    def hemisphere(self) -> str:
+        return self.get_meta_spec('hemisphere').lower()
+    
+    @property
+    def area_id(self) -> str:
         return self.get_grid_spec('area_id')
     
-    def get_description(self) -> str:
+    @property
+    def description(self) -> str:
         return self.get_grid_spec('description')
     
-    def get_proj_id(self) -> str:
+    @property
+    def proj_id(self) -> str:
         return self.get_grid_spec('proj_id')
     
-    def get_projection(self) -> str:
+    @property
+    def projection(self) -> str:
         return self.get_grid_spec('projection')
     
-    def get_width(self) -> int:
+    @property
+    def width(self) -> int:
         return self.get_grid_spec('width')
     
-    def get_height(self) -> int:
+    @property
+    def height(self) -> int:
         return self.get_grid_spec('height')
     
-    def get_area_extent(self) -> tuple:
+    @property
+    def area_extent(self) -> tuple:
         EXTENT = self.get_grid_spec('area_extent')
         return tuple([float(e) for e in EXTENT[1:-1].split(',')])
         
     def set_grid(self, scale_factor: float) -> None:
-        ID       = self.get_area_id()
-        LONGNAME = self.get_description()
-        PROJID   = self.get_proj_id()
-        PROJ     = self.get_projection()
-        WIDTH    = self.get_width() * scale_factor
-        HEIGHT   = self.get_height() * scale_factor
-        EXTENT   = self.get_area_extent()
+        ID       = self.area_id
+        LONGNAME = self.description
+        PROJID   = self.proj_id
+        PROJ     = self.projection
+        WIDTH    = self.width * scale_factor
+        HEIGHT   = self.height * scale_factor
+        EXTENT   = self.area_extent
         #pyresample area definition
         self.grid = pr.geometry.AreaDefinition(ID, LONGNAME, PROJID, PROJ,
                                                WIDTH, HEIGHT, EXTENT)
         
     def get_grid(self) -> object:
         return self.grid
+    
+    @property
+    def target_epsg(self) -> str:
+        HEMISPHERE = self.hemisphere
+        if HEMISPHERE == 'south':
+            TARGET_EPSG = 'EPSG:6932'
+        else:
+            TARGET_EPSG = 'EPSG:6931'
+        return TARGET_EPSG
+    
+    def set_transformer(self) -> None:
+        SOURCE = CRS(self.projection)
+        TARGET = CRS(self.target_epsg)
+        TRANSFORMER = Transformer.from_crs(SOURCE, TARGET, always_xy=True)
+        self.transformer = TRANSFORMER.transform
+        
+    def get_transformer(self) -> object:
+        return self.transformer
 
     def set_aoi_poly(self) -> None:
         #get lat/lon from grid definition
         lon, lat = self.grid.get_lonlats()
-        
-        #create ring
-        ring = ogr.Geometry(ogr.wkbLinearRing)
-        GDAL_VERSION = self.get_gdal_version()
-        if GDAL_VERSION >= 3:
-            ring.AddPoint(lat[ 0, 0],lon[ 0, 0])
-            ring.AddPoint(lat[-1, 0],lon[-1, 0])
-            ring.AddPoint(lat[-1,-1],lon[-1,-1])
-            ring.AddPoint(lat[ 0,-1],lon[ 0,-1])
-            ring.AddPoint(lat[ 0, 0],lon[ 0, 0])
-        else:
-            ring.AddPoint(lon[ 0, 0],lat[ 0, 0])
-            ring.AddPoint(lon[-1, 0],lat[-1, 0])
-            ring.AddPoint(lon[-1,-1],lat[-1,-1])
-            ring.AddPoint(lon[ 0,-1],lat[ 0,-1])
-            ring.AddPoint(lon[ 0, 0],lat[ 0, 0])
-            
-        #create polygon from ring
-        poly = ogr.Geometry(ogr.wkbPolygon)
-        poly.AddGeometry(ring) 
-        #set ogr polygon
-        self.aoi_poly = poly
+        #create shapely polygon
+        AOI_POLY = Polygon([[lon[ 0, 0],lat[ 0, 0]],
+                            [lon[-1, 0],lat[-1, 0]],
+                            [lon[-1,-1],lat[-1,-1]],
+                            [lon[ 0,-1],lat[ 0,-1]]])
+        TRANSFORMER = self.get_transformer()
+        self.aoi_poly = transform(TRANSFORMER, AOI_POLY)
         
     def get_aoi_poly(self) -> object:
-        return self.aoi_poly
-    
-    def set_target_epsg(self) -> None:
-        HEMISPHERE = self.get_hemisphere()
-        if HEMISPHERE == 'south':
-            self.target_epsg = 'EPSG:6932'
-        else:
-            self.target_epsg = 'EPSG:6931'
-            
-    def get_target_epsg(self) -> int:
-        return self.target_epsg
-    
-    def format_epsg(self, epsg: str) -> int:
-        return int(epsg[-4:])
-    
+        return self.aoi_poly            
+
     def check_overlap_with_aoi(self, listing_entry: list) -> (bool, list):
         """
         Parameters
@@ -151,76 +146,40 @@ class AoiGrid(object):
                         float(listing_entry[3]),float(listing_entry[4])])
         lat = np.array([float(listing_entry[5]),float(listing_entry[6]),
                         float(listing_entry[7]),float(listing_entry[8])])
-            
-        #compile swath polyon
-        coordinates = [[lat[0],lon[0]],
-                       [lat[3],lon[3]],
-                       [lat[2],lon[2]],
-                       [lat[1],lon[1]],
-                       [lat[0],lon[0]]]
-        #create ring
-        ring = ogr.Geometry(ogr.wkbLinearRing)
+                    
+        #create shapely polygon
+        SWATH_POLY = Polygon([[lon[0],lat[0]],
+                              [lon[3],lat[3]],
+                              [lon[2],lat[2]],
+                              [lon[1],lat[1]]])
         
-        #fill it
-        GDAL_VERSION = self.get_gdal_version()
-        if GDAL_VERSION >= 3:
-            for coord in coordinates:
-                ring.AddPoint(float(coord[0]),float(coord[1]))
-        else:
-            for coord in coordinates:
-                ring.AddPoint(float(coord[1]),float(coord[0]))
-            
-        #create polygon from ring
-        SWATH_POLY = ogr.Geometry(ogr.wkbPolygon)
-        SWATH_POLY.AddGeometry(ring)
-
         #validate swath being in the correct hemisphere 
-        ENVELOPE = SWATH_POLY.GetEnvelope()
-        HEMISPHERE = self.get_hemisphere()
+        HEMISPHERE = self.hemisphere
+        ENVELOPE = SWATH_POLY.bounds
         if HEMISPHERE == 'south':
-            if GDAL_VERSION >= 3:
-                inHemisphere = ENVELOPE[0] < (-30.0)
-            else:
-                inHemisphere = ENVELOPE[2] < (-30.0)
+            IN_HEMISPHERE = ENVELOPE[0] < (-30.0)
         else:
-            if GDAL_VERSION >= 3:
-                inHemisphere = ENVELOPE[0] > (30.0)
-            else:
-                inHemisphere = ENVELOPE[2] > (30.0)
+            IN_HEMISPHERE = ENVELOPE[0] > (30.0)
             
         """ Check for Overlap with AOI Polygon"""
-        #define soure/target spatial reference
-        SOURCE_EPSG = self.format_epsg(self.get_projection())
-        TARGET_EPSG = self.format_epsg(self.get_target_epsg())
-        insrs = osr.SpatialReference()
-        insrs.ImportFromEPSG(SOURCE_EPSG)
-        outsrs = osr.SpatialReference()
-        outsrs.ImportFromEPSG(TARGET_EPSG)
-        #set up transformation
-        crs_transformation = osr.CoordinateTransformation(insrs,outsrs)
-        #transform aoi/swath polygons
+        #transform swath polygons
         AOI_POLY = self.get_aoi_poly()
-        AOI_POLY.Transform(crs_transformation)
-        SWATH_POLY.Transform(crs_transformation)
+        TRANSFORMER = self.get_transformer()
+        SWATH_POLY = transform(TRANSFORMER, SWATH_POLY)
 
         #check for overlap
-        INTERSECT_GEOMETRY = AOI_POLY.Intersection(SWATH_POLY.Buffer(0))
-        if INTERSECT_GEOMETRY is not None \
-            and INTERSECT_GEOMETRY.Area()>0 \
-            and inHemisphere:
+        try:
+            SWATH_INTERSECTS = SWATH_POLY.intersects(AOI_POLY)
+        except:
+            import pdb; pdb.set_trace()
+        if SWATH_INTERSECTS and IN_HEMISPHERE:
             OVERLAP = True
-            FRACTION = np.round(INTERSECT_GEOMETRY.Area()/
-                                AOI_POLY.Area()*100.,2)
+            AOI_AREA = AOI_POLY.area
+            INTERSECTION_AREA = AOI_POLY.intersection(SWATH_POLY).area
+            FRACTION = np.round((INTERSECTION_AREA / AOI_AREA)*100,2)
         else:
             OVERLAP = False
             FRACTION = 0.0
-        
-        #TODO is this still necessary?!
-        #reverse transformation
-        crs_transformation = osr.CoordinateTransformation(outsrs,insrs)
-        #transform aoi/swath polygons
-        AOI_POLY.Transform(crs_transformation)
-        SWATH_POLY.Transform(crs_transformation)
         
         #return to caller
         return OVERLAP, FRACTION
