@@ -153,13 +153,13 @@ class AoiGrid(object):
                               [lon[2],lat[2]],
                               [lon[1],lat[1]]])
         
-        #validate swath being in the correct hemisphere 
-        HEMISPHERE = self.hemisphere
-        ENVELOPE = SWATH_POLY.bounds
-        if HEMISPHERE == 'south':
-            IN_HEMISPHERE = ENVELOPE[0] < (-30.0)
-        else:
-            IN_HEMISPHERE = ENVELOPE[0] > (30.0)
+        # #validate swath being in the correct hemisphere 
+        # HEMISPHERE = self.hemisphere
+        # ENVELOPE = SWATH_POLY.bounds
+        # if HEMISPHERE == 'south':
+        #     IN_HEMISPHERE = ENVELOPE[0] < (-30.0)
+        # else:
+        #     IN_HEMISPHERE = ENVELOPE[0] > (30.0)
             
         """ Check for Overlap with AOI Polygon"""
         #transform swath polygons
@@ -168,11 +168,8 @@ class AoiGrid(object):
         SWATH_POLY = transform(TRANSFORMER, SWATH_POLY)
 
         #check for overlap
-        try:
-            SWATH_INTERSECTS = SWATH_POLY.intersects(AOI_POLY)
-        except:
-            import pdb; pdb.set_trace()
-        if SWATH_INTERSECTS and IN_HEMISPHERE:
+        SWATH_INTERSECTS = SWATH_POLY.intersects(AOI_POLY)
+        if SWATH_INTERSECTS: # and IN_HEMISPHERE:
             OVERLAP = True
             AOI_AREA = AOI_POLY.area
             INTERSECTION_AREA = AOI_POLY.intersection(SWATH_POLY).area
