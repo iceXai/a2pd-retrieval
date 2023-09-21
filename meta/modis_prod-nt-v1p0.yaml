@@ -10,157 +10,179 @@ urls:
         mxd03: https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/61/MYD03/
         meta: https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMeta/61/AQUA/
     
-input_specs:
+variables:
     #necessary information about filename, group, and variable names etc 
     #of the input data to load it, specified as keywords:
-    lat: 
-        file: mxd03
-        variable: Latitude
+    lat:
+        type: 
+            geo
+        input:
+            file: mxd03
+            variable: Latitude
+        output:
+            group: mod03
+            variable: lat
+            longname: mod03_latitude
     lon:
-        file: mxd03
-        variable: Longitude
+        type: 
+            geo
+        input:
+            file: mxd03
+            variable: Longitude 
+        output:
+            group: mod03
+            variable: lon
+            longname: mod03_longitude
     sat_zen:
-        file: mxd03
-        variable: SensorZenith
-    sat_azi: 
-        file: mxd03
-        variable: SensorAzimuth
-    sol_zen: 
-        file: mxd03
-        variable: SolarZenith
-    sol_azi: 
-        file: mxd03
-        variable: SolarAzimuth
-    ch20: 
-        file: mxd02
-        variable: EV_1KM_Emissive
-        index: 0
-    ch25: 
-        file: mxd02
-        variable: EV_1KM_Emissive
-        index: 5
-    ch31: 
-        file: mxd02
-        variable: EV_1KM_Emissive
-        index: 10
-    ch32: 
-        file: mxd02
-        variable: EV_1KM_Emissive
-        index: 11
-    ch33: 
-        file: mxd02
-        variable: EV_1KM_Emissive
-        index: 12
-    
-grid_specs:
-    #information about the reference longitude/latitude grid reference internal
-    #names for the resampling process as keywords:
-    sat_zen:
-        longitude: lon
-        latitude: lat
+        type:
+            auxiliary
+        input:
+            file: mxd03
+            variable: SensorZenith
+        grid:
+            longitude: lon
+            latitude: lat 
+        process:
+            scale: scale_factor
+        output:
+            group: mod03
+            variable: sat_zen
+            longname: mod03_sensor_zenith_angle
+        
     sat_azi:
-        longitude: lon
-        latitude: lat
+        type:
+            auxiliary
+        input:
+            file: mxd03
+            variable: SensorAzimuth
+        grid:
+            longitude: lon
+            latitude: lat
+        process:
+            scale: scale_factor
+        output:
+            group: mod03
+            variable: sat_azi
+            longname: mod03_sensor_azimuth_angle
+        
     sol_zen:
-        longitude: lon
-        latitude: lat
-    sol_azi:
-        longitude: lon
-        latitude: lat
-    ch20:
-        longitude: lon
-        latitude: lat
-    ch25:
-        longitude: lon
-        latitude: lat
-    ch31:
-        longitude: lon
-        latitude: lat
-    ch32:
-        longitude: lon
-        latitude: lat
-    ch33:
-        longitude: lon
-        latitude: lat
-
-channel_specs:
-    #define channel specifications for the processing such as 
-    #scale/offset internal names or others as keywords:
-    sat_zen: 
-        scale: scale_factor
-    sat_azi: 
-        scale: scale_factor
-    sol_zen:
-        scale: scale_factor
+        type:
+            auxiliary
+        input:
+            file: mxd03
+            variable: SolarZenith
+        grid:
+            longitude: lon
+            latitude: lat  
+        process:
+            scale: scale_factor
+        output:
+            group: mod03
+            variable: sol_zen
+            longname: mod03_solar_zenith_angle
+        
     sol_azi: 
-        scale: scale_factor
-    ch20: 
-        scale: radiance_scales
-        offset: radiance_offsets
-        wavelength: 3.7500e-06
-    ch25: 
-        scale: radiance_scales
-        offset: radiance_offsets
-        wavelength: 4.5155e-06
-    ch31: 
-        scale: radiance_scales
-        offset: radiance_offsets
-        wavelength: 11.030e-06
-    ch32:  
-        scale: radiance_scales
-        offset: radiance_offsets
-        wavelength: 12.020e-06
-    ch33:  
-        scale: radiance_scales
-        offset: radiance_offsets
-        wavelength: 13.335e-06
-
-output_specs:
-    #define output structure of the data in the HDF5 file by providing 
-    #for each variable name an in-file group name, an in-file variable
-    #name as well as an attribute long name as keywords:
-    lat: 
-        group: mod03
-        variable: lat
-        longname: mod03_latitude
-    lon:  
-        group: mod03
-        variable: lon
-        longname: mod03_longitude
-    sat_zen: 
-        group: mod03
-        variable: sat_zen
-        longname: mod03_sensor_zenith_angle
-    sat_azi:  
-        group: mod03
-        variable: sat_azi
-        longname: mod03_sensor_azimuth_angle
-    sol_zen:  
-        group: mod03
-        variable: sol_zen
-        longname: mod03_solar_zenith_angle
-    sol_azi:  
-        group: mod03
-        variable: sol_azi
-        longname: mod03_solar_azimuth_angle
-    ch20:  
-        group: mod02
-        variable: ch20
-        longname: mod02_ch20_brightness_temperature
-    ch25: 
-        group: mod02
-        variable: ch25
-        longname: mod02_ch25_brightness_temperature
-    ch31: 
-        group: mod02
-        variable: ch31
-        longname: mod02_ch31_brightness_temperature
-    ch32: 
-        group: mod02
-        variable: ch32
-        longname: mod02_ch32_brightness_temperature
-    ch33: 
-        group: mod02
-        variable: ch33
-        longname: mod02_ch33_brightness_temperature
-    
+        type:
+            auxiliary
+        input:
+            file: mxd03
+            variable: SolarAzimuth
+        grid:
+            longitude: lon
+            latitude: lat
+        process:
+            scale: scale_factor
+        output:
+            group: mod03
+            variable: sol_azi
+            longname: mod03_solar_azimuth_angle
+        
+    ch20:
+        type:
+            data
+        input:
+            file: mxd02
+            variable: EV_1KM_Emissive
+            index: 0
+        grid:
+            longitude: lon
+            latitude: lat
+        process:
+            scale: radiance_scales
+            offset: radiance_offsets
+            wavelength: 3.7500e-06
+        output:
+            group: mod02
+            variable: ch20
+            longname: mod02_ch20_brightness_temperature
+    ch25:
+        type:
+            data
+        input:
+            file: mxd02
+            variable: EV_1KM_Emissive
+            index: 5
+        grid:
+        
+        process:
+            scale: radiance_scales
+            offset: radiance_offsets
+            wavelength: 4.5155e-06  
+        output:
+            group: mod02
+            variable: ch25
+            longname: mod02_ch25_brightness_temperature
+    ch31:
+        type:
+            data
+        input:
+            file: mxd02
+            variable: EV_1KM_Emissive
+            index: 10
+        grid:
+            longitude: lon
+            latitude: lat
+        process:
+            scale: radiance_scales
+            offset: radiance_offsets
+            wavelength: 11.030e-06
+        output:
+            group: mod02
+            variable: ch31
+            longname: mod02_ch31_brightness_temperature
+    ch32:
+        type:
+            data    
+        input:
+            file: mxd02
+            variable: EV_1KM_Emissive
+            index: 11
+        grid:
+            longitude: lon
+            latitude: lat
+        process:
+            scale: radiance_scales
+            offset: radiance_offsets
+            wavelength: 12.020e-06
+        output:
+            group: mod02
+            variable: ch32
+            longname: mod02_ch32_brightness_temperature
+    ch33:
+        type:
+            data
+        input:
+            file: mxd02
+            variable: EV_1KM_Emissive
+            index: 12
+        grid:
+            longitude: lon
+            latitude: lat
+        process:
+            scale: radiance_scales
+            offset: radiance_offsets
+            wavelength: 13.335e-06
+        output:
+            group: mod02
+            variable: ch33
+            longname: mod02_ch33_brightness_temperature
