@@ -77,16 +77,28 @@ class Configuration(object):
         return self.config['meta']['version'].lower()
     
     
-    """ Configfile::Output """
+    """ Configfile::I/O """
     @property
     def output_path(self) -> str:
         #get output path
-        path = self.config['output']['path']
+        path = self.config['io']['path']
         #check for existence and create otherwise
         if not os.path.isdir(path):
             os.makedirs(path)
         #returns the specified output path
         return path
+    
+    @property
+    def input_handler(self) -> object:
+        class_name = self.config['io']['input']
+        module_name = 'iotools'
+        return self.get_class(module_name, class_name)
+    
+    @property
+    def output_handler(self) -> object:
+        class_name = self.config['io']['output']
+        module_name = 'iotools'
+        return self.get_class(module_name, class_name)
     
     
     """ Configfile::Date """
@@ -203,6 +215,14 @@ class Configuration(object):
         retrieval_proc = self.get_retrievalprocessor_class()
         retrieval_proc = retrieval_proc(self, **retrieval_modules)
         return self.get_retrieval_class()(retrieval_proc)
+    
+    def setup_swath_io(self) -> object:
+        module_name = 'iotools'
+        class_name = 'SwathIO'
+        SWATHIO = self.get_class(module_name, class_name)
+        INPUT_HANDLER = self.input_handler()
+        OUTPUT_HANDLER = self.output_handler()
+        return SWATHIO(INPUT_HANDLER, OUTPUT_HANDLER)
 
     """ Proc::MetaData """
     def get_meta_module(self) -> object:
