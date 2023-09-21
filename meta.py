@@ -45,7 +45,11 @@ class SpectralMetaDataVariable(MetaDataVariable):
     
 @dataclass
 class MetaData:
-    variables: List[MetaDataVariable]     
+    variables: List[MetaDataVariable]
+    
+    @property
+    def datatypes(self):
+        return [var.datatype for var in self.variables]
 
 
 # In[]
