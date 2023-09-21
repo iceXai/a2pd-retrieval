@@ -52,6 +52,11 @@ class Meta(ABC):
         grp = 'input_specs'
         return self.get_grp_data(grp).keys()
     
+    def get_chspecs_variables(self) -> list:
+        #returns variables that have a grid definition
+        grp = 'channel_specs'
+        return self.get_grp_data(grp).keys()
+    
     def get_resample_variables(self) -> list:
         #returns variables that have a grid definition
         grp = 'grid_specs'
@@ -62,19 +67,19 @@ class Meta(ABC):
         grp = 'output_specs'
         return self.get_grp_data(grp).keys()
             
-    def get_var_input_specs(self, var: str) -> list:
+    def get_var_input_specs(self, var: str) -> dict:
         grp = 'input_specs'
         return self.get_var_data(grp, var)
     
-    def get_var_grid_specs(self, var: str) -> list:
+    def get_var_grid_specs(self, var: str) -> dict:
         grp = 'grid_specs'
         return self.get_var_data(grp, var)
     
-    def get_var_channel_specs(self, var: str) -> list:
+    def get_var_channel_specs(self, var: str) -> dict:
         grp = 'channel_specs'
         return self.get_var_data(grp, var)
     
-    def get_var_output_specs(self, var: str) -> list:
+    def get_var_output_specs(self, var: str) -> dict:
         grp = 'output_specs'
         return self.get_var_data(grp, var)
 
@@ -134,7 +139,7 @@ class ModisSwathMeta(Meta):
         variables = self.get_input_variables()
         for var in variables:
             idx = self.get_var_input_file_index(var)
-            input_specs[var][0] = swaths[idx]
+            input_specs[var]['file'] = swaths[idx]
 
     
 class SlstrSwathMeta(Meta):
