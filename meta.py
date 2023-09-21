@@ -16,11 +16,12 @@ import yaml
 # In[]
 
 """
-Meta Data Container
+Meta Data Classes/Container
 """
 
 @dataclass
-class MetaDataVariable:
+class MetaDataVariable(ABC):
+    """ Meta variable base class containing variable name and datatype """
     name: str
     datatype: str
     
@@ -47,9 +48,19 @@ class SpectralMetaDataVariable(MetaDataVariable):
 class MetaData:
     variables: List[MetaDataVariable]
     
+    def __len__(self) -> int:
+        return len(self.variables)
+    
     @property
-    def datatypes(self):
+    def datatypes(self) -> List[str]:
         return [var.datatype for var in self.variables]
+    
+    @property
+    def size(self) -> int:
+        return self.__len__()
+    
+    def var(self, idx: int) -> MetaDataVariable:
+        return self.variables[idx]
 
 
 # In[]
@@ -63,7 +74,8 @@ class Meta(ABC):
     Abstract base class for all meta information regarding the supported 
     sensor/carrier combinations
     """    
-    def __init__(self, sensor: str, version: str):
+    def __init__(self, sensor: str, carrier: str, version: str):
+        self.carrier = carrier
         #loads the yaml file and reads it content
         fn = f'{sensor}_{version}.yaml'
         with open(os.path.join(os.getcwd(), 'meta', fn)) as f:
@@ -88,19 +100,16 @@ class Meta(ABC):
         if datatype == 'spectral':
             return SpectralMetaDataVariable(var,**var_meta)
     
+    @property
+    def urls(self) -> dict:
+        return self.meta['urls'][self.carrier]
     
-    def set_carrier(self, carrier: str) -> None:
-        #sets the current carrier
-        self.carrier = carrier
+    @property
+    def geo_variables(self) -> GeoMetaDataVariable:
+        datatypes = self.metadata.datatypes
+        idx = [idx for idx, dt in enumerate(datatypes) if dt== 'geo']
+        
     
-    def get_carrier(self) -> str:
-        #returns the current carrier
-        return self.carrier
-            
-    def get_urls(self) -> dict:
-        #returns the specified variables for the current sensor
-        CARRIER = self.get_carrier()
-        return self.meta['urls'][CARRIER]
 
     def get_grp_data(self, grp: str) -> dict:
         return self.meta[grp]
@@ -188,12 +197,12 @@ class ModisSwathMeta(Meta):
                    }
         return indices[var]
     
-    def get_data_prefix(self) -> dict:
-        CARRIER = self.get_carrier()
+    @property
+    def data_prefix(self) -> str:
         data_prefixes = {'terra': 'MOD',
                          'aqua': 'MYD',
                          }
-        return data_prefixes[CARRIER]
+        return data_prefixes[self.carrier]
 
     def update_input_specs(self, swaths: tuple) -> None:
         input_specs = self.get_grp_data('input_specs')
