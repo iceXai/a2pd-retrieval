@@ -6,9 +6,46 @@
 
 # In[] 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import List
 
 import os
 import yaml
+
+
+# In[]
+
+"""
+Meta Data Container
+"""
+
+@dataclass
+class MetaDataVariable:
+    name: str
+    datatype: str
+    
+@dataclass
+class GeoMetaDataVariable(MetaDataVariable):
+    input_parameter: dict
+    output_parameter: dict
+    
+@dataclass
+class AuxiliaryMetaDataVariable(MetaDataVariable):
+    input_parameter: dict
+    output_parameter: dict
+    grid_parameter: dict
+    process_parameter: dict = None
+    
+@dataclass
+class SpectralMetaDataVariable(MetaDataVariable):
+    input_parameter: dict
+    output_parameter: dict
+    grid_parameter: dict
+    process_parameter: dict  
+    
+@dataclass
+class MetaData:
+    variables: List[MetaDataVariable]     
 
 
 # In[]
@@ -27,6 +64,26 @@ class Meta(ABC):
         fn = f'{sensor}_{version}.yaml'
         with open(os.path.join(os.getcwd(), 'meta', fn)) as f:
             self.meta = yaml.safe_load(f)
+        self._import_variables()
+        import pdb; pdb.set_trace()
+        
+    def _import_variables(self) -> None:
+        variables = []
+        for var in self.meta['variables'].keys():
+            var_meta = self.meta['variables'][var]
+            data = self._assign_variable_dataclass(var, var_meta)
+            variables.append(data)
+        self.metadata = MetaData(variables)
+
+    def _assign_variable_dataclass(self, var: str, var_meta: dict):
+        datatype = var_meta['datatype'].lower()
+        if datatype == 'geo':
+            return GeoMetaDataVariable(var,**var_meta)
+        if datatype == 'auxiliary':
+            return AuxiliaryMetaDataVariable(var,**var_meta)
+        if datatype == 'spectral':
+            return SpectralMetaDataVariable(var,**var_meta)
+    
     
     def set_carrier(self, carrier: str) -> None:
         #sets the current carrier
