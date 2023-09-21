@@ -30,3 +30,6 @@ axs[1].imshow(test2['bt']['s8n'][:])
 axs[2].imshow(test2['bt']['s9exo'][:])
 #plt.tight_layout()
 #plt.imshow(test['mod02']['ch20'][:])
+
+
+
