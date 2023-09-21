@@ -10,7 +10,11 @@ meta:
     scale: 1.0
     version: production
 
-output:
+io:
+    # Input/Output handlers depending on the file type of the swath data
+    # [{HDF4/HDF5/NetCDF}Swath{Input/Output}]
+    input: HDF4SwathInput
+    output: HDF5SwathOutput
     # output path for the retrieved data [will be created if not existent]
     path: C:\data\testretrieval
     
