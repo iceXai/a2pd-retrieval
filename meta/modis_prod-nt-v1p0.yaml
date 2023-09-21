@@ -14,175 +14,176 @@ variables:
     #necessary information about filename, group, and variable names etc 
     #of the input data to load it, specified as keywords:
     lat:
-        type: 
+        datatype: 
             geo
-        input:
+        input_parameter:
             file: mxd03
             variable: Latitude
-        output:
+        output_parameter:
             group: mod03
             variable: lat
             longname: mod03_latitude
     lon:
-        type: 
+        datatype: 
             geo
-        input:
+        input_parameter:
             file: mxd03
             variable: Longitude 
-        output:
+        output_parameter:
             group: mod03
             variable: lon
             longname: mod03_longitude
     sat_zen:
-        type:
+        datatype:
             auxiliary
-        input:
+        input_parameter:
             file: mxd03
             variable: SensorZenith
-        grid:
+        grid_parameter:
             longitude: lon
             latitude: lat 
-        process:
+        process_parameter:
             scale: scale_factor
-        output:
+        output_parameter:
             group: mod03
             variable: sat_zen
             longname: mod03_sensor_zenith_angle
         
     sat_azi:
-        type:
+        datatype:
             auxiliary
-        input:
+        input_parameter:
             file: mxd03
             variable: SensorAzimuth
-        grid:
+        grid_parameter:
             longitude: lon
             latitude: lat
-        process:
+        process_parameter:
             scale: scale_factor
-        output:
+        output_parameter:
             group: mod03
             variable: sat_azi
             longname: mod03_sensor_azimuth_angle
         
     sol_zen:
-        type:
+        datatype:
             auxiliary
-        input:
+        input_parameter:
             file: mxd03
             variable: SolarZenith
-        grid:
+        grid_parameter:
             longitude: lon
             latitude: lat  
-        process:
+        process_parameter:
             scale: scale_factor
-        output:
+        output_parameter:
             group: mod03
             variable: sol_zen
             longname: mod03_solar_zenith_angle
         
     sol_azi: 
-        type:
+        datatype:
             auxiliary
-        input:
+        input_parameter:
             file: mxd03
             variable: SolarAzimuth
-        grid:
+        grid_parameter:
             longitude: lon
             latitude: lat
-        process:
+        process_parameter:
             scale: scale_factor
-        output:
+        output_parameter:
             group: mod03
             variable: sol_azi
             longname: mod03_solar_azimuth_angle
         
     ch20:
-        type:
-            data
-        input:
+        datatype:
+            spectral
+        input_parameter:
             file: mxd02
             variable: EV_1KM_Emissive
             index: 0
-        grid:
+        grid_parameter:
             longitude: lon
             latitude: lat
-        process:
+        process_parameter:
             scale: radiance_scales
             offset: radiance_offsets
             wavelength: 3.7500e-06
-        output:
+        output_parameter:
             group: mod02
             variable: ch20
             longname: mod02_ch20_brightness_temperature
     ch25:
-        type:
-            data
-        input:
+        datatype:
+            spectral
+        input_parameter:
             file: mxd02
             variable: EV_1KM_Emissive
             index: 5
-        grid:
-        
-        process:
+        grid_parameter:
+            longitude: lon
+            latitude: lat
+        process_parameter:
             scale: radiance_scales
             offset: radiance_offsets
             wavelength: 4.5155e-06  
-        output:
+        output_parameter:
             group: mod02
             variable: ch25
             longname: mod02_ch25_brightness_temperature
     ch31:
-        type:
-            data
-        input:
+        datatype:
+            spectral
+        input_parameter:
             file: mxd02
             variable: EV_1KM_Emissive
             index: 10
-        grid:
+        grid_parameter:
             longitude: lon
             latitude: lat
-        process:
+        process_parameter:
             scale: radiance_scales
             offset: radiance_offsets
             wavelength: 11.030e-06
-        output:
+        output_parameter:
             group: mod02
             variable: ch31
             longname: mod02_ch31_brightness_temperature
     ch32:
-        type:
-            data    
-        input:
+        datatype:
+            spectral    
+        input_parameter:
             file: mxd02
             variable: EV_1KM_Emissive
             index: 11
-        grid:
+        grid_parameter:
             longitude: lon
             latitude: lat
-        process:
+        process_parameter:
             scale: radiance_scales
             offset: radiance_offsets
             wavelength: 12.020e-06
-        output:
+        output_parameter:
             group: mod02
             variable: ch32
             longname: mod02_ch32_brightness_temperature
     ch33:
-        type:
-            data
-        input:
+        datatype:
+            spectral
+        input_parameter:
             file: mxd02
             variable: EV_1KM_Emissive
             index: 12
-        grid:
+        grid_parameter:
             longitude: lon
             latitude: lat
-        process:
+        process_parameter:
             scale: radiance_scales
             offset: radiance_offsets
             wavelength: 13.335e-06
-        output:
+        output_parameter:
             group: mod02
             variable: ch33
             longname: mod02_ch33_brightness_temperature
