@@ -686,9 +686,10 @@ class RetrievalProcessor(object):
         
     def _set_swath_io(self) -> None:
         #initiate i/o handler
-        SENSOR = self.cfg.sensor.capitalize()
-        IO_CLASS = self.cfg.get_class('iotools', f'{SENSOR}SwathIO') 
-        self.io = IO_CLASS(self.out)
+        self.io = self.cfg.setup_swath_io()
+        # SENSOR = self.cfg.sensor.capitalize()
+        # IO_CLASS = self.cfg.get_class('iotools', f'{SENSOR}SwathIO') 
+        # self.io = IO_CLASS(self.out)
         
     def _set_error_handler(self) -> None:
         #initiate download error handler
@@ -972,18 +973,25 @@ class SwathHandler(ABC):
     
     @abstractmethod
     def open_swath(self, var: str) -> None:
-        FILENAME = self.ref.meta.get_var_input_specs(var)[0]
+        SPECS = self.ref.meta.get_var_input_specs(var)
+        FILENAME = SPECS['file']
         FILEPATH = os.path.join(self.ref.rawout, FILENAME)
-        self.ref.io.load(FILEPATH)
+        self.ref.io.open_input_swath(FILEPATH)
         
     @abstractmethod
     def load_variable(self, var: str) -> None:
-        #get current variable/group name info
-        GRP, VAR = self.ref.meta.get_var_input_specs(var)[1:]
-        #retrieve corresponding channel specifications
-        CHSPECS = self.ref.meta.get_var_channel_specs(var)
+        SPECS = self.ref.meta.get_var_input_specs(var)
         #retrieve the actual variable data from the swath
-        DATA = self.ref.io.get_var(VAR, GRP, CHSPECS)
+        self.ref.io.get_variable(**SPECS)
+        #check for available channel specs to be applied
+        CHSPECS_KEYS = self.ref.meta.get_chspecs_variables()
+        if var in CHSPECS_KEYS:
+            #retrieve corresponding channel specifications
+            CHSPECS = self.ref.meta.get_var_channel_specs(var)
+            #apply
+            DATA = self.ref.io.process_variable(**CHSPECS)
+        else:
+            DATA = self.ref.io.process_variable()
         #store it to the data container using the same variable key handle
         self.ref.data.add_to_data(var, DATA)
      
