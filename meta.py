@@ -7,6 +7,7 @@
 # In[] 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from dataclasses import asdict
 from typing import List
 
 import os
@@ -20,29 +21,18 @@ Meta Data Classes/Container
 """
 
 @dataclass
-class MetaDataVariable(ABC):
+class MetaDataVariable:#(ABC):
     """ Meta variable base class containing variable name and datatype """
     name: str
     datatype: str
-    
-@dataclass
-class GeoMetaDataVariable(MetaDataVariable):
     input_parameter: dict
     output_parameter: dict
-    
-@dataclass
-class AuxiliaryMetaDataVariable(MetaDataVariable):
-    input_parameter: dict
-    output_parameter: dict
-    grid_parameter: dict
+    grid_parameter: dict = None
     process_parameter: dict = None
     
-@dataclass
-class SpectralMetaDataVariable(MetaDataVariable):
-    input_parameter: dict
-    output_parameter: dict
-    grid_parameter: dict
-    process_parameter: dict  
+    @property
+    def input_file(self):
+        return self.input_parameter['file']
     
 @dataclass
 class MetaData:
@@ -50,6 +40,9 @@ class MetaData:
     
     def __len__(self) -> int:
         return len(self.variables)
+    
+    def __iter__(self):
+        return iter(self.variables)
     
     @property
     def datatypes(self) -> List[str]:
@@ -81,77 +74,104 @@ class Meta(ABC):
         with open(os.path.join(os.getcwd(), 'meta', fn)) as f:
             self.meta = yaml.safe_load(f)
         self._import_variables()
-        import pdb; pdb.set_trace()
         
     def _import_variables(self) -> None:
         variables = []
         for var in self.meta['variables'].keys():
             var_meta = self.meta['variables'][var]
-            data = self._assign_variable_dataclass(var, var_meta)
+            # data = self._assign_variable_dataclass(var, var_meta)
+            data = MetaDataVariable(var,**var_meta)
             variables.append(data)
         self.metadata = MetaData(variables)
 
-    def _assign_variable_dataclass(self, var: str, var_meta: dict):
-        datatype = var_meta['datatype'].lower()
-        if datatype == 'geo':
-            return GeoMetaDataVariable(var,**var_meta)
-        if datatype == 'auxiliary':
-            return AuxiliaryMetaDataVariable(var,**var_meta)
-        if datatype == 'spectral':
-            return SpectralMetaDataVariable(var,**var_meta)
+    # def _assign_variable_dataclass(self, var: str, var_meta: dict):
+    #     datatype = var_meta['datatype'].lower()
+    #     if datatype == 'geo':
+    #         return GeoMetaDataVariable(var,**var_meta)
+    #     if datatype == 'auxiliary':
+    #         return AuxiliaryMetaDataVariable(var,**var_meta)
+    #     if datatype == 'spectral':
+    #         return SpectralMetaDataVariable(var,**var_meta)
     
     @property
     def urls(self) -> dict:
         return self.meta['urls'][self.carrier]
     
     @property
-    def geo_variables(self) -> GeoMetaDataVariable:
+    def variables(self) -> List[str]:
+        return [datavar.name for datavar in self.metadata]
+    
+    @property
+    def datatypes(self) -> List[str]:
         datatypes = self.metadata.datatypes
-        idx = [idx for idx, dt in enumerate(datatypes) if dt== 'geo']
+        return [dt for idx, dt in enumerate(datatypes)]
+    
+    @property
+    def indices(self) -> List[int]:
+        datatypes = self.metadata.datatypes
+        return [idx for idx, dt in enumerate(datatypes)]
+    
+    @property
+    def meta_data(self) -> MetaData:
+        return self.metadata
+    
+    @property
+    def geo_meta_data(self) -> MetaData:
+        datatypes = self.metadata.datatypes
+        idx = [idx for idx, dt in enumerate(datatypes) if dt == 'geo']
+        import pdb; pdb.set_trace()
         
+        
+    @property
+    def non_geo_meta_data(self) -> MetaData:
+        datatypes = self.metadata.datatypes
+        idx = [idx for idx, dt in enumerate(datatypes) if dt != 'geo']
+        import pdb; pdb.set_trace()
+        
+    #[...]
     
 
-    def get_grp_data(self, grp: str) -> dict:
-        return self.meta[grp]
+    # def get_grp_data(self, grp: str) -> dict:
+    #     return self.meta[grp]
     
-    def get_var_data(self, grp: str, var: str) -> list:
-        return self.meta[grp][var]
+    # def get_var_data(self, grp: str, var: str) -> list:
+    #     return self.meta[grp][var]
     
-    def get_input_variables(self) -> list:
-        #returns variables that have a grid definition
-        grp = 'input_specs'
-        return self.get_grp_data(grp).keys()
+    # def get_input_variables(self) -> list:
+    #     #returns variables that have a grid definition
+    #     grp = 'input_specs'
+    #     return self.get_grp_data(grp).keys()
     
-    def get_chspecs_variables(self) -> list:
-        #returns variables that have a grid definition
-        grp = 'channel_specs'
-        return self.get_grp_data(grp).keys()
+    # def get_chspecs_variables(self) -> list:
+    #     #returns variables that have a grid definition
+    #     grp = 'channel_specs'
+    #     return self.get_grp_data(grp).keys()
     
-    def get_resample_variables(self) -> list:
-        #returns variables that have a grid definition
-        grp = 'grid_specs'
-        return self.get_grp_data(grp).keys()
+    # def get_resample_variables(self) -> list:
+    #     #returns variables that have a grid definition
+    #     grp = 'grid_specs'
+    #     return self.get_grp_data(grp).keys()
     
-    def get_output_variables(self) -> list:
-        #returns variables that have a grid definition
-        grp = 'output_specs'
-        return self.get_grp_data(grp).keys()
+    # def get_output_variables(self) -> list:
+    #     #returns variables that have a grid definition
+    #     grp = 'output_specs'
+    #     return self.get_grp_data(grp).keys()
             
-    def get_var_input_specs(self, var: str) -> dict:
-        grp = 'input_specs'
-        return self.get_var_data(grp, var)
+    # def get_var_input_specs(self, var: str) -> dict:
+    #     grp = 'input_specs'
+    #     return self.get_var_data(grp, var)
     
-    def get_var_grid_specs(self, var: str) -> dict:
-        grp = 'grid_specs'
-        return self.get_var_data(grp, var)
+    # def get_var_grid_specs(self, var: str) -> dict:
+    #     grp = 'grid_specs'
+    #     return self.get_var_data(grp, var)
     
-    def get_var_channel_specs(self, var: str) -> dict:
-        grp = 'channel_specs'
-        return self.get_var_data(grp, var)
+    # def get_var_channel_specs(self, var: str) -> dict:
+    #     grp = 'channel_specs'
+    #     return self.get_var_data(grp, var)
     
-    def get_var_output_specs(self, var: str) -> dict:
-        grp = 'output_specs'
-        return self.get_var_data(grp, var)
+    # def get_var_output_specs(self, var: str) -> dict:
+    #     grp = 'output_specs'
+    #     return self.get_var_data(grp, var)
 
     
 class ModisSwathMeta(Meta):
@@ -204,12 +224,11 @@ class ModisSwathMeta(Meta):
                          }
         return data_prefixes[self.carrier]
 
-    def update_input_specs(self, swaths: tuple) -> None:
-        input_specs = self.get_grp_data('input_specs')
-        variables = self.get_input_variables()
-        for var in variables:
-            idx = self.get_var_input_file_index(var)
-            input_specs[var]['file'] = swaths[idx]
+    def update_input_parameter(self, swaths: tuple) -> None:
+        for var in self.metadata:
+            VARNAME = var.name
+            idx = self.get_var_input_file_index(VARNAME)
+            var.input_parameter['file'] = swaths[idx]
 
     
 class SlstrSwathMeta(Meta):
