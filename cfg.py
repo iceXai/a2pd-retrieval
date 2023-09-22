@@ -229,8 +229,9 @@ class Configuration(object):
         #sets the correct meta data class corresponding to the
         #sensor/carrier
         SENSOR = self.sensor
+        CARRIER = self.carrier
         VERSION = self.version
-        return self.get_meta_class()(SENSOR, VERSION)
+        return self.get_meta_class()(SENSOR, CARRIER, VERSION)
 
 
 # In[]
