@@ -5,11 +5,14 @@
 
 
 # In[] 
+#from meta import MetaDataVariable
+
 from abc import ABC, abstractmethod
 from pyhdf.SD import SD, SDC
 from datetime import datetime, timedelta
 from loguru import logger
 from dataclasses import dataclass
+from typing import List, Dict
 
 import h5py
 import os
@@ -40,19 +43,15 @@ class ListingIO(object):
 """ Swath handling """
 # In[]
 @dataclass
-class SwathVariable:
+class SwathVariable(ABC):
     """ Dataclass to keep track of and process a loaded variable """
+    name: str
     data: np.array
-    attrs 
-    variable: str
     
-#TODO have several data classes per sensor-type variable?! that sports 
-#     necessary functionality for all its processing and maybe also 
-#     resampling and storing? - also rewrite data class to store serveral 
-#     of these dataclasses?
-#
-#     also have a meta dataclass and reorder all meta yaml info along 
-#     the channels?
+@dataclass
+class HDF4SwathVariable(SwathVariable):
+    attributes: dict
+
     
 
 class SwathInput(ABC):
@@ -95,7 +94,7 @@ class SwathInput(ABC):
         pass
     
     @abstractmethod
-    def process_variable(self, ds: np.array, chspecs: list) -> np.array:
+    def process_var(self, ds: np.array, chspecs: list) -> np.array:
         """
         Parameters
         ----------
@@ -190,18 +189,23 @@ class HDF4SwathInput(SwathInput):
     def load(self, path: str) -> None:
         self.fh = SD(path,SDC.READ)
     
-    def get_var(self, **kwargs) -> None:
-        var = kwargs['variable']
+    def get_var(self, **kwargs) -> SwathVariable:
+        VAR = kwargs['variable']
         #select scientific data set (sds) and corresponding attributes
-        sds = self.fh.select(var)
-        import pdb; pdb.set_trace()
-        self.attrs = sds.attributes(full=1)
+        sds = self.fh.select(VAR)
+        attributes = sds.attributes(full=1)
         #index in sds
         if 'index' in kwargs.keys():
             idx = kwargs['index']
-            self.data = sds[idx,:,:].astype(np.float32)
+            data = sds[idx,:,:].astype(np.float32)
         else:
-            self.data = sds[:,:].astype(np.float32)
+            data = sds[:,:].astype(np.float32)
+        #initialize swath variable data class
+        DATA = {'name': kwargs['name'],
+                'data': data,
+                'attributes': attributes,
+                }
+        return HDF4SwathVariable(**DATA)
     
     def process_var(self, var: str, chspecs: list) -> np.array:
         pass
@@ -238,8 +242,8 @@ class SwathIO(object):
     def open_input_swath(self, path: str) -> None:
         self.swath_in.load(path)
         
-    def get_variable(self, **kwargs: dict) -> None:
-        self.swath_in.get_var(**kwargs)
+    def get_variable(self, **kwargs: dict) -> SwathVariable:
+        return self.swath_in.get_var(**kwargs)
         
     def process_variable(self, **kwargs: dict) -> np.array:
         self.swath_in.process_var(**kwargs)
