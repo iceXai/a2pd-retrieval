@@ -4,6 +4,8 @@
 """
 
 # In[] 
+from meta import MetaDataVariable
+
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from loguru import logger
@@ -63,10 +65,9 @@ class ListingProcessor(object):
         
     def _set_url(self) -> None:
         #initiate meta data handler
-        META = self.cfg.get_meta_module()
-        META.set_carrier(self.carrier)
+        self.meta = self.cfg.get_meta_module()
         #set url's
-        self.url = META.get_urls()  
+        self.url = self.meta.urls  
         
     def _set_output_path(self) -> None:
         #output directory
@@ -315,11 +316,8 @@ class ModisListingProcessHandler(ListingProcessHandler):
                             'mxd02': mxd2_url
                             }
     def _compile_geometa_filename(self, yy: str, mm: str, dd: str) -> str:
-        #initiate meta data handler
-        META = self.ref.cfg.get_meta_module()
-        META.set_carrier(self.ref.carrier)
         #get prefix
-        PREFIX = META.get_data_prefix().upper()
+        PREFIX = self.ref.meta.data_prefix.upper()
         return f'{PREFIX}03_{yy}-{mm}-{dd}.txt'
 
 
@@ -678,7 +676,6 @@ class RetrievalProcessor(object):
     def _set_swath_meta(self) -> None:
         #initiate meta data handler
         self.meta = self.cfg.get_meta_module()
-        self.meta.set_carrier(self.carrier)      
         
     def _set_swath_data(self) -> None:
         #initiate swath data container
@@ -796,11 +793,11 @@ class RetrievalProcessor(object):
         variables from the meta file, looping over them, opening the 
         corresponding files and storing the data within the data container
         """    
-        #loop through all downloaded variables and import corresponding 
+        #loop through all specified variables and import corresponding 
         #files/data
-        VARIABLES_TO_PROCESS = self.meta.get_input_variables()
+        META_DATA_VARIABLES = self.meta.meta_data
         
-        for VAR in VARIABLES_TO_PROCESS:
+        for VAR in META_DATA_VARIABLES:
             #open file link
             self.swath.open_swath(VAR)
             
@@ -972,17 +969,18 @@ class SwathHandler(ABC):
         return SWATH
     
     @abstractmethod
-    def open_swath(self, var: str) -> None:
-        SPECS = self.ref.meta.get_var_input_specs(var)
-        FILENAME = SPECS['file']
+    def open_swath(self, metavar: MetaDataVariable) -> None:
+        FILENAME = metavar.input_file
         FILEPATH = os.path.join(self.ref.rawout, FILENAME)
         self.ref.io.open_input_swath(FILEPATH)
         
     @abstractmethod
-    def load_variable(self, var: str) -> None:
-        SPECS = self.ref.meta.get_var_input_specs(var)
+    def load_variable(self, metavar: MetaDataVariable) -> None:
+        SPECS = metavar.input_parameter
+        VARNAME = metavar.name
         #retrieve the actual variable data from the swath
-        self.ref.io.get_variable(**SPECS)
+        datavar = self.ref.io.get_variable(name=VARNAME, **SPECS)
+        import pdb; pdb.set_trace()
         #check for available channel specs to be applied
         CHSPECS_KEYS = self.ref.meta.get_chspecs_variables()
         if var in CHSPECS_KEYS:
@@ -1181,7 +1179,7 @@ class ModisSwathHandler(SwathHandler):
         SWATHS = self.get_swath_id(swath_only=True)
         MXD03 = SWATHS['mxd03']
         MXD02 = SWATHS['mxd02']
-        self.ref.meta.update_input_specs((MXD03, MXD02))
+        self.ref.meta.update_input_parameter((MXD03, MXD02))
         
     def _get_date_from_swath_file(self) -> str:
         #get swath id
