@@ -99,7 +99,7 @@ variables:
         
     ch20:
         datatype:
-            spectral
+            radiance
         input_parameter:
             file: mxd02
             variable: EV_1KM_Emissive
@@ -117,7 +117,7 @@ variables:
             longname: mod02_ch20_brightness_temperature
     ch25:
         datatype:
-            spectral
+            radiance
         input_parameter:
             file: mxd02
             variable: EV_1KM_Emissive
@@ -135,7 +135,7 @@ variables:
             longname: mod02_ch25_brightness_temperature
     ch31:
         datatype:
-            spectral
+            radiance
         input_parameter:
             file: mxd02
             variable: EV_1KM_Emissive
@@ -153,7 +153,7 @@ variables:
             longname: mod02_ch31_brightness_temperature
     ch32:
         datatype:
-            spectral    
+            radiance    
         input_parameter:
             file: mxd02
             variable: EV_1KM_Emissive
@@ -171,7 +171,7 @@ variables:
             longname: mod02_ch32_brightness_temperature
     ch33:
         datatype:
-            spectral
+            radiance
         input_parameter:
             file: mxd02
             variable: EV_1KM_Emissive
