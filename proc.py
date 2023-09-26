@@ -4,8 +4,6 @@
 """
 
 # In[] 
-from meta import MetaDataVariable
-
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from loguru import logger
@@ -14,6 +12,10 @@ from iotools import ListingIO
 from data import ListingData
 from data import SwathData
 from resampling import ResampleHandler
+from meta import MetaDataVariable
+from meta import MetaData
+from iotools import SwathDataVariable
+from iotools import SwathDataStack
 
 import pandas as pd
 import numpy as np
@@ -789,23 +791,10 @@ class RetrievalProcessor(object):
 
     def load_swath(self) -> None:
         """
-        API function to handle the swath loading by getting all available 
-        variables from the meta file, looping over them, opening the 
-        corresponding files and storing the data within the data container
+        API function to handle the swath loading using the available meta data
         """    
-        #loop through all specified variables and import corresponding 
-        #files/data
         META_DATA_VARIABLES = self.meta.meta_data
-        
-        for VAR in META_DATA_VARIABLES:
-            #open file link
-            self.swath.open_swath(VAR)
-            
-            #retrieve content from group/variable
-            self.swath.load_variable(VAR)
-            
-            #close file handle
-            self.swath.close_swath()
+        self.swath.load_and_process_swath(META_DATA_VARIABLES)
             
     def save_swath(self) -> None:
         """
@@ -855,6 +844,7 @@ class RetrievalProcessor(object):
         grouping the data, and sending to grouped data to the ResampleHandler 
         class for resampling with the data to be stored in the data container
         """
+        import pdb; pdb.set_trace()
         #loop through all variables in the data and send it to the 
         #resample procedure
         VARIABLES_TO_PROCESS = self.meta.get_resample_variables()
@@ -969,29 +959,31 @@ class SwathHandler(ABC):
         return SWATH
     
     @abstractmethod
-    def open_swath(self, metavar: MetaDataVariable) -> None:
-        FILENAME = metavar.input_file
-        FILEPATH = os.path.join(self.ref.rawout, FILENAME)
+    def load_and_process_swath(self, metadata: MetaData) -> None:
+        pass
+    
+    def load_swath(self, swath_name: str) -> None:
+        FILEPATH = os.path.join(self.ref.rawout, swath_name)
         self.ref.io.open_input_swath(FILEPATH)
         
-    @abstractmethod
-    def load_variable(self, metavar: MetaDataVariable) -> None:
+    def get_variable(self, metavar: MetaDataVariable) -> SwathDataVariable:
         SPECS = metavar.input_parameter
         VARNAME = metavar.name
         #retrieve the actual variable data from the swath
         datavar = self.ref.io.get_variable(name=VARNAME, **SPECS)
-        import pdb; pdb.set_trace()
-        #check for available channel specs to be applied
-        CHSPECS_KEYS = self.ref.meta.get_chspecs_variables()
-        if var in CHSPECS_KEYS:
-            #retrieve corresponding channel specifications
-            CHSPECS = self.ref.meta.get_var_channel_specs(var)
-            #apply
-            DATA = self.ref.io.process_variable(**CHSPECS)
-        else:
-            DATA = self.ref.io.process_variable()
-        #store it to the data container using the same variable key handle
-        self.ref.data.add_to_data(var, DATA)
+        return datavar
+        # import pdb; pdb.set_trace()
+        # #check for available channel specs to be applied
+        # CHSPECS_KEYS = self.ref.meta.get_chspecs_variables()
+        # if var in CHSPECS_KEYS:
+        #     #retrieve corresponding channel specifications
+        #     CHSPECS = self.ref.meta.get_var_channel_specs(var)
+        #     #apply
+        #     DATA = self.ref.io.process_variable(**CHSPECS)
+        # else:
+        #     DATA = self.ref.io.process_variable()
+        # #store it to the data container using the same variable key handle
+        # self.ref.data.add_to_data(var, DATA)
      
     def close_swath(self) -> None:
         self.ref.io.close() 
@@ -1076,6 +1068,9 @@ class SlstrSwathHandler(SwathHandler):
     def get_swath_id(self, swath_only: bool) -> str:
         return super().get_swath_id(swath_only)
     
+    def load_and_process_swath(self, metadata: MetaData) -> None:
+        pass
+    
     def open_swath(self, var: str) -> None:
         FILENAME = self.ref.meta.get_var_input_specs(var)[0]
         UNZIPPATH = self.ref.zip.get_unzip_path()
@@ -1113,6 +1108,9 @@ class OlciSwathHandler(SwathHandler):
         
     def get_swath_id(self, swath_only: bool) -> str:
         return super().get_swath_id(swath_only)
+    
+    def load_and_process_swath(self, metadata: MetaData) -> None:
+        pass
     
     def open_swath(self, var: str) -> None:
         FILENAME = self.ref.meta.get_var_input_specs(var)[0]
@@ -1159,14 +1157,41 @@ class ModisSwathHandler(SwathHandler):
             return SWATHS
         return URLS
     
-    def open_swath(self, var: str) -> None:
-        #update meta info on variables for MODIS
+    def load_and_process_swath(self, metadata: MetaData) -> None:
+        loaded_data = []
+        #update meta variable on input files
         self._update_meta_info()
-        #call base class function
-        super().open_swath(var)
+        #keep track of currently loaded swath file
+        loaded_swath = None
+        #loop over all meta variables in meta data
+        for metavar in metadata:
+            current_swath = metavar.input_file
+            if current_swath != loaded_swath:
+                FILEPATH = os.path.join(self.ref.rawout, current_swath)
+                self.ref.io.open_input_swath(FILEPATH)
+            #get variables
+            INPUT_SPECS = metavar.input_parameter
+            VARNAME = metavar.name
+            DATATYPE = metavar.datatype
+            #retrieve the actual variable data from the swath
+            datavar = self.ref.io.get_variable(name = VARNAME,
+                                               datatype = DATATYPE,
+                                               **INPUT_SPECS)
+            #process it applying scale/offset etc
+            if metavar.process_parameter is not None:
+                datavar.process(metavar)
+            loaded_data.append(datavar)
+        #store data
+        self.ref.swathstack = SwathDataStack(loaded_data)
         
-    def load_variable(self, var: str) -> None:
-        super().load_variable(var)
+        
+        
+    def load_swath(self, swath_name: str) -> None:
+        #call base class function
+        super().load_swath(swath_name)
+        
+    def get_variable(self, var: str) -> None:
+        super().get_variable(var)
         
     def _update_meta_info(self) -> None:
         """
