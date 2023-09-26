@@ -34,6 +34,14 @@ class MetaDataVariable:#(ABC):
     def input_file(self):
         return self.input_parameter['file']
     
+    @property
+    def stack_index(self):
+        if 'index' in self.input_parameter.keys():
+            return self.input_parameter['index']
+        else: 
+            return None
+
+    
 @dataclass
 class MetaData:
     variables: List[MetaDataVariable]
@@ -44,6 +52,9 @@ class MetaData:
     def __iter__(self):
         return iter(self.variables)
     
+    def __getitem__(self, idx: int) -> MetaDataVariable:
+        return self.variables[idx]
+    
     @property
     def datatypes(self) -> List[str]:
         return [var.datatype for var in self.variables]
@@ -51,9 +62,7 @@ class MetaData:
     @property
     def size(self) -> int:
         return self.__len__()
-    
-    def var(self, idx: int) -> MetaDataVariable:
-        return self.variables[idx]
+
 
 
 # In[]
