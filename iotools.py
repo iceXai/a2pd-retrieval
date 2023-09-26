@@ -5,7 +5,7 @@
 
 
 # In[] 
-#from meta import MetaDataVariable
+from meta import MetaDataVariable
 
 from abc import ABC, abstractmethod
 from pyhdf.SD import SD, SDC
@@ -43,16 +43,89 @@ class ListingIO(object):
 """ Swath handling """
 # In[]
 @dataclass
-class SwathVariable(ABC):
+class SwathDataVariable(ABC):
     """ Dataclass to keep track of and process a loaded variable """
     name: str
+    datatype: str
     data: np.array
     
+    @abstractmethod
+    def process(self, metavar: MetaDataVariable) -> None:
+        pass
+    
 @dataclass
-class HDF4SwathVariable(SwathVariable):
+class HDF4SwathVariable(SwathDataVariable):
     attributes: dict
+    
+    def process(self, metavar: MetaDataVariable) -> None:
+        #limit data
+        FILL_VALUE = self.attributes['_FillValue'][0]
+        VALID_MIN = self.attributes['valid_range'][0][0]
+        VALID_MAX = self.attributes['valid_range'][0][1]
+        DATA = self.data        
+        #mask invalid entries
+        INVALID = np.logical_or(DATA > VALID_MAX, 
+                                DATA < VALID_MIN, 
+                                DATA == FILL_VALUE)
+        DATA[INVALID] = np.nan
+        #apply offset if available
+        PROCESS_SPECS = metavar.process_parameter
+        IDX = metavar.stack_index
+        if 'offset' in PROCESS_SPECS.keys():
+            OFFSET = self.attributes[PROCESS_SPECS['offset']][0]
+            DATA -= OFFSET[IDX]
+        #apply scale if available
+        if 'scale' in PROCESS_SPECS.keys() and IDX is None:
+            SCALE = self.attributes[PROCESS_SPECS['scale']][0]
+            DATA *= SCALE
+        if 'scale' in PROCESS_SPECS.keys() and IDX is not None:
+            SCALE = self.attributes[PROCESS_SPECS['scale']][0]
+            DATA *= SCALE[IDX]
+        #compute brightness temperature where applicable
+        if 'wavelength' in PROCESS_SPECS.keys():
+            #mask values below 0 that sometimes appear
+            non_nan = ~np.isnan(DATA)
+            non_nan[non_nan] = np.less(DATA[non_nan],0)
+            DATA[non_nan] = np.nan
+            DATA = self._calculate_Tb(DATA, PROCESS_SPECS['wavelength'])
+        #override it
+        self.data = DATA
+        
+    def _calculate_Tb(self, var, wavelength):
+        #define constants
+        H_PLANCK = 6.62607004 * 10**-34  #[Js]
+        C_SOL    = 2.99792458 * 10**8  #[m/s]
+        K_BOLTZ  = 1.38064852 * 10**-23  #[J/K]
+        
+        #calculate and return brightness temperature
+        Tb = H_PLANCK * C_SOL / (K_BOLTZ * wavelength * 
+             np.log((2.0 * H_PLANCK * C_SOL**2 * wavelength**(-5)) / 
+                    (var * 10**6) + 1.0))
+        return Tb
 
     
+@dataclass
+class SwathDataStack:
+    variables: List[SwathDataVariable]
+    
+    def __len__(self) -> int:
+        return len(self.variables)
+    
+    def __iter__(self):
+        return iter(self.variables)
+    
+    def __getitem__(self, idx: int) -> SwathDataVariable:
+        return self.variables[idx]
+    
+    @property
+    def datatypes(self) -> List[str]:
+        return [var.datatype for var in self.variables]
+    
+    @property
+    def size(self) -> int:
+        return self.__len__()
+
+
 
 class SwathInput(ABC):
     """ Parentclass for all input-related swath operations """
@@ -72,42 +145,19 @@ class SwathInput(ABC):
         pass
     
     @abstractmethod
-    def get_var(self, var: str, grp: str, chspecs: list) -> np.array:
+    def get_var(self, **kwargs) -> SwathDataVariable:
         """
         Parameters
         ----------
-        var : str
-            Variable name within the data set taken from the variables to 
-            process dictionary provided within the sensor-specific meta data
-        grp : str
-            Group name within the data set taken from the variables to 
-            process dictionary provided within the sensor-specific meta data
-        chspecs : list
-            List entry with channel specifications from the sensor-specific 
-            meta file
+        **kwargs : dict
+            key-word arguments from the MetaDataVariable dataclass's 
+            input_parameter field
 
         Returns
         -------
-        np.array
-            Returns numpy array with corresponding data
-        """
-        pass
-    
-    @abstractmethod
-    def process_var(self, ds: np.array, chspecs: list) -> np.array:
-        """
-        Parameters
-        ----------
-        ds : np.array
-            Dataset to be processed; output of the get_var() function
-        chspecs : list
-            List entry with channel specifications from the sensor-specific 
-            meta file
-            
-        Returns
-        -------
-        np.array
-            Returns numpy array with corresponding data
+        SwathDataVariable
+            Returns a SwathDataVariable dataclass or it child with the 
+            corresponding data
         """
         pass
     
@@ -189,7 +239,7 @@ class HDF4SwathInput(SwathInput):
     def load(self, path: str) -> None:
         self.fh = SD(path,SDC.READ)
     
-    def get_var(self, **kwargs) -> SwathVariable:
+    def get_var(self, **kwargs) -> HDF4SwathVariable:
         VAR = kwargs['variable']
         #select scientific data set (sds) and corresponding attributes
         sds = self.fh.select(VAR)
@@ -202,13 +252,11 @@ class HDF4SwathInput(SwathInput):
             data = sds[:,:].astype(np.float32)
         #initialize swath variable data class
         DATA = {'name': kwargs['name'],
+                'datatype': kwargs['datatype'],
                 'data': data,
                 'attributes': attributes,
                 }
         return HDF4SwathVariable(**DATA)
-    
-    def process_var(self, var: str, chspecs: list) -> np.array:
-        pass
     
     def close(self):
         pass
@@ -242,11 +290,11 @@ class SwathIO(object):
     def open_input_swath(self, path: str) -> None:
         self.swath_in.load(path)
         
-    def get_variable(self, **kwargs: dict) -> SwathVariable:
+    def get_variable(self, **kwargs: dict) -> SwathDataVariable:
         return self.swath_in.get_var(**kwargs)
         
-    def process_variable(self, **kwargs: dict) -> np.array:
-        self.swath_in.process_var(**kwargs)
+    def close_input_swath(self) -> None:
+        self.swath_in.close()
         
         
     # """
