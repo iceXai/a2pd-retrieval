@@ -793,7 +793,7 @@ class RetrievalProcessor(object):
         """
         API function to handle the swath loading using the available meta data
         """    
-        META_DATA_VARIABLES = self.meta.meta_data
+        META_DATA_VARIABLES = self.meta.data
         self.swath.load_and_process_swath(META_DATA_VARIABLES)
             
     def save_swath(self) -> None:
@@ -844,27 +844,30 @@ class RetrievalProcessor(object):
         grouping the data, and sending to grouped data to the ResampleHandler 
         class for resampling with the data to be stored in the data container
         """
-        import pdb; pdb.set_trace()
-        #loop through all variables in the data and send it to the 
-        #resample procedure
-        VARIABLES_TO_PROCESS = self.meta.get_resample_variables()
+        #retrieve meta variables (a.k.a. the non geolocation ones)
+        #and the swath data variables to be resampled
+        META_VARIABLES = self.meta.data
+        DATA_VARIABLES = self.swathstack
+        self.swath.group_and_resample_swath(META_VARIABLES, DATA_VARIABLES)
+        
+        # for VAR in RESAMPLE_META_VARIABLES: 
+        #     #get resample information from meta data
+        #     import pdb; pdb.set_trace()
 
-        for VAR in VARIABLES_TO_PROCESS: 
-            #get resample information from meta data
-            LON, LAT = self.meta.get_var_grid_specs(VAR)
-            #regroup/shuffle the data by their used lon/lat information
-            self.resampling.add_data_to_group(VAR, LON, LAT)
+        #     LON, LAT = self.meta.get_var_grid_specs(VAR)
+        #     #regroup/shuffle the data by their used lon/lat information
+        #     self.resampling.add_data_to_group(VAR, LON, LAT)
 
-        #stack the groups if necessary
-        self.resampling.add_groups_to_resample_stack()
-        #resample the data
-        for aoi in self.overlapping_aois:
-            #status
-            logger.info(f'Resampling to grid: {aoi}')
-            self.resampling.resample(aoi)
-        #add to data container
-        RESAMPLED_DATA = self.resampling.get_resampled_data()
-        self.data.add_to_resampled_data(RESAMPLED_DATA)
+        # #stack the groups if necessary
+        # self.resampling.add_groups_to_resample_stack()
+        # #resample the data
+        # for aoi in self.overlapping_aois:
+        #     #status
+        #     logger.info(f'Resampling to grid: {aoi}')
+        #     self.resampling.resample(aoi)
+        # #add to data container
+        # RESAMPLED_DATA = self.resampling.get_resampled_data()
+        # self.data.add_to_resampled_data(RESAMPLED_DATA)
         
 
 
@@ -987,6 +990,13 @@ class SwathHandler(ABC):
      
     def close_swath(self) -> None:
         self.ref.io.close() 
+        
+    @abstractmethod
+    def group_and_resample_swath(self, metavar, datavar) -> None:
+        pass
+        
+        
+    #####
         
     def create_swath(self, aoi: str = None) -> None:
         FILENAME = self._compile_output_swath_name(aoi)
@@ -1157,19 +1167,20 @@ class ModisSwathHandler(SwathHandler):
             return SWATHS
         return URLS
     
-    def load_and_process_swath(self, metadata: MetaData) -> None:
+    def load_and_process_swath(self, metastack: MetaStack) -> None:
         loaded_data = []
         #update meta variable on input files
         self._update_meta_info()
         #keep track of currently loaded swath file
         loaded_swath = None
         #loop over all meta variables in meta data
-        for metavar in metadata:
+        for metavar in metastack:
             current_swath = metavar.input_file
             if current_swath != loaded_swath:
+                ###open_swath()
                 FILEPATH = os.path.join(self.ref.rawout, current_swath)
                 self.ref.io.open_input_swath(FILEPATH)
-            #get variables
+            ###get_variable()
             INPUT_SPECS = metavar.input_parameter
             VARNAME = metavar.name
             DATATYPE = metavar.datatype
@@ -1182,16 +1193,16 @@ class ModisSwathHandler(SwathHandler):
                 datavar.process(metavar)
             loaded_data.append(datavar)
         #store data
-        self.ref.swathstack = SwathDataStack(loaded_data)
+        self.ref.swathstack = DataStack(loaded_data)
         
         
         
-    def load_swath(self, swath_name: str) -> None:
-        #call base class function
-        super().load_swath(swath_name)
+    # def load_swath(self, swath_name: str) -> None:
+    #     #call base class function
+    #     super().load_swath(swath_name)
         
-    def get_variable(self, var: str) -> None:
-        super().get_variable(var)
+    # def get_variable(self, var: str) -> None:
+    #     super().get_variable(var)
         
     def _update_meta_info(self) -> None:
         """
@@ -1237,6 +1248,11 @@ class ModisSwathHandler(SwathHandler):
         LISTING = self.ref.raw_listing
         AOI_LIST = LISTING['aoi'].loc[LISTING['mxd03']==SWATH].tolist()
         self.ref.overlapping_aois = AOI_LIST
+        
+    def group_and_resample_swath(self, metastack, datastack) -> None:
+        list_of_datatypes = np.unique(metastack.datatypes)
+        
+        import pdb; pdb.set_trace()
     
 
 """ Retrieval procedure """
