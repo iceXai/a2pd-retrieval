@@ -5,6 +5,8 @@
 
 
 # In[] 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from dataclasses import asdict
@@ -21,8 +23,12 @@ Meta Data Classes/Container
 """
 
 @dataclass
-class MetaDataVariable:#(ABC):
-    """ Meta variable base class containing variable name and datatype """
+class MetaVariable:
+    """ 
+    Meta variable class containing variable name, datatype, and all 
+    other relevant meta data needed for the input/output and processing 
+    of the data
+    """
     name: str
     datatype: str
     input_parameter: dict
@@ -43,8 +49,9 @@ class MetaDataVariable:#(ABC):
 
     
 @dataclass
-class MetaData:
-    variables: List[MetaDataVariable]
+class MetaStack:
+    """ Container class to store and handle individual meta variables """
+    variables: List[MetaVariable]
     
     def __len__(self) -> int:
         return len(self.variables)
@@ -52,7 +59,7 @@ class MetaData:
     def __iter__(self):
         return iter(self.variables)
     
-    def __getitem__(self, idx: int) -> MetaDataVariable:
+    def __getitem__(self, idx: int) -> MetaVariable:
         return self.variables[idx]
     
     @property
@@ -62,6 +69,15 @@ class MetaData:
     @property
     def size(self) -> int:
         return self.__len__()
+    
+    def subset_by_datatype(self, datatype: str) -> MetaStack:
+        datatypes = self.datatypes
+        if datatype in datatypes:
+            idx = [idx for idx, dt in enumerate(datatypes) if dt == datatype]
+            subset_vars = [self.variables[i] for i in idx]
+            return MetaData(subset_vars)
+        else:
+            return None
 
 
 
@@ -89,9 +105,9 @@ class Meta(ABC):
         for var in self.meta['variables'].keys():
             var_meta = self.meta['variables'][var]
             # data = self._assign_variable_dataclass(var, var_meta)
-            data = MetaDataVariable(var,**var_meta)
+            data = MetaVariable(var,**var_meta)
             variables.append(data)
-        self.metadata = MetaData(variables)
+        self.metadata = MetaStack(variables)
 
     # def _assign_variable_dataclass(self, var: str, var_meta: dict):
     #     datatype = var_meta['datatype'].lower()
@@ -121,21 +137,22 @@ class Meta(ABC):
         return [idx for idx, dt in enumerate(datatypes)]
     
     @property
-    def meta_data(self) -> MetaData:
+    def data(self) -> MetaData:
         return self.metadata
     
-    @property
-    def geo_meta_data(self) -> MetaData:
-        datatypes = self.metadata.datatypes
-        idx = [idx for idx, dt in enumerate(datatypes) if dt == 'geo']
-        import pdb; pdb.set_trace()
-        
-        
-    @property
-    def non_geo_meta_data(self) -> MetaData:
-        datatypes = self.metadata.datatypes
-        idx = [idx for idx, dt in enumerate(datatypes) if dt != 'geo']
-        import pdb; pdb.set_trace()
+    # @property
+    # def geo_meta_data(self) -> MetaStack:
+    #     datatypes = self.metadata.datatypes
+    #     idx = [idx for idx, dt in enumerate(datatypes) if dt == 'geo']
+    #     geo_vars = [self.metadata[i] for i in idx]
+    #     return MetaData(geo_vars)
+          
+    # @property
+    # def non_geo_meta_data(self) -> MetaStack:
+    #     datatypes = self.metadata.datatypes
+    #     idx = [idx for idx, dt in enumerate(datatypes) if dt != 'geo']
+    #     non_geo_vars = [self.metadata[i] for i in idx]
+    #     return MetaData(non_geo_vars)
         
     #[...]
     
