@@ -43,18 +43,34 @@ class ListingIO(object):
 """ Swath handling """
 # In[]
 @dataclass
-class SwathDataVariable(ABC):
-    """ Dataclass to keep track of and process a loaded variable """
+class DataVariable(ABC):
     name: str
     datatype: str
+
+@dataclass
+class SwathVariable(DataVariable):
+    """ Databaseclass to keep track of and process a loaded variable """
     data: np.array
+    
+    @property
+    def shape(self) -> tuple:
+        return self.data.shape
     
     @abstractmethod
     def process(self, metavar: MetaDataVariable) -> None:
         pass
-    
+
 @dataclass
-class HDF4SwathVariable(SwathDataVariable):
+class ResampledSwathVariable(DataVariable):
+    aoi: Dict[str, np.array]
+    
+    @property
+    def shape(self) -> tuple:
+        return self.data.shape
+
+
+@dataclass
+class HDF4SwathVariable(SwathVariable):
     attributes: dict
     
     def process(self, metavar: MetaDataVariable) -> None:
@@ -105,8 +121,9 @@ class HDF4SwathVariable(SwathDataVariable):
 
     
 @dataclass
-class SwathDataStack:
-    variables: List[SwathDataVariable]
+class DataStack:
+    """ Container class to store and handle individual data variables """
+    variables: List[DataVariable]
     
     def __len__(self) -> int:
         return len(self.variables)
@@ -114,8 +131,15 @@ class SwathDataStack:
     def __iter__(self):
         return iter(self.variables)
     
-    def __getitem__(self, idx: int) -> SwathDataVariable:
-        return self.variables[idx]
+    def __getitem__(self, item: str) -> SwathDataVariable:
+        if item in self.names:
+            return [var for var in self.variables if item == var.name][0]
+        else:
+            return None
+    
+    @property
+    def names(self) -> List[str]:
+        return [var.name for var in self.variables]
     
     @property
     def datatypes(self) -> List[str]:
