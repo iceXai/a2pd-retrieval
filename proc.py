@@ -12,10 +12,10 @@ from iotools import ListingIO
 from data import ListingData
 from data import SwathData
 from resampling import ResampleHandler
-from meta import MetaDataVariable
-from meta import MetaData
-from iotools import SwathDataVariable
-from iotools import SwathDataStack
+from meta import MetaVariable
+from meta import MetaStack
+from iotools import DataVariable
+from iotools import DataStack
 
 import pandas as pd
 import numpy as np
@@ -793,8 +793,8 @@ class RetrievalProcessor(object):
         """
         API function to handle the swath loading using the available meta data
         """    
-        META_DATA_VARIABLES = self.meta.data
-        self.swath.load_and_process_swath(META_DATA_VARIABLES)
+        META_STACK = self.meta.data
+        self.swath.load_and_process_swath(META_STACK)
             
     def save_swath(self) -> None:
         """
@@ -846,9 +846,9 @@ class RetrievalProcessor(object):
         """
         #retrieve meta variables (a.k.a. the non geolocation ones)
         #and the swath data variables to be resampled
-        META_VARIABLES = self.meta.data
-        DATA_VARIABLES = self.swathstack
-        self.swath.group_and_resample_swath(META_VARIABLES, DATA_VARIABLES)
+        META_STACK = self.meta.data
+        DATA_STACK = self.swathstack
+        self.swath.group_and_resample_swath(META_STACK, DATA_STACK)
         
         # for VAR in RESAMPLE_META_VARIABLES: 
         #     #get resample information from meta data
@@ -962,14 +962,14 @@ class SwathHandler(ABC):
         return SWATH
     
     @abstractmethod
-    def load_and_process_swath(self, metadata: MetaData) -> None:
+    def load_and_process_swath(self, metadata: MetaStack) -> None:
         pass
     
     def load_swath(self, swath_name: str) -> None:
         FILEPATH = os.path.join(self.ref.rawout, swath_name)
         self.ref.io.open_input_swath(FILEPATH)
         
-    def get_variable(self, metavar: MetaDataVariable) -> SwathDataVariable:
+    def get_variable(self, metavar: MetaVariable) -> DataVariable:
         SPECS = metavar.input_parameter
         VARNAME = metavar.name
         #retrieve the actual variable data from the swath
@@ -992,7 +992,9 @@ class SwathHandler(ABC):
         self.ref.io.close() 
         
     @abstractmethod
-    def group_and_resample_swath(self, metavar, datavar) -> None:
+    def group_and_resample_swath(self, 
+                                 metastack: MetaStack, 
+                                 datastack: DataStack) -> None:
         pass
         
         
@@ -1078,7 +1080,7 @@ class SlstrSwathHandler(SwathHandler):
     def get_swath_id(self, swath_only: bool) -> str:
         return super().get_swath_id(swath_only)
     
-    def load_and_process_swath(self, metadata: MetaData) -> None:
+    def load_and_process_swath(self, metadata: MetaStack) -> None:
         pass
     
     def open_swath(self, var: str) -> None:
@@ -1119,7 +1121,7 @@ class OlciSwathHandler(SwathHandler):
     def get_swath_id(self, swath_only: bool) -> str:
         return super().get_swath_id(swath_only)
     
-    def load_and_process_swath(self, metadata: MetaData) -> None:
+    def load_and_process_swath(self, metadata: MetaStack) -> None:
         pass
     
     def open_swath(self, var: str) -> None:
@@ -1249,7 +1251,9 @@ class ModisSwathHandler(SwathHandler):
         AOI_LIST = LISTING['aoi'].loc[LISTING['mxd03']==SWATH].tolist()
         self.ref.overlapping_aois = AOI_LIST
         
-    def group_and_resample_swath(self, metastack, datastack) -> None:
+    def group_and_resample_swath(self, 
+                                 metastack: MetaStack, 
+                                 datastack: DataStack) -> None:
         list_of_datatypes = np.unique(metastack.datatypes)
         
         import pdb; pdb.set_trace()

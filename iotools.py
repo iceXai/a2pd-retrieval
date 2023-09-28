@@ -5,7 +5,7 @@
 
 
 # In[] 
-from meta import MetaDataVariable
+from meta import MetaVariable
 
 from abc import ABC, abstractmethod
 from pyhdf.SD import SD, SDC
@@ -43,12 +43,12 @@ class ListingIO(object):
 """ Swath handling """
 # In[]
 @dataclass
-class DataVariable(ABC):
+class SwathVariable(ABC):
     name: str
     datatype: str
 
 @dataclass
-class SwathVariable(DataVariable):
+class DataVariable(SwathVariable):
     """ Databaseclass to keep track of and process a loaded variable """
     data: np.array
     
@@ -57,11 +57,11 @@ class SwathVariable(DataVariable):
         return self.data.shape
     
     @abstractmethod
-    def process(self, metavar: MetaDataVariable) -> None:
+    def process(self, metavar: MetaVariable) -> None:
         pass
 
 @dataclass
-class ResampledSwathVariable(DataVariable):
+class ResampledVariable(SwathVariable):
     aoi: Dict[str, np.array]
     
     @property
@@ -70,10 +70,10 @@ class ResampledSwathVariable(DataVariable):
 
 
 @dataclass
-class HDF4SwathVariable(SwathVariable):
+class HDF4DataVariable(DataVariable):
     attributes: dict
     
-    def process(self, metavar: MetaDataVariable) -> None:
+    def process(self, metavar: MetaVariable) -> None:
         #limit data
         FILL_VALUE = self.attributes['_FillValue'][0]
         VALID_MIN = self.attributes['valid_range'][0][0]
@@ -122,8 +122,8 @@ class HDF4SwathVariable(SwathVariable):
     
 @dataclass
 class DataStack:
-    """ Container class to store and handle individual data variables """
-    variables: List[DataVariable]
+    """ Container class to store and handle individual swath variables """
+    variables: List[SwathVariable]
     
     def __len__(self) -> int:
         return len(self.variables)
@@ -131,7 +131,7 @@ class DataStack:
     def __iter__(self):
         return iter(self.variables)
     
-    def __getitem__(self, item: str) -> SwathDataVariable:
+    def __getitem__(self, item: str) -> SwathVariable:
         if item in self.names:
             return [var for var in self.variables if item == var.name][0]
         else:
@@ -169,7 +169,7 @@ class SwathInput(ABC):
         pass
     
     @abstractmethod
-    def get_var(self, **kwargs) -> SwathDataVariable:
+    def get_var(self, **kwargs) -> SwathVariable:
         """
         Parameters
         ----------
@@ -263,7 +263,7 @@ class HDF4SwathInput(SwathInput):
     def load(self, path: str) -> None:
         self.fh = SD(path,SDC.READ)
     
-    def get_var(self, **kwargs) -> HDF4SwathVariable:
+    def get_var(self, **kwargs) -> HDF4DataVariable:
         VAR = kwargs['variable']
         #select scientific data set (sds) and corresponding attributes
         sds = self.fh.select(VAR)
@@ -280,7 +280,7 @@ class HDF4SwathInput(SwathInput):
                 'data': data,
                 'attributes': attributes,
                 }
-        return HDF4SwathVariable(**DATA)
+        return HDF4DataVariable(**DATA)
     
     def close(self):
         pass
@@ -314,7 +314,7 @@ class SwathIO(object):
     def open_input_swath(self, path: str) -> None:
         self.swath_in.load(path)
         
-    def get_variable(self, **kwargs: dict) -> SwathDataVariable:
+    def get_variable(self, **kwargs: dict) -> SwathVariable:
         return self.swath_in.get_var(**kwargs)
         
     def close_input_swath(self) -> None:
