@@ -16,6 +16,8 @@ from meta import MetaVariable
 from meta import MetaStack
 from iotools import DataVariable
 from iotools import DataStack
+from iotools import ResampledVariable
+from iotools import ResampleStack
 
 import pandas as pd
 import numpy as np
@@ -848,7 +850,7 @@ class RetrievalProcessor(object):
         #and the swath data variables to be resampled
         META_STACK = self.meta.data
         DATA_STACK = self.swathstack
-        self.swath.group_and_resample_swath(META_STACK, DATA_STACK)
+        self.swath.resample_swath(META_STACK, DATA_STACK)
         
         # for VAR in RESAMPLE_META_VARIABLES: 
         #     #get resample information from meta data
@@ -991,15 +993,8 @@ class SwathHandler(ABC):
     def close_swath(self) -> None:
         self.ref.io.close() 
         
-    @abstractmethod
-    def group_and_resample_swath(self, 
-                                 metastack: MetaStack, 
-                                 datastack: DataStack) -> None:
-        pass
-        
-        
-    #####
-        
+####
+
     def create_swath(self, aoi: str = None) -> None:
         FILENAME = self._compile_output_swath_name(aoi)
         FILEPATH = os.path.join(self.ref.out, FILENAME)
@@ -1071,6 +1066,13 @@ class SwathHandler(ABC):
         LISTING = self.ref.raw_listing
         AOI_LIST = LISTING['aoi'].loc[LISTING['file']==SWATH].tolist()
         self.ref.overlapping_aois = AOI_LIST
+        
+    @abstractmethod
+    def resample_swath(self,
+                       metastack: MetaStack, 
+                       datastack: DataStack) -> None:
+        pass
+        
         
 
 class SlstrSwathHandler(SwathHandler):
@@ -1251,12 +1253,44 @@ class ModisSwathHandler(SwathHandler):
         AOI_LIST = LISTING['aoi'].loc[LISTING['mxd03']==SWATH].tolist()
         self.ref.overlapping_aois = AOI_LIST
         
-    def group_and_resample_swath(self, 
-                                 metastack: MetaStack, 
-                                 datastack: DataStack) -> None:
+    def resample_swath(self,
+                       metastack: MetaStack, 
+                       datastack: DataStack) -> None:
+        #get data types and subset
         list_of_datatypes = np.unique(metastack.datatypes)
+        non_geo_datatypes = list_of_datatypes[list_of_datatypes != 'geo']
         
+        #get all available grids
+        AOIS = self.ref.aoi.get_aois()
+        #keep track of resampled variables
+        resampled_variables = []
+            
+        for AOI in AOIS:
+            #retrieve aoi grid to resample to
+            aoi_grid = self.ref.aoi.get_aoi(AOI).get_grid()    
+        
+            #return reference-grid latitude/longitude
+            ref_grid_lon, ref_grid_lat = aoi_grid.get_lonlats()
+            lon = ResampledVariable('lon', 'resampled', AOI, ref_grid_lon)
+            lat = ResampledVariable('lat', 'resampled', AOI, ref_grid_lat)
+            resampled_variables.extend([lon, lat])
+            
+            for datatype in non_geo_datatypes:
+                #subset by data type    
+                metagrp = metastack.subset_by_datatype(datatype)
+                lon = datastack[metagrp[0].grid_parameter['longitude']]
+                lat = datastack[metagrp[0].grid_parameter['latitude']]
+                datagrp = datastack.subset_by_datatype(datatype)
+                
+                #transfer to ResampleStack
+                stack = ResampleStack(datagrp.variables, lon, lat, aoi_grid)
+                stack.resample()
+                
+                #export and store itfrom ResampleStack into a normal DataStack
+                resampled_variables.extend(stack.export())
         import pdb; pdb.set_trace()
+        #store it
+        self.ref.resamplestack = DataStack(resampled_variables)
     
 
 """ Retrieval procedure """
