@@ -214,5 +214,5 @@ class AoiData(object):
     def get_aois(self) -> list:
         return self.aoi_dict.keys()
     
-    def get_aoi(self, aoi: str) -> object:
+    def get_aoi(self, aoi: str) -> AoiGrid:
         return self.aoi_dict[aoi]
