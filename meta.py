@@ -70,12 +70,16 @@ class MetaStack:
     def size(self) -> int:
         return self.__len__()
     
+    @property
+    def names(self) -> list:
+        return [var.name for var in self.variables]
+    
     def subset_by_datatype(self, datatype: str) -> MetaStack:
         datatypes = self.datatypes
         if datatype in datatypes:
             idx = [idx for idx, dt in enumerate(datatypes) if dt == datatype]
             subset_vars = [self.variables[i] for i in idx]
-            return MetaData(subset_vars)
+            return MetaStack(subset_vars)
         else:
             return None
 
