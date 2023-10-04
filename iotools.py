@@ -4,8 +4,18 @@
 """
 
 
-# In[] 
+# In[]
+from __future__ import annotations
+
 from meta import MetaVariable
+
+##
+from aoi import AoiGrid
+from pyresample.kd_tree import get_neighbour_info
+from pyresample.kd_tree import get_sample_from_neighbour_info
+import pyresample as pr
+##
+
 
 from abc import ABC, abstractmethod
 from pyhdf.SD import SD, SDC
@@ -19,7 +29,6 @@ import os
 
 import netCDF4 as nc
 import numpy as np
-import pyresample as pr
 import pandas as pd
 
 
@@ -62,7 +71,9 @@ class DataVariable(SwathVariable):
 
 @dataclass
 class ResampledVariable(SwathVariable):
-    aoi: Dict[str, np.array]
+    """ Databaseclass to keep track of a resampled variable """
+    aoi: str
+    data: np.array
     
     @property
     def shape(self) -> tuple:
@@ -148,8 +159,93 @@ class DataStack:
     @property
     def size(self) -> int:
         return self.__len__()
+    
+    def subset_by_datatype(self, datatype: str) -> DataStack:
+        datatypes = self.datatypes
+        if datatype in datatypes:
+            idx = [idx for idx, dt in enumerate(datatypes) if dt == datatype]
+            subset_vars = [self.variables[i] for i in idx]
+            return DataStack(subset_vars)
+        else:
+            return None
+        
+@dataclass
+class ResampleStack:
+    """ 
+    Container class to take on a DataStack group and resample it; turning 
+    all DataVariable's into ResampledVariable's
+    """
+    variables: List[DataVariable]
+    lon: DataVariable
+    lat: DataVariable
+    aoi: AoiGrid
+    
+    def __len__(self) -> int:
+        return len(self.variables)
+    
+    def __iter__(self):
+        return iter(self.variables)
+    
+    def __getitem__(self, item: str) -> SwathVariable:
+        if item in self.names:
+            return [var for var in self.variables if item == var.name][0]
+        else:
+            return None
+    
+    @property
+    def names(self) -> List[str]:
+        return [var.name for var in self.variables]
+    
+    @property
+    def datatypes(self) -> List[str]:
+        return [var.datatype for var in self.variables]
+    
+    @property
+    def size(self) -> int:
+        return self.__len__()
+    
+    @property
+    def datastack(self) -> np.array:
+        stack = [var.data for var in self.variables]
+        return np.stack(stack,axis=2)
+    
+    def resample(self):
+        #stack available data
+        STACK = self.datastack
+        #set-up swath definition
+        LON = self.lon.data
+        LAT = self.lat.data
+        SWATH_DEF = pr.geometry.SwathDefinition(lons = LON, lats = LAT)
+        #resample using kd tree
+        AOI_GRID = self.aoi
+        self.stack = self._kd_tree_resample(SWATH_DEF, AOI_GRID, STACK)
+        
+    def export(self) -> List[ResampledVariable]:
+        NAMES = self.names
+        AOI_ID = self.aoi.area_id
+        DATATYPE = 'resampled'
+        STACK = self.stack
+        return [ResampledVariable(name, DATATYPE, AOI_ID, STACK[idx]) 
+                for idx,name in enumerate(NAMES)]
+    
+    def _kd_tree_neighbours(self, swath_def, aoi_grid) -> tuple:
+        in_idx, out_idx, idx, _ = get_neighbour_info(swath_def,
+                                                     aoi_grid,
+                                                     radius_of_influence=5000,
+                                                     neighbours=1)
+        return in_idx, out_idx, idx
+    
+    def _kd_tree_resample(self, swath_def, aoi_grid, stack) -> np.array:
+        in_idx, out_idx, idx = self._kd_tree_neighbours(swath_def, aoi_grid)
+        
+        grid_shape = aoi_grid.shape
+        
+        rs = get_sample_from_neighbour_info('nn', grid_shape, stack, 
+                                            in_idx, out_idx, idx)
+        
+        return np.transpose(rs, (2,0,1))
 
-
+        
 
 class SwathInput(ABC):
     """ Parentclass for all input-related swath operations """
