@@ -794,7 +794,8 @@ class RetrievalProcessor(object):
     def load_swath(self) -> None:
         """
         API function to handle the swath loading using the available meta data
-        """    
+        """
+        #get meta data and send it to the swath handler
         META_STACK = self.meta.data
         self.swath.load_and_process_swath(META_STACK)
             
@@ -804,6 +805,19 @@ class RetrievalProcessor(object):
         between resampling and non-resampling mode and putting variable by 
         variable into the new file using the respective SwathHandler class
         """
+        #get meta data
+        META_STACK = self.meta.data
+        #decide on resampling or not
+        RESAMPLING_APPLIED = self.cfg.apply_resampling
+        if RESAMPLING_APPLIED:
+            DATA_STACK = self.resamplestack
+        else:
+            DATA_STACK = self.swathstack
+        #send it to the swath hnadler
+        self.swath.save_swath(META_STACK, DATA_STACK)
+        
+        
+        
         #creating the h5 output file with base global attributes 
         VARIABLES_TO_PROCESS = self.meta.get_output_variables()
         
@@ -851,25 +865,6 @@ class RetrievalProcessor(object):
         META_STACK = self.meta.data
         DATA_STACK = self.swathstack
         self.swath.resample_swath(META_STACK, DATA_STACK)
-        
-        # for VAR in RESAMPLE_META_VARIABLES: 
-        #     #get resample information from meta data
-        #     import pdb; pdb.set_trace()
-
-        #     LON, LAT = self.meta.get_var_grid_specs(VAR)
-        #     #regroup/shuffle the data by their used lon/lat information
-        #     self.resampling.add_data_to_group(VAR, LON, LAT)
-
-        # #stack the groups if necessary
-        # self.resampling.add_groups_to_resample_stack()
-        # #resample the data
-        # for aoi in self.overlapping_aois:
-        #     #status
-        #     logger.info(f'Resampling to grid: {aoi}')
-        #     self.resampling.resample(aoi)
-        # #add to data container
-        # RESAMPLED_DATA = self.resampling.get_resampled_data()
-        # self.data.add_to_resampled_data(RESAMPLED_DATA)
         
 
 
@@ -964,37 +959,40 @@ class SwathHandler(ABC):
         return SWATH
     
     @abstractmethod
-    def load_and_process_swath(self, metadata: MetaStack) -> None:
+    def load_and_process_swath(self, metastack: MetaStack) -> None:
         pass
     
-    def load_swath(self, swath_name: str) -> None:
-        FILEPATH = os.path.join(self.ref.rawout, swath_name)
-        self.ref.io.open_input_swath(FILEPATH)
+    # def load_swath(self, swath_name: str) -> None:
+    #     FILEPATH = os.path.join(self.ref.rawout, swath_name)
+    #     self.ref.io.open_input_swath(FILEPATH)
         
-    def get_variable(self, metavar: MetaVariable) -> DataVariable:
-        SPECS = metavar.input_parameter
-        VARNAME = metavar.name
-        #retrieve the actual variable data from the swath
-        datavar = self.ref.io.get_variable(name=VARNAME, **SPECS)
-        return datavar
-        # import pdb; pdb.set_trace()
-        # #check for available channel specs to be applied
-        # CHSPECS_KEYS = self.ref.meta.get_chspecs_variables()
-        # if var in CHSPECS_KEYS:
-        #     #retrieve corresponding channel specifications
-        #     CHSPECS = self.ref.meta.get_var_channel_specs(var)
-        #     #apply
-        #     DATA = self.ref.io.process_variable(**CHSPECS)
-        # else:
-        #     DATA = self.ref.io.process_variable()
-        # #store it to the data container using the same variable key handle
-        # self.ref.data.add_to_data(var, DATA)
+    # def get_variable(self, metavar: MetaVariable) -> DataVariable:
+    #     SPECS = metavar.input_parameter
+    #     VARNAME = metavar.name
+    #     #retrieve the actual variable data from the swath
+    #     datavar = self.ref.io.get_variable(name=VARNAME, **SPECS)
+    #     return datavar
+    #     # import pdb; pdb.set_trace()
+    #     # #check for available channel specs to be applied
+    #     # CHSPECS_KEYS = self.ref.meta.get_chspecs_variables()
+    #     # if var in CHSPECS_KEYS:
+    #     #     #retrieve corresponding channel specifications
+    #     #     CHSPECS = self.ref.meta.get_var_channel_specs(var)
+    #     #     #apply
+    #     #     DATA = self.ref.io.process_variable(**CHSPECS)
+    #     # else:
+    #     #     DATA = self.ref.io.process_variable()
+    #     # #store it to the data container using the same variable key handle
+    #     # self.ref.data.add_to_data(var, DATA)
      
-    def close_swath(self) -> None:
-        self.ref.io.close() 
-        
-####
+    # def close_swath(self) -> None:
+    #     self.ref.io.close() 
 
+    @abstractmethod
+    def save_swath(self, metastack: MetaStack, datastack: DataStack) -> None:
+        pass
+
+###
     def create_swath(self, aoi: str = None) -> None:
         FILENAME = self._compile_output_swath_name(aoi)
         FILEPATH = os.path.join(self.ref.out, FILENAME)
@@ -1067,11 +1065,43 @@ class SwathHandler(ABC):
         AOI_LIST = LISTING['aoi'].loc[LISTING['file']==SWATH].tolist()
         self.ref.overlapping_aois = AOI_LIST
         
-    @abstractmethod
     def resample_swath(self,
                        metastack: MetaStack, 
                        datastack: DataStack) -> None:
-        pass
+        #get data types and subset
+        list_of_datatypes = np.unique(metastack.datatypes)
+        non_geo_datatypes = list_of_datatypes[list_of_datatypes != 'geo']
+        
+        #get all available grids
+        AOIS = self.ref.aoi.get_aois()
+        #keep track of resampled variables
+        resampled_variables = []
+            
+        for AOI in AOIS:
+            #retrieve aoi grid to resample to
+            aoi_grid = self.ref.aoi.get_aoi(AOI).get_grid()    
+        
+            #return reference-grid latitude/longitude
+            ref_grid_lon, ref_grid_lat = aoi_grid.get_lonlats()
+            lon = ResampledVariable('lon', 'resampled', AOI, ref_grid_lon)
+            lat = ResampledVariable('lat', 'resampled', AOI, ref_grid_lat)
+            resampled_variables.extend([lon, lat])
+            
+            for datatype in non_geo_datatypes:
+                #subset by data type    
+                metagrp = metastack.subset_by_datatype(datatype)
+                lon = datastack[metagrp[0].grid_parameter['longitude']]
+                lat = datastack[metagrp[0].grid_parameter['latitude']]
+                datagrp = datastack.subset_by_datatype(datatype)
+                
+                #transfer to ResampleStack
+                stack = ResampleStack(datagrp.variables, lon, lat, aoi_grid)
+                stack.resample()
+                
+                #export and store itfrom ResampleStack into a normal DataStack
+                resampled_variables.extend(stack.export())
+        #store it
+        self.ref.resamplestack = DataStack(resampled_variables)
         
         
 
@@ -1181,6 +1211,9 @@ class ModisSwathHandler(SwathHandler):
         for metavar in metastack:
             current_swath = metavar.input_file
             if current_swath != loaded_swath:
+                if loaded_swath is not None:
+                    ###close_swath()
+                    self.ref.io.close_input_swath()
                 ###open_swath()
                 FILEPATH = os.path.join(self.ref.rawout, current_swath)
                 self.ref.io.open_input_swath(FILEPATH)
@@ -1196,17 +1229,10 @@ class ModisSwathHandler(SwathHandler):
             if metavar.process_parameter is not None:
                 datavar.process(metavar)
             loaded_data.append(datavar)
+        #close file connection
+        self.ref.io.close_input_swath()
         #store data
         self.ref.swathstack = DataStack(loaded_data)
-        
-        
-        
-    # def load_swath(self, swath_name: str) -> None:
-    #     #call base class function
-    #     super().load_swath(swath_name)
-        
-    # def get_variable(self, var: str) -> None:
-    #     super().get_variable(var)
         
     def _update_meta_info(self) -> None:
         """
@@ -1220,6 +1246,10 @@ class ModisSwathHandler(SwathHandler):
         MXD03 = SWATHS['mxd03']
         MXD02 = SWATHS['mxd02']
         self.ref.meta.update_input_parameter((MXD03, MXD02))
+        
+    def save_swath(self, metastack: MetaStack, datastack: DataStack) -> None:
+        import pdb; pdb.set_trace()
+        
         
     def _get_date_from_swath_file(self) -> str:
         #get swath id
@@ -1252,45 +1282,6 @@ class ModisSwathHandler(SwathHandler):
         LISTING = self.ref.raw_listing
         AOI_LIST = LISTING['aoi'].loc[LISTING['mxd03']==SWATH].tolist()
         self.ref.overlapping_aois = AOI_LIST
-        
-    def resample_swath(self,
-                       metastack: MetaStack, 
-                       datastack: DataStack) -> None:
-        #get data types and subset
-        list_of_datatypes = np.unique(metastack.datatypes)
-        non_geo_datatypes = list_of_datatypes[list_of_datatypes != 'geo']
-        
-        #get all available grids
-        AOIS = self.ref.aoi.get_aois()
-        #keep track of resampled variables
-        resampled_variables = []
-            
-        for AOI in AOIS:
-            #retrieve aoi grid to resample to
-            aoi_grid = self.ref.aoi.get_aoi(AOI).get_grid()    
-        
-            #return reference-grid latitude/longitude
-            ref_grid_lon, ref_grid_lat = aoi_grid.get_lonlats()
-            lon = ResampledVariable('lon', 'resampled', AOI, ref_grid_lon)
-            lat = ResampledVariable('lat', 'resampled', AOI, ref_grid_lat)
-            resampled_variables.extend([lon, lat])
-            
-            for datatype in non_geo_datatypes:
-                #subset by data type    
-                metagrp = metastack.subset_by_datatype(datatype)
-                lon = datastack[metagrp[0].grid_parameter['longitude']]
-                lat = datastack[metagrp[0].grid_parameter['latitude']]
-                datagrp = datastack.subset_by_datatype(datatype)
-                
-                #transfer to ResampleStack
-                stack = ResampleStack(datagrp.variables, lon, lat, aoi_grid)
-                stack.resample()
-                
-                #export and store itfrom ResampleStack into a normal DataStack
-                resampled_variables.extend(stack.export())
-        import pdb; pdb.set_trace()
-        #store it
-        self.ref.resamplestack = DataStack(resampled_variables)
     
 
 """ Retrieval procedure """
