@@ -59,9 +59,14 @@ class MetaStack:
     def __iter__(self):
         return iter(self.variables)
     
-    def __getitem__(self, idx: int) -> MetaVariable:
-        return self.variables[idx]
-    
+    def __getitem__(self, item: int | str) -> MetaVariable:
+        if type(item) == str and item in self.names:
+            return [var for var in self.variables if item == var.name][0]
+        elif type(item) == int:
+            return self.variables[item]
+        else:
+            return None
+        
     @property
     def datatypes(self) -> List[str]:
         return [var.datatype for var in self.variables]
