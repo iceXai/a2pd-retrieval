@@ -142,9 +142,11 @@ class DataStack:
     def __iter__(self):
         return iter(self.variables)
     
-    def __getitem__(self, item: str) -> SwathVariable:
-        if item in self.names:
+    def __getitem__(self, item: int | str) -> SwathVariable:
+        if type(item) == str and item in self.names:
             return [var for var in self.variables if item == var.name][0]
+        elif type(item) == int:
+            return self.variables[item]
         else:
             return None
     
@@ -310,23 +312,23 @@ class SwathOutput(ABC):
         pass
     
     @abstractmethod
-    def set_var(self, var: str, grp: str, ds: np.array, attr: str) -> None:
+    def set_var(self, data: np.array, group: str, variable: str,
+                     longname: str) -> None:
         """
         Parameters
         ----------
-        var : str
-            Variable name used for within the output file
-        grp : str
-            Group name used for the variable within the output file 
-        dataset : np.array
-            Dataset to be placed within the output file
-        attr : str
-            Corresponding attribute/longname used within the output file
+        data : np.array
+            DESCRIPTION.
+        group : str
+            DESCRIPTION.
+        variable : str
+            DESCRIPTION.
+        longname : str
+            DESCRIPTION.
 
         Returns
         -------
         None
-            DESCRIPTION.
         """
         pass
     
@@ -379,7 +381,7 @@ class HDF4SwathInput(SwathInput):
         return HDF4DataVariable(**DATA)
     
     def close(self):
-        pass
+        self.fh.end()
 
 # class NetCDFSwathInput(SwathInput):
 
@@ -388,17 +390,30 @@ class HDF4SwathInput(SwathInput):
     
 
 class HDF5SwathOutput(SwathOutput):
-    def save(self, path: str) -> None:
-        pass
+    def create(self, path: str) -> None:
+        #create file and open file handle
+        self.fh = h5py.File(path,'w')
+        #set global attributes
+        AUTHOR = "Dr. Stephan Paul (AWI/iceXai)"
+        self.fh.attrs.create("author", AUTHOR)
+        EMAIL = "stephan.paul@posteo.net"
+        self.fh.attrs.create("contact", EMAIL)
+        TIMESTAMP = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        self.fh.attrs.create("created", TIMESTAMP)
     
-    def set_var(self, var: str, grp: str, ds: np.array, attr: str) -> None:
-        pass
-
-    def cleanup(self, path: str) -> None:
-        pass
+    def set_var(self, data: np.array, group: str, variable: str,
+                longname: str) -> None:
+        #create dataset in file
+        h5ds = self.fh.create_dataset(f'{group}/{variable}',
+                                      data=data,
+                                      compression="gzip",
+                                      compression_opts=9)
+        #set data attributes
+        h5ds.attrs.create("long_name", longname)
+        h5ds.attrs.create("valid_range", [np.nanmin(data),np.nanmax(data)])
     
     def close(self) -> None:
-        pass
+        self.fh.close()
 
 
 # In[]
@@ -411,11 +426,34 @@ class SwathIO(object):
         self.swath_in.load(path)
         
     def get_variable(self, **kwargs: dict) -> SwathVariable:
+        #TODO change as in set_variable and remove **kwargs here
         return self.swath_in.get_var(**kwargs)
         
     def close_input_swath(self) -> None:
         self.swath_in.close()
         
+    def create_output_swath(self, path: str) -> None:
+        self.swath_out.create(path)
+        
+    def set_variable(self, data: np.array, group: str, variable: str,
+                     longname: str) -> None:
+        self.swath_out.set_var(data, group, variable, longname)
+        
+    def close_output_swath(self) -> None:
+        self.swath_out.close()
+        
+    def cleanup(self, path: str) -> None:
+        """
+        Parameters
+        ----------
+        path : str
+            Path to the raw swath file that shall be removed after processing
+
+        Returns
+        -------
+        None
+        """
+        os.remove(path) 
         
     # """
     # Parentclass for all swath-related I/O
