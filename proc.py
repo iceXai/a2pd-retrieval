@@ -818,25 +818,25 @@ class RetrievalProcessor(object):
         
         
         
-        #creating the h5 output file with base global attributes 
-        VARIABLES_TO_PROCESS = self.meta.get_output_variables()
+        # #creating the h5 output file with base global attributes 
+        # VARIABLES_TO_PROCESS = self.meta.get_output_variables()
         
-        #decide on resampling or not
-        RESAMPLING_APPLIED = self.cfg.apply_resampling
-        if RESAMPLING_APPLIED:
-            for aoi in self.overlapping_aois:
-                self.swath.create_swath(aoi)
-                #set variables into the new file
-                for VAR in VARIABLES_TO_PROCESS:
-                    self.swath.set_variable(VAR, aoi)
-        else:
-            self.swath.create_swath()
-            #set variables into the new file
-            for VAR in VARIABLES_TO_PROCESS:
-                self.swath.set_variable(VAR)
+        # #decide on resampling or not
+        # RESAMPLING_APPLIED = self.cfg.apply_resampling
+        # if RESAMPLING_APPLIED:
+        #     for aoi in self.overlapping_aois:
+        #         self.swath.create_swath(aoi)
+        #         #set variables into the new file
+        #         for VAR in VARIABLES_TO_PROCESS:
+        #             self.swath.set_variable(VAR, aoi)
+        # else:
+        #     self.swath.create_swath()
+        #     #set variables into the new file
+        #     for VAR in VARIABLES_TO_PROCESS:
+        #         self.swath.set_variable(VAR)
 
-        #close file connection
-        self.swath.close_swath()
+        # #close file connection
+        # self.swath.close_swath()
         
     def cleanup(self) -> None:
         """
@@ -960,7 +960,35 @@ class SwathHandler(ABC):
     
     @abstractmethod
     def load_and_process_swath(self, metastack: MetaStack) -> None:
-        pass
+        #keep track of currently loaded data and swath file
+        loaded_data = []
+        loaded_swath = None
+        #loop over all meta variables in meta data
+        for metavar in metastack:
+            current_swath = metavar.input_file
+            if current_swath != loaded_swath:
+                if loaded_swath is not None:
+                    ###close_swath()
+                    self.ref.io.close_input_swath()
+                ###open_swath()
+                FILEPATH = os.path.join(self.ref.rawout, current_swath)
+                self.ref.io.open_input_swath(FILEPATH)
+            ###get_variable()
+            INPUT_SPECS = metavar.input_parameter
+            VARNAME = metavar.name
+            DATATYPE = metavar.datatype
+            #retrieve the actual variable data from the swath
+            datavar = self.ref.io.get_variable(name = VARNAME,
+                                               datatype = DATATYPE,
+                                               **INPUT_SPECS)
+            #process it applying scale/offset etc
+            if metavar.process_parameter is not None:
+                datavar.process(metavar)
+            loaded_data.append(datavar)
+        #close file connection
+        self.ref.io.close_input_swath()
+        #store data
+        self.ref.swathstack = DataStack(loaded_data)
     
     # def load_swath(self, swath_name: str) -> None:
     #     FILEPATH = os.path.join(self.ref.rawout, swath_name)
@@ -988,30 +1016,49 @@ class SwathHandler(ABC):
     # def close_swath(self) -> None:
     #     self.ref.io.close() 
 
-    @abstractmethod
     def save_swath(self, metastack: MetaStack, datastack: DataStack) -> None:
-        pass
+        #keep track of currently opened output swath file
+        current_output_swath = None
+        #loop over all data varibales in stack
+        for datavar in datastack:
+            VARNAME = datavar.name
+            DATA = datavar.data
+            OUTPUT_SPECS = metastack[VARNAME].output_parameter
+            #check whether its a resampled or standard variable
+            if hasattr(datavar,'aoi'):
+                AOI = datavar.aoi
+            else:
+                AOI = None
+            ###create_swath()
+            FILENAME = self._compile_output_swath_name(AOI)
+            if FILENAME != current_output_swath:
+                if current_output_swath is not None:
+                    ###close_swath()
+                    self.ref.io.close_output_swath()
+                FILEPATH = os.path.join(self.ref.out, FILENAME)
+                #status
+                logger.info(f'Saving to file: {FILENAME}')
+                self.ref.io.create_output_swath(FILEPATH)
+            #set variable
+            self.set_variable(DATA, **OUTPUT_SPECS)
+        ###close_swath()
+        self.ref.io.close_output_swath()    
 
 ###
-    def create_swath(self, aoi: str = None) -> None:
-        FILENAME = self._compile_output_swath_name(aoi)
-        FILEPATH = os.path.join(self.ref.out, FILENAME)
-        #status
-        logger.info(f'Saving to file: {FILENAME}')
-        self.ref.io.save(FILEPATH)
+    # def create_swath(self, aoi: str = None) -> None:
+    #     FILENAME = self._compile_output_swath_name(aoi)
+    #     FILEPATH = os.path.join(self.ref.out, FILENAME)
+    #     #status
+    #     logger.info(f'Saving to file: {FILENAME}')
+    #     self.ref.io.save(FILEPATH)
 
-    def set_variable(self, var: str, aoi: str = None) -> None:
-        #get variable specific output specifications
-        GRP, VAR, ATTR = self.ref.meta.get_var_output_specs(var)
-        #compile in-file specific group/variable path
-        INPATH = f'{GRP}/{VAR}'
-        #pick dataset
-        if aoi is None:
-            DS = self.ref.data.get_data(var)
-        else:
-            DS = self.ref.data.get_resampled_data(aoi, var)
+    def set_variable(self, 
+                     data: np.array = None, 
+                     group: str = None,
+                     variable: str = None,
+                     longname: str = None) -> None:
         #pass data to io
-        self.ref.io.set_var(INPATH, DS, ATTR)    
+        self.ref.io.set_variable(data, group, variable, longname)  
         
     def _compile_output_swath_name(self, aoi: str = None) -> str:
         #correct processing state extension
@@ -1112,8 +1159,8 @@ class SlstrSwathHandler(SwathHandler):
     def get_swath_id(self, swath_only: bool) -> str:
         return super().get_swath_id(swath_only)
     
-    def load_and_process_swath(self, metadata: MetaStack) -> None:
-        pass
+    def load_and_process_swath(self, metastack: MetaStack) -> None:
+        super().load_and_process_swath(metastack)
     
     def open_swath(self, var: str) -> None:
         FILENAME = self.ref.meta.get_var_input_specs(var)[0]
@@ -1153,8 +1200,8 @@ class OlciSwathHandler(SwathHandler):
     def get_swath_id(self, swath_only: bool) -> str:
         return super().get_swath_id(swath_only)
     
-    def load_and_process_swath(self, metadata: MetaStack) -> None:
-        pass
+    def load_and_process_swath(self, metastack: MetaStack) -> None:
+        super().load_and_process_swath(metastack)
     
     def open_swath(self, var: str) -> None:
         FILENAME = self.ref.meta.get_var_input_specs(var)[0]
@@ -1202,37 +1249,10 @@ class ModisSwathHandler(SwathHandler):
         return URLS
     
     def load_and_process_swath(self, metastack: MetaStack) -> None:
-        loaded_data = []
         #update meta variable on input files
         self._update_meta_info()
-        #keep track of currently loaded swath file
-        loaded_swath = None
-        #loop over all meta variables in meta data
-        for metavar in metastack:
-            current_swath = metavar.input_file
-            if current_swath != loaded_swath:
-                if loaded_swath is not None:
-                    ###close_swath()
-                    self.ref.io.close_input_swath()
-                ###open_swath()
-                FILEPATH = os.path.join(self.ref.rawout, current_swath)
-                self.ref.io.open_input_swath(FILEPATH)
-            ###get_variable()
-            INPUT_SPECS = metavar.input_parameter
-            VARNAME = metavar.name
-            DATATYPE = metavar.datatype
-            #retrieve the actual variable data from the swath
-            datavar = self.ref.io.get_variable(name = VARNAME,
-                                               datatype = DATATYPE,
-                                               **INPUT_SPECS)
-            #process it applying scale/offset etc
-            if metavar.process_parameter is not None:
-                datavar.process(metavar)
-            loaded_data.append(datavar)
-        #close file connection
-        self.ref.io.close_input_swath()
-        #store data
-        self.ref.swathstack = DataStack(loaded_data)
+        #call partent method
+        super().load_and_process_swath(metastack)
         
     def _update_meta_info(self) -> None:
         """
@@ -1246,10 +1266,6 @@ class ModisSwathHandler(SwathHandler):
         MXD03 = SWATHS['mxd03']
         MXD02 = SWATHS['mxd02']
         self.ref.meta.update_input_parameter((MXD03, MXD02))
-        
-    def save_swath(self, metastack: MetaStack, datastack: DataStack) -> None:
-        import pdb; pdb.set_trace()
-        
         
     def _get_date_from_swath_file(self) -> str:
         #get swath id
