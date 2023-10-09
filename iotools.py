@@ -159,6 +159,16 @@ class DataStack:
         return [var.datatype for var in self.variables]
     
     @property
+    def aois(self) -> Dict[str, np.array]:
+        aoi_dict = {}
+        aoi_list = [var.aoi for var in self.variables if hasattr(var, 'aoi')]
+        aoi_array = np.array(aoi_list)
+        unique_aois = np.unique(aoi_array)
+        for aoi in unique_aois:
+            aoi_dict[aoi] = np.where(aoi_array==aoi)[0]
+        return aoi_dict
+    
+    @property
     def size(self) -> int:
         return self.__len__()
     
@@ -221,6 +231,7 @@ class ResampleStack:
         #resample using kd tree
         AOI_GRID = self.aoi
         self.stack = self._kd_tree_resample(SWATH_DEF, AOI_GRID, STACK)
+        self.stack[np.where(self.stack == 0.0)] = np.nan
         
     def export(self) -> List[ResampledVariable]:
         NAMES = self.names
@@ -228,7 +239,7 @@ class ResampleStack:
         DATATYPE = 'resampled'
         STACK = self.stack
         return [ResampledVariable(name, DATATYPE, AOI_ID, STACK[idx]) 
-                for idx,name in enumerate(NAMES)]
+                for idx, name in enumerate(NAMES)]
     
     def _kd_tree_neighbours(self, swath_def, aoi_grid) -> tuple:
         in_idx, out_idx, idx, _ = get_neighbour_info(swath_def,
@@ -297,7 +308,7 @@ class SwathInput(ABC):
 class SwathOutput(ABC):
     """ Parentclass for all output-related swath operations """
     @abstractmethod
-    def save(self, path: str) -> None:
+    def create(self, path: str) -> None:
         """
         Parameters
         ----------
@@ -325,20 +336,6 @@ class SwathOutput(ABC):
             DESCRIPTION.
         longname : str
             DESCRIPTION.
-
-        Returns
-        -------
-        None
-        """
-        pass
-    
-    @abstractmethod
-    def cleanup(self, path: str) -> None:
-        """
-        Parameters
-        ----------
-        path : str
-            Path to the raw swath file that shall be removed after processing
 
         Returns
         -------
@@ -526,7 +523,7 @@ class SwathIO(object):
     #     h5ds.attrs.create("valid_range",[np.nanmin(ds),np.nanmax(ds)])
     
     # def cleanup(self, path: str) -> None:
-    #     os.remove(path)  
+    #     os.remove(path) / 
     
     
 class ModisSwathIO(SwathIO):
