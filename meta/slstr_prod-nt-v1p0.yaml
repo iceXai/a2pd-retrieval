@@ -8,7 +8,121 @@ urls:
         data: https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/450/S3B_SL_1_RBT/
         meta: https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMetaSentinel3B/450/SLSTR/
 
+       
+variables:
+    lat:
+        datatype: 
+            geo
+        input_parameter:
+            file: [geodetic_in.nc, geodetic_io.nc, geodetic_tx.nc]
+            orientation: [nadir, oblique, cross]
+            gridtype: [infrared, infrared, tiepoints]
+            variable: [latitude_in, latitude_io, latitude_tx]
+        output_parameter:
+            group: geo
+            variable: lat
+            longname: reference_grid_latitude
+            
+    lon:
+        datatype: 
+            geo
+        input_parameter:
+            file: [geodetic_in.nc, geodetic_io.nc, geodetic_tx.nc]
+            orientation: [nadir, oblique, cross]
+            gridtype: [infrared, infrared, tiepoints]
+            variable: [longitude_in, longitude_io, longitude_tx]
+        output_parameter:
+            group: geo
+            variable: lon
+            longname: reference_grid_longitude
+            
+    sat_zen:
+        datatype:
+            auxiliary
+        input_parameter:
+            file: [geometry_tn.nc, geometry_to.nc]
+            orientation: [nadir, oblique]
+            gridtype: [tiepoints, tiepoints]
+            variable: [sat_zenith_tn, sat_zenith_to]
+        grid_parameter:
+            longitude: longitude_tx
+            latitude: latitude_tx 
+        output_parameter:
+            group: misc
+            variable: [sat_zen_n, sat_zen_o]
+            longname: [slstr_sensor_zenith_angle_nadir, slstr_sensor_zenith_angle_oblique]
+
+    sat_azi:
+        datatype:
+            auxiliary
+        input_parameter:
+            file: [geometry_tn.nc, geometry_to.nc]
+            orientation: [nadir, oblique]
+            gridtype: [tiepoints, tiepoints]
+            variable: [sat_azimuth_tn, sat_azimuth_to]
+        grid_parameter:
+            longitude: longitude_tx
+            latitude: latitude_tx 
+        output_parameter:
+            group: misc
+            variable: [sat_azi_n, sat_azi_o]
+            longname: [slstr_sensor_azimuth_angle_nadir, slstr_sensor_azimuth_angle_oblique]        
+
+    sol_zen:
+        datatype:
+            auxiliary
+        input_parameter:
+            file: [geometry_tn.nc, geometry_to.nc]
+            orientation: [nadir, oblique]
+            gridtype: [tiepoints, tiepoints]
+            variable: [solar_zenith_tn, solar_zenith_to]
+        grid_parameter:
+            longitude: longitude_tx
+            latitude: latitude_tx 
+        output_parameter:
+            group: misc
+            variable: [sol_zen_n, sol_zen_o]
+            longname: [slstr_solar_zenith_angle_nadir, slstr_solar_zenith_angle_oblique]
+
+    sol_azi:
+        datatype:
+            auxiliary
+        input_parameter:
+            file: [geometry_tn.nc, geometry_to.nc]
+            orientation: [nadir, oblique]
+            gridtype: [tiepoints, tiepoints]
+            variable: [solar_azimuth_tn, solar_azimuth_to]
+        grid_parameter:
+            longitude: longitude_tx
+            latitude: latitude_tx 
+        output_parameter:
+            group: misc
+            variable: [sol_azi_n, sol_azi_o]
+            longname: [slstr_solar_azimuth_angle_nadir, slstr_solar_azimuth_angle_oblique]
+
+
         
+    ch20:
+        datatype:
+            radiance
+        input_parameter:
+            file: mxd02
+            variable: EV_1KM_Emissive
+            index: 0
+        grid_parameter:
+            longitude: lon
+            latitude: lat
+        process_parameter:
+            scale: radiance_scales
+            offset: radiance_offsets
+            wavelength: 3.7500e-06
+        output_parameter:
+            group: mod02
+            variable: ch20
+            longname: mod02_ch20_brightness_temperature
+            
+            
+            
 input_specs:
     #information about file, group, and variable names of the input data, e.g.,
     #[file, grp, var]
