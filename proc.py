@@ -688,6 +688,7 @@ class RetrievalProcessor(object):
         
     def _set_swath_io(self) -> None:
         #initiate i/o handler
+        # TODO move to swath hndler instead of the main class?
         self.io = self.cfg.setup_swath_io()
         # SENSOR = self.cfg.sensor.capitalize()
         # IO_CLASS = self.cfg.get_class('iotools', f'{SENSOR}SwathIO') 
@@ -1067,13 +1068,13 @@ class SwathHandler(ABC):
             DATA = datavar.data
             OUTPUT_SPECS = metastack[VARNAME].output_parameter
             #create swath file if necessary
-            self.create_swath(datavar)
+            self._create_swath(datavar)
             #set variable
-            self.set_variable(DATA, **OUTPUT_SPECS)
+            self._set_variable(DATA, **OUTPUT_SPECS)
         ###close_swath()
         self.ref.io.close_output_swath() 
         
-    def create_swath(self, datavar: SwathVariable) -> None:
+    def _create_swath(self, datavar: SwathVariable) -> None:
         #check whether its a resampled or standard variable
         if isinstance(datavar, ResampledVariable):
             AOI = datavar.aoi
@@ -1094,7 +1095,7 @@ class SwathHandler(ABC):
                 pass
             self.ref.io.create_output_swath(FILEPATH)
 
-    def set_variable(self, 
+    def _set_variable(self, 
                      data: np.array = None, 
                      group: str = None,
                      variable: str = None,
