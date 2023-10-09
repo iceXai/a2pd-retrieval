@@ -14,6 +14,7 @@ from data import SwathData
 from resampling import ResampleHandler
 from meta import MetaVariable
 from meta import MetaStack
+from iotools import SwathVariable
 from iotools import DataVariable
 from iotools import DataStack
 from iotools import ResampledVariable
@@ -816,8 +817,6 @@ class RetrievalProcessor(object):
         #send it to the swath hnadler
         self.swath.save_swath(META_STACK, DATA_STACK)
         
-        
-        
         # #creating the h5 output file with base global attributes 
         # VARIABLES_TO_PROCESS = self.meta.get_output_variables()
         
@@ -1016,41 +1015,84 @@ class SwathHandler(ABC):
     # def close_swath(self) -> None:
     #     self.ref.io.close() 
 
+    @abstractmethod
+    def identify_resample_aois(self) -> None:
+        SWATH = self.get_swath_id(swath_only=True)
+        LISTING = self.ref.raw_listing
+        AOI_LIST = LISTING['aoi'].loc[LISTING['file']==SWATH].tolist()
+        self.ref.overlapping_aois = AOI_LIST
+        
+    def resample_swath(self,
+                       metastack: MetaStack, 
+                       datastack: DataStack) -> None:
+        #get data types and subset
+        list_of_datatypes = np.unique(metastack.datatypes)
+        non_geo_datatypes = list_of_datatypes[list_of_datatypes != 'geo']
+        
+        #get all available overlapping grids
+        AOIS = self.ref.overlapping_aois
+        #keep track of resampled variables
+        resampled_variables = []
+            
+        for AOI in AOIS:
+            #retrieve aoi grid to resample to
+            aoi_grid = self.ref.aoi.get_aoi(AOI).get_grid()    
+        
+            #return reference-grid latitude/longitude
+            ref_grid_lon, ref_grid_lat = aoi_grid.get_lonlats()
+            lon = ResampledVariable('lon', 'resampled', AOI, ref_grid_lon)
+            lat = ResampledVariable('lat', 'resampled', AOI, ref_grid_lat)
+            resampled_variables.extend([lon, lat])
+            
+            for datatype in non_geo_datatypes:
+                #subset by data type    
+                metagrp = metastack.subset_by_datatype(datatype)
+                lon = datastack[metagrp[0].grid_parameter['longitude']]
+                lat = datastack[metagrp[0].grid_parameter['latitude']]
+                datagrp = datastack.subset_by_datatype(datatype)
+                
+                #transfer to ResampleStack
+                stack = ResampleStack(datagrp.variables, lon, lat, aoi_grid)
+                stack.resample()
+                
+                #export and store itfrom ResampleStack into a normal DataStack
+                resampled_variables.extend(stack.export())
+        #store it
+        self.ref.resamplestack = DataStack(resampled_variables)
+
     def save_swath(self, metastack: MetaStack, datastack: DataStack) -> None:
-        #keep track of currently opened output swath file
-        current_output_swath = None
         #loop over all data varibales in stack
         for datavar in datastack:
             VARNAME = datavar.name
             DATA = datavar.data
             OUTPUT_SPECS = metastack[VARNAME].output_parameter
-            #check whether its a resampled or standard variable
-            if hasattr(datavar,'aoi'):
-                AOI = datavar.aoi
-            else:
-                AOI = None
-            ###create_swath()
-            FILENAME = self._compile_output_swath_name(AOI)
-            if FILENAME != current_output_swath:
-                if current_output_swath is not None:
-                    ###close_swath()
-                    self.ref.io.close_output_swath()
-                FILEPATH = os.path.join(self.ref.out, FILENAME)
-                #status
-                logger.info(f'Saving to file: {FILENAME}')
-                self.ref.io.create_output_swath(FILEPATH)
+            #create swath file if necessary
+            self.create_swath(datavar)
             #set variable
             self.set_variable(DATA, **OUTPUT_SPECS)
         ###close_swath()
-        self.ref.io.close_output_swath()    
-
-###
-    # def create_swath(self, aoi: str = None) -> None:
-    #     FILENAME = self._compile_output_swath_name(aoi)
-    #     FILEPATH = os.path.join(self.ref.out, FILENAME)
-    #     #status
-    #     logger.info(f'Saving to file: {FILENAME}')
-    #     self.ref.io.save(FILEPATH)
+        self.ref.io.close_output_swath() 
+        
+    def create_swath(self, datavar: SwathVariable) -> None:
+        #check whether its a resampled or standard variable
+        if isinstance(datavar, ResampledVariable):
+            AOI = datavar.aoi
+        else:
+            AOI = None
+        #create output file name and check for file existence
+        FILENAME = self._compile_output_swath_name(AOI)
+        FILEPATH = os.path.join(self.ref.out, FILENAME)
+        if not os.path.isfile(FILEPATH):
+            #status
+            logger.info(f'Saving to file: {FILENAME}')
+            try:
+                self.ref.io.close_output_swath()
+            except AttributeError:
+                """ 
+                In case no file is present but also none was yet created 
+                """
+                pass
+            self.ref.io.create_output_swath(FILEPATH)
 
     def set_variable(self, 
                      data: np.array = None, 
@@ -1105,51 +1147,7 @@ class SwathHandler(ABC):
     def _cleanup_data_container(self) -> None:
         self.ref.data.cleanup()      
             
-    @abstractmethod
-    def identify_resample_aois(self) -> None:
-        SWATH = self.get_swath_id(swath_only=True)
-        LISTING = self.ref.raw_listing
-        AOI_LIST = LISTING['aoi'].loc[LISTING['file']==SWATH].tolist()
-        self.ref.overlapping_aois = AOI_LIST
-        
-    def resample_swath(self,
-                       metastack: MetaStack, 
-                       datastack: DataStack) -> None:
-        #get data types and subset
-        list_of_datatypes = np.unique(metastack.datatypes)
-        non_geo_datatypes = list_of_datatypes[list_of_datatypes != 'geo']
-        
-        #get all available grids
-        AOIS = self.ref.aoi.get_aois()
-        #keep track of resampled variables
-        resampled_variables = []
-            
-        for AOI in AOIS:
-            #retrieve aoi grid to resample to
-            aoi_grid = self.ref.aoi.get_aoi(AOI).get_grid()    
-        
-            #return reference-grid latitude/longitude
-            ref_grid_lon, ref_grid_lat = aoi_grid.get_lonlats()
-            lon = ResampledVariable('lon', 'resampled', AOI, ref_grid_lon)
-            lat = ResampledVariable('lat', 'resampled', AOI, ref_grid_lat)
-            resampled_variables.extend([lon, lat])
-            
-            for datatype in non_geo_datatypes:
-                #subset by data type    
-                metagrp = metastack.subset_by_datatype(datatype)
-                lon = datastack[metagrp[0].grid_parameter['longitude']]
-                lat = datastack[metagrp[0].grid_parameter['latitude']]
-                datagrp = datastack.subset_by_datatype(datatype)
-                
-                #transfer to ResampleStack
-                stack = ResampleStack(datagrp.variables, lon, lat, aoi_grid)
-                stack.resample()
-                
-                #export and store itfrom ResampleStack into a normal DataStack
-                resampled_variables.extend(stack.export())
-        #store it
-        self.ref.resamplestack = DataStack(resampled_variables)
-        
+
         
 
 class SlstrSwathHandler(SwathHandler):
