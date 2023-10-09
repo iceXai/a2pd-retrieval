@@ -1034,7 +1034,6 @@ class SwathHandler(ABC):
         AOIS = self.ref.overlapping_aois
         #keep track of resampled variables
         resampled_variables = []
-            
         for AOI in AOIS:
             #retrieve aoi grid to resample to
             aoi_grid = self.ref.aoi.get_aoi(AOI).get_grid()    
@@ -1055,7 +1054,6 @@ class SwathHandler(ABC):
                 #transfer to ResampleStack
                 stack = ResampleStack(datagrp.variables, lon, lat, aoi_grid)
                 stack.resample()
-                
                 #export and store itfrom ResampleStack into a normal DataStack
                 resampled_variables.extend(stack.export())
         #store it
