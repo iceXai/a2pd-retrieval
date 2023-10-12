@@ -15,6 +15,8 @@ from typing import List
 import os
 import yaml
 
+import pandas as pd
+
 
 # In[]
 
@@ -30,6 +32,7 @@ class MetaVariable:
     of the data
     """
     name: str
+    filetype: str
     datatype: str
     input_parameter: dict
     output_parameter: dict
@@ -44,6 +47,35 @@ class MetaVariable:
     def stack_index(self):
         if 'index' in self.input_parameter.keys():
             return self.input_parameter['index']
+        else: 
+            return None
+        
+    def splitup(self) -> List[MetaVariable]:
+        if type(self.input_file) == list:
+            split_vars = []
+            INPUT_PAR = self.input_parameter
+            PROCESS_PAR = self.process_parameter
+            #transform to dataframe
+            input_df = pd.DataFrame(INPUT_PAR)
+            process_df = pd.DataFrame(PROCESS_PAR)
+            df = pd.concat([input_df,process_df])
+            #loop over rows
+            for index, row in df.iterrows():
+                submeta = {}
+                columns = INPUT_PAR.keys()
+                submeta['input_parameter'] = row[columns].to_dict() 
+                submeta['output_parameter'] = None
+                if PROCESS_PAR is not None:
+                    columns = PROCESS_PAR.keys()
+                    submeta['process_parameter'] = row[columns].to_dict()    
+                #append meta variable
+                metavar = MetaVariable(self.name, 
+                                       self.filetype, 
+                                       self.datatype,
+                                       **submeta)
+                split_vars.append(metavar)
+            #return to caller
+            return split_vars
         else: 
             return None
 
@@ -111,21 +143,12 @@ class Meta(ABC):
         
     def _import_variables(self) -> None:
         variables = []
+        filetype = self.meta['filetype']
         for var in self.meta['variables'].keys():
             var_meta = self.meta['variables'][var]
-            # data = self._assign_variable_dataclass(var, var_meta)
-            data = MetaVariable(var,**var_meta)
+            data = MetaVariable(var, filetype, **var_meta)
             variables.append(data)
         self.metadata = MetaStack(variables)
-
-    # def _assign_variable_dataclass(self, var: str, var_meta: dict):
-    #     datatype = var_meta['datatype'].lower()
-    #     if datatype == 'geo':
-    #         return GeoMetaDataVariable(var,**var_meta)
-    #     if datatype == 'auxiliary':
-    #         return AuxiliaryMetaDataVariable(var,**var_meta)
-    #     if datatype == 'spectral':
-    #         return SpectralMetaDataVariable(var,**var_meta)
     
     @property
     def urls(self) -> dict:
@@ -271,7 +294,11 @@ class SlstrSwathMeta(Meta):
     Sentinel3-A/B SLSTR meta information child class tailored to the 
     sensor-specific data processing
     """      
-    pass
+    def update_input_parameter(self, zippath: str) -> None:
+        for var in self.metadata:
+            FILENAME = var.input_file
+            FILENAME = [os.path.join(zippath, fn) for fn in FILENAME]
+            var.input_parameter['file'] = FILENAME
 
 
 class OlciSwathMeta(Meta):
@@ -279,4 +306,8 @@ class OlciSwathMeta(Meta):
     Sentinel3-A/B OLCI meta information child class tailored to the 
     sensor-specific data processing
     """      
-    pass
+    def update_input_parameter(self, zippath: str) -> None:
+        for var in self.metadata:
+            FILENAME = var.input_file
+            FILENAME = [os.path.join(zippath, fn) for fn in FILENAME]
+            var.input_parameter['file'] = FILENAME
