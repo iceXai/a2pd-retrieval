@@ -393,7 +393,8 @@ class NetCDFSwathInput(SwathInput):
     def load(self, path: str) -> None:
         self.fh = nc.Dataset(path, 'r')
     
-    def get_var(self, var: str, grp: str, meta: list) -> NetCDFDataVariable:
+    def get_var(self, **kwargs) -> NetCDFDataVariable:
+        import pdb; pdb.set_trace()
         if grp is None:
             return self.fh.variables[var][:,:]
         else:
