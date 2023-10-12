@@ -7,6 +7,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from loguru import logger
+from typing import List, Dict
 
 from iotools import ListingIO
 from data import ListingData
@@ -960,35 +961,93 @@ class SwathHandler(ABC):
     
     @abstractmethod
     def load_and_process_swath(self, metastack: MetaStack) -> None:
-        #keep track of currently loaded data and swath file
+        #keep track of currently loaded data
         loaded_data = []
-        loaded_swath = None
         #loop over all meta variables in meta data
         for metavar in metastack:
-            current_swath = metavar.input_file
-            if current_swath != loaded_swath:
-                if loaded_swath is not None:
-                    ###close_swath()
-                    self.ref.io.close_input_swath()
-                ###open_swath()
-                FILEPATH = os.path.join(self.ref.rawout, current_swath)
-                self.ref.io.open_input_swath(FILEPATH)
-            ###get_variable()
-            INPUT_SPECS = metavar.input_parameter
-            VARNAME = metavar.name
-            DATATYPE = metavar.datatype
-            #retrieve the actual variable data from the swath
-            datavar = self.ref.io.get_variable(name = VARNAME,
-                                               datatype = DATATYPE,
-                                               **INPUT_SPECS)
-            #process it applying scale/offset etc
-            if metavar.process_parameter is not None:
-                datavar.process(metavar)
+            #load variable
+            FILETYPE = metavar.filetype
+            if FILETYPE == 'stack':
+                datavar_list = self._load_stacked_var(metavar)
+            else:
+                datavar = self._load_single_var(metavar)
+                
+            #process variable applying scale/offset etc
+            datavar = self._process_variable(metavar, datavar)
+            #store it
             loaded_data.append(datavar)
+        #store data
+        self.ref.swathstack = DataStack(loaded_data)    
+
+        
+    def _load_single_var(self, metavar: MetaVariable) -> DataVariable:
+        FILENAME = metavar.input_file
+        FILEPATH = os.path.join(self.ref.rawout, FILENAME)
+        self.ref.io.open_input_swath(FILEPATH)
+        #get variable
+        INPUT_SPECS = metavar.input_parameter
+        VARNAME = metavar.name
+        DATATYPE = metavar.datatype
+        #export to DataVariable
+        datavar = self.ref.io.get_variable(name = VARNAME,
+                                           datatype = DATATYPE,
+                                           **INPUT_SPECS)
         #close file connection
         self.ref.io.close_input_swath()
-        #store data
-        self.ref.swathstack = DataStack(loaded_data)
+        #return to caller
+        return datavar
+    
+    def _load_stacked_var(self, metavar: MetaVariable) -> List[DataVariable]:
+        #split up stacked meta variable
+        metavar_list = metavar.splitup()
+        datavar_list = []
+        for var in metavar_list:
+            datavar = self._load_single_var(var)
+            datavar_list.append(datavar)
+        return datavar_list
+        
+    def _process_variable(self,
+                          metavar: MetaVariable,
+                          datavar: DataVariable) -> DataVariable:
+        if metavar.process_parameter is not None:
+                datavar.process(metavar)
+        return datavar
+    
+        
+        #TODO get back to a simple open/load/close procedure per variable?
+        #     especially make it possible for these sentinel variables as 
+        #     they may consist of several files per variable/aspects
+        
+        # import pdb; pdb.set_trace()
+        # #keep track of currently loaded data and swath file
+        # loaded_data = []
+        # loaded_swath = None
+        # #loop over all meta variables in meta data
+        # for metavar in metastack:
+        #     current_swath = metavar.input_file
+        #     if current_swath != loaded_swath:
+        #         if loaded_swath is not None:
+        #             ###close_swath()
+        #             self.ref.io.close_input_swath()
+        #         ###open_swath()
+        #         FILEPATH = os.path.join(self.ref.rawout, current_swath)
+        #         self.ref.io.open_input_swath(FILEPATH)
+        #     ###get_variable()
+        #     INPUT_SPECS = metavar.input_parameter
+        #     VARNAME = metavar.name
+        #     DATATYPE = metavar.datatype
+        #     #retrieve the actual variable data from the swath
+        #     datavar = self.ref.io.get_variable(name = VARNAME,
+        #                                        datatype = DATATYPE,
+        #                                        **INPUT_SPECS)
+        #     #process it applying scale/offset etc
+        #     if metavar.process_parameter is not None:
+        #         datavar.process(metavar)
+        #     loaded_data.append(datavar)
+        # #close file connection
+        # self.ref.io.close_input_swath()
+        # #store data
+        # self.ref.swathstack = DataStack(loaded_data)
     
     # def load_swath(self, swath_name: str) -> None:
     #     FILEPATH = os.path.join(self.ref.rawout, swath_name)
@@ -1157,7 +1216,21 @@ class SlstrSwathHandler(SwathHandler):
         return super().get_swath_id(swath_only)
     
     def load_and_process_swath(self, metastack: MetaStack) -> None:
+        #update meta variable on input files
+        self._update_meta_info()
+        #call partent method
         super().load_and_process_swath(metastack)
+        
+    def _update_meta_info(self) -> None:
+        """
+        Returns
+        -------
+        None
+            Updates the SLSTR specific meta data information by including/
+            prepending the unzip path to the respective file name
+        """
+        UNZIPPATH = self.ref.zip.get_unzip_path()
+        self.ref.meta.update_input_parameter(UNZIPPATH)
     
     def open_swath(self, var: str) -> None:
         FILENAME = self.ref.meta.get_var_input_specs(var)[0]
@@ -1198,7 +1271,21 @@ class OlciSwathHandler(SwathHandler):
         return super().get_swath_id(swath_only)
     
     def load_and_process_swath(self, metastack: MetaStack) -> None:
+        #update meta variable on input files
+        self._update_meta_info()
+        #call partent method
         super().load_and_process_swath(metastack)
+        
+    def _update_meta_info(self) -> None:
+        """
+        Returns
+        -------
+        None
+            Updates the OLCI specific meta data information by including/
+            prepending the unzip path to the respective file name
+        """
+        UNZIPPATH = self.ref.zip.get_unzip_path()
+        self.ref.meta.update_input_parameter(UNZIPPATH)
     
     def open_swath(self, var: str) -> None:
         FILENAME = self.ref.meta.get_var_input_specs(var)[0]
