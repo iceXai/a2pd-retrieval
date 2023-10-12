@@ -130,6 +130,14 @@ class HDF4DataVariable(DataVariable):
                     (var * 10**6) + 1.0))
         return Tb
 
+@dataclass
+class NetCDFDataVariable(DataVariable):
+    exclusion: dict
+
+    def process(self, metavar: MetaVariable) -> None:
+        pass
+    
+
     
 @dataclass
 class DataStack:
@@ -380,11 +388,31 @@ class HDF4SwathInput(SwathInput):
     def close(self):
         self.fh.end()
 
-# class NetCDFSwathInput(SwathInput):
 
-
-# class HDF5SwathInput(SwathInput):
+class NetCDFSwathInput(SwathInput):
+    def load(self, path: str) -> None:
+        self.fh = nc.Dataset(path, 'r')
     
+    def get_var(self, var: str, grp: str, meta: list) -> NetCDFDataVariable:
+        if grp is None:
+            return self.fh.variables[var][:,:]
+        else:
+            return self.fh.groups[grp].variables[var][:,:]
+
+    def close(self) -> None:
+        self.fh.close()
+        
+        
+class HDF5SwathInput(SwathInput):
+    def load(self, path: str) -> None:
+        pass
+    
+    def get_var(self, **kwargs) -> HDF5DataVariable:
+        pass
+
+    def close(self) -> None:
+        self.fh.close()
+        
 
 class HDF5SwathOutput(SwathOutput):
     def create(self, path: str) -> None:
