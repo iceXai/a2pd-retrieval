@@ -65,9 +65,14 @@ class DataVariable(SwathVariable):
     def shape(self) -> tuple:
         return self.data.shape
     
-    @abstractmethod
     def process(self, metavar: MetaVariable) -> None:
+        if metavar.process_parameter is not None:
+            self._process(metavar)
+    
+    @abstractmethod
+    def _process(self, metavar: MetaVariable) -> None:
         pass
+    
 
 @dataclass
 class ResampledVariable(SwathVariable):
@@ -84,7 +89,7 @@ class ResampledVariable(SwathVariable):
 class HDF4DataVariable(DataVariable):
     attributes: dict
     
-    def process(self, metavar: MetaVariable) -> None:
+    def _process(self, metavar: MetaVariable) -> None:
         #limit data
         FILL_VALUE = self.attributes['_FillValue'][0]
         VALID_MIN = self.attributes['valid_range'][0][0]
@@ -132,9 +137,13 @@ class HDF4DataVariable(DataVariable):
 
 @dataclass
 class NetCDFDataVariable(DataVariable):
-    exclusion: dict
+    variable: str = None
+    orientation: str = None
+    gridtype: str = None
+    exclude: np.array = None
 
-    def process(self, metavar: MetaVariable) -> None:
+    def _process(self, metavar: MetaVariable) -> None:
+        import pdb; pdb.set_trace()
         pass
     
 
@@ -286,13 +295,22 @@ class SwathInput(ABC):
         pass
     
     @abstractmethod
-    def get_var(self, **kwargs) -> SwathVariable:
+    def get_var(self, name: str, datatype: str, variable: str, 
+                idx: str = None, **kwargs) -> SwathVariable:
         """
         Parameters
         ----------
-        **kwargs : dict
-            key-word arguments from the MetaDataVariable dataclass's 
-            input_parameter field
+        name : str
+            DESCRIPTION.
+        datatype : str
+            DESCRIPTION.
+        variable : str
+            DESCRIPTION.
+        idx : str, optional
+            DESCRIPTION. The default is None.
+        **kwargs : dict, optional
+            additional key-word arguments from the MetaDataVariable 
+            dataclass's input_parameter field
 
         Returns
         -------
@@ -332,7 +350,7 @@ class SwathOutput(ABC):
     
     @abstractmethod
     def set_var(self, data: np.array, group: str, variable: str,
-                     longname: str) -> None:
+                longname: str) -> None:
         """
         Parameters
         ----------
@@ -366,20 +384,20 @@ class HDF4SwathInput(SwathInput):
     def load(self, path: str) -> None:
         self.fh = SD(path,SDC.READ)
     
-    def get_var(self, **kwargs) -> HDF4DataVariable:
-        VAR = kwargs['variable']
+    def get_var(self, metavar: MetaVariable) -> HDF4DataVariable:
         #select scientific data set (sds) and corresponding attributes
+        VAR = VAR = metavar.input_parameter['variable']
         sds = self.fh.select(VAR)
         attributes = sds.attributes(full=1)
         #index in sds
-        if 'index' in kwargs.keys():
-            idx = kwargs['index']
-            data = sds[idx,:,:].astype(np.float32)
+        IDX = metavar.stack_index
+        if IDX is not None:
+            data = sds[IDX,:,:].astype(np.float32)
         else:
             data = sds[:,:].astype(np.float32)
         #initialize swath variable data class
-        DATA = {'name': kwargs['name'],
-                'datatype': kwargs['datatype'],
+        DATA = {'name': metavar.name,
+                'datatype': metavar.datatype,
                 'data': data,
                 'attributes': attributes,
                 }
@@ -393,12 +411,26 @@ class NetCDFSwathInput(SwathInput):
     def load(self, path: str) -> None:
         self.fh = nc.Dataset(path, 'r')
     
-    def get_var(self, **kwargs) -> NetCDFDataVariable:
-        import pdb; pdb.set_trace()
-        if grp is None:
-            return self.fh.variables[var][:,:]
+    def get_var(self, metavar: MetaVariable) -> NetCDFDataVariable:
+        VAR = metavar.input_parameter['variable']
+        data = self.fh.variables[VAR][:,:]
+        if metavar.process_parameter is not None:
+            EXCLUDE_VAR = metavar.process_parameter['exclusion_variable']
+            exclusion_data = self.fh.variables[EXCLUDE_VAR][:,:]
         else:
-            return self.fh.groups[grp].variables[var][:,:]
+            exclusion_data = None
+        GRIDTYPE = metavar.input_parameter['gridtype']
+        ORIENTATION = metavar.input_parameter['orientation']
+        #initialize swath variable data class
+        DATA = {'name': metavar.name,
+                'datatype': metavar.datatype,
+                'data': data,
+                'variable': VAR,
+                'gridtype': GRIDTYPE,
+                'orientation': ORIENTATION,
+                'exclude': exclusion_data,
+                }
+        return NetCDFDataVariable(**DATA)
 
     def close(self) -> None:
         self.fh.close()
@@ -408,7 +440,7 @@ class HDF5SwathInput(SwathInput):
     def load(self, path: str) -> None:
         pass
     
-    def get_var(self, **kwargs) -> HDF5DataVariable:
+    def get_var(self, metavar: MetaVariable) -> HDF5DataVariable:
         pass
 
     def close(self) -> None:
@@ -451,9 +483,9 @@ class SwathIO(object):
     def open_input_swath(self, path: str) -> None:
         self.swath_in.load(path)
         
-    def get_variable(self, **kwargs: dict) -> SwathVariable:
+    def get_variable(self, metavar: MetaVariable) -> SwathVariable:
         #TODO change as in set_variable and remove **kwargs here
-        return self.swath_in.get_var(**kwargs)
+        return self.swath_in.get_var(metavar)
         
     def close_input_swath(self) -> None:
         self.swath_in.close()
