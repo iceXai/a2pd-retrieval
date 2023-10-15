@@ -965,35 +965,32 @@ class SwathHandler(ABC):
         loaded_data = []
         #loop over all meta variables in meta data
         for metavar in metastack:
-            #load variable
+            #check filetype
             FILETYPE = metavar.filetype
             if FILETYPE == 'stack':
+                #load variable
                 datavar_list = self._load_stacked_var(metavar)
+                #store it
+                loaded_data.extend(datavar_list)
             else:
+                #load variable
                 datavar = self._load_single_var(metavar)
-                
-            #process variable applying scale/offset etc
-            datavar = self._process_variable(metavar, datavar)
-            #store it
-            loaded_data.append(datavar)
+                #store it
+                loaded_data.append(datavar)
         #store data
         self.ref.swathstack = DataStack(loaded_data)    
-
         
     def _load_single_var(self, metavar: MetaVariable) -> DataVariable:
+        #open file connection
         FILENAME = metavar.input_file
         FILEPATH = os.path.join(self.ref.rawout, FILENAME)
         self.ref.io.open_input_swath(FILEPATH)
-        #get variable
-        INPUT_SPECS = metavar.input_parameter
-        VARNAME = metavar.name
-        DATATYPE = metavar.datatype
-        #export to DataVariable
-        datavar = self.ref.io.get_variable(name = VARNAME,
-                                           datatype = DATATYPE,
-                                           **INPUT_SPECS)
+        #get variable and export to DataVariable
+        datavar = self.ref.io.get_variable(metavar)
         #close file connection
         self.ref.io.close_input_swath()
+        #process it
+        datavar.process(metavar)
         #return to caller
         return datavar
     
@@ -1005,13 +1002,6 @@ class SwathHandler(ABC):
             datavar = self._load_single_var(var)
             datavar_list.append(datavar)
         return datavar_list
-        
-    def _process_variable(self,
-                          metavar: MetaVariable,
-                          datavar: DataVariable) -> DataVariable:
-        if metavar.process_parameter is not None:
-                datavar.process(metavar)
-        return datavar
     
         
         #TODO get back to a simple open/load/close procedure per variable?
