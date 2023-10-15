@@ -141,12 +141,12 @@ variables:
             file: [S7_BT_in.nc, S7_BT_io.nc]
             orientation: [nadir, oblique]
             gridtype: [infrared, infrared]
-            variable: [[S7_BT_in, S7_exception_in], [S7_BT_io, S7_exception_io]]
+            variable: [S7_BT_in, S7_BT_io]
         grid_parameter:
             longitude: [longitude_in, longitude_io]
             latitude: [latitude_in, latitude_io]
         process_parameter:
-            exclude: [S7_exception_in, S7_exception_io] 
+            exclusion_variable: [S7_exception_in, S7_exception_io] 
         output_parameter:
             group: bt
             variable: [s7_n, s7_o]
@@ -159,12 +159,12 @@ variables:
             file: [S8_BT_in.nc, S8_BT_io.nc]
             orientation: [nadir, oblique]
             gridtype: [infrared, infrared]
-            variable: [[S8_BT_in, S8_exception_in], [S8_BT_io, S8_exception_io]]
+            variable: [S8_BT_in, S8_BT_io]
         grid_parameter:
             longitude: [longitude_in, longitude_io]
             latitude: [latitude_in, latitude_io]
         process_parameter:
-            exclude: [S8_exception_in, S8_exception_io] 
+            exclusion_variable: [S8_exception_in, S8_exception_io] 
         output_parameter:
             group: bt
             variable: [s8_n, s8_o]
@@ -177,12 +177,12 @@ variables:
             file: [S9_BT_in.nc, S9_BT_io.nc]
             orientation: [nadir, oblique]
             gridtype: [infrared, infrared]
-            variable: [[S9_BT_in, S9_exception_in], [S9_BT_io, S9_exception_io]]
+            variable: [S9_BT_in, S9_BT_io]
         grid_parameter:
             longitude: [longitude_in, longitude_io]
             latitude: [latitude_in, latitude_io]
         process_parameter:
-            exclude: [S9_exception_in, S9_exception_io] 
+            exclusion_variable: [S9_exception_in, S9_exception_io] 
         output_parameter:
             group: bt
             variable: [s9_n, s9_o]
