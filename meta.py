@@ -58,7 +58,7 @@ class MetaVariable:
             #transform to dataframe
             input_df = pd.DataFrame(INPUT_PAR)
             process_df = pd.DataFrame(PROCESS_PAR)
-            df = pd.concat([input_df,process_df])
+            df = pd.concat([input_df,process_df], axis=1)
             #loop over rows
             for index, row in df.iterrows():
                 submeta = {}
