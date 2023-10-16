@@ -808,8 +808,6 @@ class RetrievalProcessor(object):
         between resampling and non-resampling mode and putting variable by 
         variable into the new file using the respective SwathHandler class
         """
-        #get meta data
-        META_STACK = self.meta.data
         #decide on resampling or not
         RESAMPLING_APPLIED = self.cfg.apply_resampling
         if RESAMPLING_APPLIED:
@@ -817,27 +815,7 @@ class RetrievalProcessor(object):
         else:
             DATA_STACK = self.swathstack
         #send it to the swath hnadler
-        self.swath.save_swath(META_STACK, DATA_STACK)
-        
-        # #creating the h5 output file with base global attributes 
-        # VARIABLES_TO_PROCESS = self.meta.get_output_variables()
-        
-        # #decide on resampling or not
-        # RESAMPLING_APPLIED = self.cfg.apply_resampling
-        # if RESAMPLING_APPLIED:
-        #     for aoi in self.overlapping_aois:
-        #         self.swath.create_swath(aoi)
-        #         #set variables into the new file
-        #         for VAR in VARIABLES_TO_PROCESS:
-        #             self.swath.set_variable(VAR, aoi)
-        # else:
-        #     self.swath.create_swath()
-        #     #set variables into the new file
-        #     for VAR in VARIABLES_TO_PROCESS:
-        #         self.swath.set_variable(VAR)
-
-        # #close file connection
-        # self.swath.close_swath()
+        self.swath.save_swath(DATA_STACK)
         
     def cleanup(self) -> None:
         """
@@ -857,15 +835,12 @@ class RetrievalProcessor(object):
         
     def resample_swath(self) -> None:
         """
-        API function to handle the resample call by checking the meta data, 
-        grouping the data, and sending to grouped data to the ResampleHandler 
-        class for resampling with the data to be stored in the data container
+        API function to handle the resample call by grouping the data, 
+        and resampling it using the ResampleStack datacklass
         """
-        #retrieve meta variables (a.k.a. the non geolocation ones)
-        #and the swath data variables to be resampled
-        META_STACK = self.meta.data
+        #retrieve the swath data variables to be resampled
         DATA_STACK = self.swathstack
-        self.swath.resample_swath(META_STACK, DATA_STACK)
+        self.swath.resample_swath(DATA_STACK)
         
 
 
@@ -1002,68 +977,6 @@ class SwathHandler(ABC):
             datavar = self._load_single_var(var)
             datavar_list.append(datavar)
         return datavar_list
-    
-        
-        #TODO get back to a simple open/load/close procedure per variable?
-        #     especially make it possible for these sentinel variables as 
-        #     they may consist of several files per variable/aspects
-        
-        # import pdb; pdb.set_trace()
-        # #keep track of currently loaded data and swath file
-        # loaded_data = []
-        # loaded_swath = None
-        # #loop over all meta variables in meta data
-        # for metavar in metastack:
-        #     current_swath = metavar.input_file
-        #     if current_swath != loaded_swath:
-        #         if loaded_swath is not None:
-        #             ###close_swath()
-        #             self.ref.io.close_input_swath()
-        #         ###open_swath()
-        #         FILEPATH = os.path.join(self.ref.rawout, current_swath)
-        #         self.ref.io.open_input_swath(FILEPATH)
-        #     ###get_variable()
-        #     INPUT_SPECS = metavar.input_parameter
-        #     VARNAME = metavar.name
-        #     DATATYPE = metavar.datatype
-        #     #retrieve the actual variable data from the swath
-        #     datavar = self.ref.io.get_variable(name = VARNAME,
-        #                                        datatype = DATATYPE,
-        #                                        **INPUT_SPECS)
-        #     #process it applying scale/offset etc
-        #     if metavar.process_parameter is not None:
-        #         datavar.process(metavar)
-        #     loaded_data.append(datavar)
-        # #close file connection
-        # self.ref.io.close_input_swath()
-        # #store data
-        # self.ref.swathstack = DataStack(loaded_data)
-    
-    # def load_swath(self, swath_name: str) -> None:
-    #     FILEPATH = os.path.join(self.ref.rawout, swath_name)
-    #     self.ref.io.open_input_swath(FILEPATH)
-        
-    # def get_variable(self, metavar: MetaVariable) -> DataVariable:
-    #     SPECS = metavar.input_parameter
-    #     VARNAME = metavar.name
-    #     #retrieve the actual variable data from the swath
-    #     datavar = self.ref.io.get_variable(name=VARNAME, **SPECS)
-    #     return datavar
-    #     # import pdb; pdb.set_trace()
-    #     # #check for available channel specs to be applied
-    #     # CHSPECS_KEYS = self.ref.meta.get_chspecs_variables()
-    #     # if var in CHSPECS_KEYS:
-    #     #     #retrieve corresponding channel specifications
-    #     #     CHSPECS = self.ref.meta.get_var_channel_specs(var)
-    #     #     #apply
-    #     #     DATA = self.ref.io.process_variable(**CHSPECS)
-    #     # else:
-    #     #     DATA = self.ref.io.process_variable()
-    #     # #store it to the data container using the same variable key handle
-    #     # self.ref.data.add_to_data(var, DATA)
-     
-    # def close_swath(self) -> None:
-    #     self.ref.io.close() 
 
     @abstractmethod
     def identify_resample_aois(self) -> None:
@@ -1072,13 +985,10 @@ class SwathHandler(ABC):
         AOI_LIST = LISTING['aoi'].loc[LISTING['file']==SWATH].tolist()
         self.ref.overlapping_aois = AOI_LIST
         
-    def resample_swath(self,
-                       metastack: MetaStack, 
-                       datastack: DataStack) -> None:
+    def resample_swath(self, datastack: DataStack) -> None:
         #get data types and subset
-        list_of_datatypes = np.unique(metastack.datatypes)
+        list_of_datatypes = np.unique(datastack.datatypes)
         non_geo_datatypes = list_of_datatypes[list_of_datatypes != 'geo']
-        
         #get all available overlapping grids
         AOIS = self.ref.overlapping_aois
         #keep track of resampled variables
@@ -1089,17 +999,35 @@ class SwathHandler(ABC):
         
             #return reference-grid latitude/longitude
             ref_grid_lon, ref_grid_lat = aoi_grid.get_lonlats()
-            lon = ResampledVariable('lon', 'resampled', AOI, ref_grid_lon)
-            lat = ResampledVariable('lat', 'resampled', AOI, ref_grid_lat)
+            geo_vars = datastack.subset_by_datatype('geo')
+            lon_var_meta = [var.meta for var in geo_vars 
+                            if var.meta['out']['variable'] == 'lon'][0]
+            lat_var_meta = [var.meta for var in geo_vars 
+                            if var.meta['out']['variable'] == 'lat'][0]
+            resampled_lon = {'name': 'lon',
+                             'datatype': 'resampled',
+                             'meta': lon_var_meta,
+                             'aoi': AOI,
+                             'data': ref_grid_lon,
+                             }
+            lon = ResampledVariable(**resampled_lon)
+            resampled_lat = {'name': 'lat',
+                             'datatype': 'resampled',
+                             'meta': lat_var_meta,
+                             'aoi': AOI,
+                             'data': ref_grid_lat,
+                             }
+            lat = ResampledVariable(**resampled_lat)
             resampled_variables.extend([lon, lat])
-            
+            #loop over the other datatypes
             for datatype in non_geo_datatypes:
-                #subset by data type    
-                metagrp = metastack.subset_by_datatype(datatype)
-                lon = datastack[metagrp[0].grid_parameter['longitude']]
-                lat = datastack[metagrp[0].grid_parameter['latitude']]
+                #subset by data type
                 datagrp = datastack.subset_by_datatype(datatype)
-                
+                grid = datagrp.variables[0].meta['grid']
+                name_grid_lon = grid['longitude']
+                name_grid_lat = grid['latitude']
+                lon = datastack[name_grid_lon]
+                lat = datastack[name_grid_lat]
                 #transfer to ResampleStack
                 stack = ResampleStack(datagrp.variables, lon, lat, aoi_grid)
                 stack.resample()
@@ -1108,12 +1036,12 @@ class SwathHandler(ABC):
         #store it
         self.ref.resamplestack = DataStack(resampled_variables)
 
-    def save_swath(self, metastack: MetaStack, datastack: DataStack) -> None:
+    def save_swath(self, datastack: DataStack) -> None:
         #loop over all data varibales in stack
         for datavar in datastack:
             VARNAME = datavar.name
             DATA = datavar.data
-            OUTPUT_SPECS = metastack[VARNAME].output_parameter
+            OUTPUT_SPECS = datavar.meta['out']
             #create swath file if necessary
             self._create_swath(datavar)
             #set variable
@@ -1194,9 +1122,7 @@ class SwathHandler(ABC):
         
     def _cleanup_data_container(self) -> None:
         self.ref.data.cleanup()      
-            
 
-        
 
 class SlstrSwathHandler(SwathHandler):
     def set_swath_id(self, entry: pd.Series) -> None:
@@ -1221,15 +1147,6 @@ class SlstrSwathHandler(SwathHandler):
         """
         UNZIPPATH = self.ref.zip.get_unzip_path()
         self.ref.meta.update_input_parameter(UNZIPPATH)
-    
-    def open_swath(self, var: str) -> None:
-        FILENAME = self.ref.meta.get_var_input_specs(var)[0]
-        UNZIPPATH = self.ref.zip.get_unzip_path()
-        FILEPATH = os.path.join(UNZIPPATH, FILENAME)
-        self.ref.io.load(FILEPATH)
-        
-    def load_variable(self, var: str) -> None:
-        super().load_variable(var)
         
     def _get_date_from_swath_file(self) -> str:
         #get swath id
@@ -1276,15 +1193,6 @@ class OlciSwathHandler(SwathHandler):
         """
         UNZIPPATH = self.ref.zip.get_unzip_path()
         self.ref.meta.update_input_parameter(UNZIPPATH)
-    
-    def open_swath(self, var: str) -> None:
-        FILENAME = self.ref.meta.get_var_input_specs(var)[0]
-        UNZIPPATH = self.ref.zip.get_unzip_path()
-        FILEPATH = os.path.join(UNZIPPATH, FILENAME)
-        self.ref.io.load(FILEPATH)
-        
-    def load_variable(self, var: str) -> None:
-        super().load_variable(var)
         
     def _get_date_from_swath_file(self) -> str:
         #get swath id
