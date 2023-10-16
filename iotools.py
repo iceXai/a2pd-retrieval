@@ -55,6 +55,7 @@ class ListingIO(object):
 class SwathVariable(ABC):
     name: str
     datatype: str
+    meta: Dict[str: str]
 
 @dataclass
 class DataVariable(SwathVariable):
@@ -137,15 +138,12 @@ class HDF4DataVariable(DataVariable):
 
 @dataclass
 class NetCDFDataVariable(DataVariable):
-    variable: str = None
-    orientation: str = None
-    gridtype: str = None
     exclude: np.array = None
 
     def _process(self, metavar: MetaVariable) -> None:
-        import pdb; pdb.set_trace()
-        pass
-    
+        #set all unsigned 8bit binary values in the exclusion variable to NaN
+        #1UB, 2UB, 4UB, 8UB, 16UB, 32UB, 64UB, 128UB
+        self.data[np.where(self.exclude)] = np.nan
 
     
 @dataclass
@@ -238,6 +236,10 @@ class ResampleStack:
         stack = [var.data for var in self.variables]
         return np.stack(stack,axis=2)
     
+    @property
+    def metadata(self) -> List[Dict]:
+        return [var.meta for var in self.variables]
+    
     def resample(self):
         #stack available data
         STACK = self.datastack
@@ -248,14 +250,16 @@ class ResampleStack:
         #resample using kd tree
         AOI_GRID = self.aoi
         self.stack = self._kd_tree_resample(SWATH_DEF, AOI_GRID, STACK)
-        self.stack[np.where(self.stack == 0.0)] = np.nan
+        #self.stack[np.where(self.stack == 0.0)] = np.nan
         
     def export(self) -> List[ResampledVariable]:
         NAMES = self.names
         AOI_ID = self.aoi.area_id
         DATATYPE = 'resampled'
         STACK = self.stack
-        return [ResampledVariable(name, DATATYPE, AOI_ID, STACK[idx]) 
+        META = self.metadata
+        return [ResampledVariable(name, DATATYPE, META[idx], AOI_ID, 
+                                  STACK[idx]) 
                 for idx, name in enumerate(NAMES)]
     
     def _kd_tree_neighbours(self, swath_def, aoi_grid) -> tuple:
@@ -386,7 +390,7 @@ class HDF4SwathInput(SwathInput):
     
     def get_var(self, metavar: MetaVariable) -> HDF4DataVariable:
         #select scientific data set (sds) and corresponding attributes
-        VAR = VAR = metavar.input_parameter['variable']
+        VAR = metavar.input_parameter['variable']
         sds = self.fh.select(VAR)
         attributes = sds.attributes(full=1)
         #index in sds
@@ -395,9 +399,15 @@ class HDF4SwathInput(SwathInput):
             data = sds[IDX,:,:].astype(np.float32)
         else:
             data = sds[:,:].astype(np.float32)
+        GRID = metavar.grid_parameter
+        OUT = metavar.output_parameter
+        META = {'grid': GRID,
+                'out': OUT,
+                }
         #initialize swath variable data class
         DATA = {'name': metavar.name,
                 'datatype': metavar.datatype,
+                'meta': META,
                 'data': data,
                 'attributes': attributes,
                 }
@@ -414,6 +424,7 @@ class NetCDFSwathInput(SwathInput):
     def get_var(self, metavar: MetaVariable) -> NetCDFDataVariable:
         VAR = metavar.input_parameter['variable']
         data = self.fh.variables[VAR][:,:]
+        GRID = metavar.grid_parameter
         if metavar.process_parameter is not None:
             EXCLUDE_VAR = metavar.process_parameter['exclusion_variable']
             exclusion_data = self.fh.variables[EXCLUDE_VAR][:,:]
@@ -421,13 +432,18 @@ class NetCDFSwathInput(SwathInput):
             exclusion_data = None
         GRIDTYPE = metavar.input_parameter['gridtype']
         ORIENTATION = metavar.input_parameter['orientation']
+        DATATYPE = metavar.datatype
+        if DATATYPE != 'geo':
+            DATATYPE = f'{DATATYPE}_{ORIENTATION}_{GRIDTYPE}'
+        OUT = metavar.output_parameter
+        META = {'grid': GRID,
+                'out': OUT,
+                }
         #initialize swath variable data class
-        DATA = {'name': metavar.name,
-                'datatype': metavar.datatype,
+        DATA = {'name': VAR,
+                'datatype': DATATYPE,
+                'meta': META,
                 'data': data,
-                'variable': VAR,
-                'gridtype': GRIDTYPE,
-                'orientation': ORIENTATION,
                 'exclude': exclusion_data,
                 }
         return NetCDFDataVariable(**DATA)
@@ -484,7 +500,6 @@ class SwathIO(object):
         self.swath_in.load(path)
         
     def get_variable(self, metavar: MetaVariable) -> SwathVariable:
-        #TODO change as in set_variable and remove **kwargs here
         return self.swath_in.get_var(metavar)
         
     def close_input_swath(self) -> None:
