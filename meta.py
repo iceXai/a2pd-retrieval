@@ -55,19 +55,26 @@ class MetaVariable:
             split_vars = []
             INPUT_PAR = self.input_parameter
             PROCESS_PAR = self.process_parameter
+            GRID_PAR = self.grid_parameter
+            OUTPUT_PAR = self.output_parameter
             #transform to dataframe
             input_df = pd.DataFrame(INPUT_PAR)
             process_df = pd.DataFrame(PROCESS_PAR)
-            df = pd.concat([input_df,process_df], axis=1)
+            grid_df = pd.DataFrame(GRID_PAR)
+            df = pd.concat([input_df,process_df,grid_df], axis=1)
+            output_df = pd.DataFrame(OUTPUT_PAR, index=range(len(df)))
             #loop over rows
             for index, row in df.iterrows():
                 submeta = {}
                 columns = INPUT_PAR.keys()
                 submeta['input_parameter'] = row[columns].to_dict() 
-                submeta['output_parameter'] = None
+                submeta['output_parameter'] = output_df.loc[index].to_dict()
                 if PROCESS_PAR is not None:
                     columns = PROCESS_PAR.keys()
                     submeta['process_parameter'] = row[columns].to_dict()    
+                if GRID_PAR is not None:
+                    columns = GRID_PAR.keys()
+                    submeta['grid_parameter'] = row[columns].to_dict()
                 #append meta variable
                 metavar = MetaVariable(self.name, 
                                        self.filetype, 
