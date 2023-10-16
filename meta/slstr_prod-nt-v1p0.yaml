@@ -96,7 +96,7 @@ variables:
             variable: [solar_azimuth_tn, solar_azimuth_to]
         grid_parameter:
             longitude: [longitude_tx ,longitude_tx]
-            latitude: [latitude_tx, latitude_tx]
+            latitude: [latitude_tx, latitude_tx] 
         output_parameter:
             group: misc
             variable: [sol_azi_n, sol_azi_o]
