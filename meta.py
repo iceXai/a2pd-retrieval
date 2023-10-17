@@ -156,7 +156,7 @@ class Meta(ABC):
             data = MetaVariable(var, filetype, **var_meta)
             variables.append(data)
         self.metadata = MetaStack(variables)
-    
+
     @property
     def urls(self) -> dict:
         return self.meta['urls'][self.carrier]
@@ -179,65 +179,6 @@ class Meta(ABC):
     def data(self) -> MetaData:
         return self.metadata
     
-    # @property
-    # def geo_meta_data(self) -> MetaStack:
-    #     datatypes = self.metadata.datatypes
-    #     idx = [idx for idx, dt in enumerate(datatypes) if dt == 'geo']
-    #     geo_vars = [self.metadata[i] for i in idx]
-    #     return MetaData(geo_vars)
-          
-    # @property
-    # def non_geo_meta_data(self) -> MetaStack:
-    #     datatypes = self.metadata.datatypes
-    #     idx = [idx for idx, dt in enumerate(datatypes) if dt != 'geo']
-    #     non_geo_vars = [self.metadata[i] for i in idx]
-    #     return MetaData(non_geo_vars)
-        
-    #[...]
-    
-
-    # def get_grp_data(self, grp: str) -> dict:
-    #     return self.meta[grp]
-    
-    # def get_var_data(self, grp: str, var: str) -> list:
-    #     return self.meta[grp][var]
-    
-    # def get_input_variables(self) -> list:
-    #     #returns variables that have a grid definition
-    #     grp = 'input_specs'
-    #     return self.get_grp_data(grp).keys()
-    
-    # def get_chspecs_variables(self) -> list:
-    #     #returns variables that have a grid definition
-    #     grp = 'channel_specs'
-    #     return self.get_grp_data(grp).keys()
-    
-    # def get_resample_variables(self) -> list:
-    #     #returns variables that have a grid definition
-    #     grp = 'grid_specs'
-    #     return self.get_grp_data(grp).keys()
-    
-    # def get_output_variables(self) -> list:
-    #     #returns variables that have a grid definition
-    #     grp = 'output_specs'
-    #     return self.get_grp_data(grp).keys()
-            
-    # def get_var_input_specs(self, var: str) -> dict:
-    #     grp = 'input_specs'
-    #     return self.get_var_data(grp, var)
-    
-    # def get_var_grid_specs(self, var: str) -> dict:
-    #     grp = 'grid_specs'
-    #     return self.get_var_data(grp, var)
-    
-    # def get_var_channel_specs(self, var: str) -> dict:
-    #     grp = 'channel_specs'
-    #     return self.get_var_data(grp, var)
-    
-    # def get_var_output_specs(self, var: str) -> dict:
-    #     grp = 'output_specs'
-    #     return self.get_var_data(grp, var)
-
     
 class ModisSwathMeta(Meta):
     """
@@ -302,8 +243,10 @@ class SlstrSwathMeta(Meta):
     sensor-specific data processing
     """      
     def update_input_parameter(self, zippath: str) -> None:
+        #loop through meta data and update the paths
         for var in self.metadata:
             FILENAME = var.input_file
+            FILENAME = [fn.split('/')[-1] for fn in FILENAME]
             FILENAME = [os.path.join(zippath, fn) for fn in FILENAME]
             var.input_parameter['file'] = FILENAME
 
@@ -314,7 +257,9 @@ class OlciSwathMeta(Meta):
     sensor-specific data processing
     """      
     def update_input_parameter(self, zippath: str) -> None:
+        #loop through meta data and update the paths
         for var in self.metadata:
             FILENAME = var.input_file
+            FILENAME = [fn.split('/')[-1] for fn in FILENAME]
             FILENAME = [os.path.join(zippath, fn) for fn in FILENAME]
             var.input_parameter['file'] = FILENAME
