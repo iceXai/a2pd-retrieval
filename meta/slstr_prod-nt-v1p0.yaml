@@ -7,184 +7,311 @@ urls:
     s3b:
         data: https://ladsweb.modaps.eosdis.nasa.gov/archive/allData/450/S3B_SL_1_RBT/
         meta: https://ladsweb.modaps.eosdis.nasa.gov/archive/geoMetaSentinel3B/450/SLSTR/
-
-filetype:
-    stack
        
 variables:
-    lat:
+    lat_nadir:
         datatype: 
             geo
         input_parameter:
-            file: [geodetic_in.nc, geodetic_io.nc, geodetic_tx.nc]
-            orientation: [nadir, oblique, cross]
-            gridtype: [infrared, infrared, tiepoints]
-            variable: [latitude_in, latitude_io, latitude_tx]
-        output_parameter:
-            group: geo
-            variable: lat
-            longname: reference_grid_latitude
-            
-    lon:
+            file: geodetic_in.nc
+            variable: latitude_in
+    
+    lat_oblique:
         datatype: 
             geo
         input_parameter:
-            file: [geodetic_in.nc, geodetic_io.nc, geodetic_tx.nc]
-            orientation: [nadir, oblique, cross]
-            gridtype: [infrared, infrared, tiepoints]
-            variable: [longitude_in, longitude_io, longitude_tx]
-        output_parameter:
-            group: geo
-            variable: lon
-            longname: reference_grid_longitude
+            file: geodetic_io.nc
+            variable: latitude_io
+
+    lat_tiepoint:
+        datatype: 
+            geo
+        input_parameter:
+            file: geodetic_tx.nc
+            variable: latitude_tx
             
-    sat_zen:
-        datatype:
-            auxiliary
+    lon_nadir:
+        datatype: 
+            geo
         input_parameter:
-            file: [geometry_tn.nc, geometry_to.nc]
-            orientation: [nadir, oblique]
-            gridtype: [tiepoints, tiepoints]
-            variable: [sat_zenith_tn, sat_zenith_to]
-        grid_parameter:
-            longitude: [longitude_tx ,longitude_tx]
-            latitude: [latitude_tx, latitude_tx]
-        output_parameter:
-            group: misc
-            variable: [sat_zen_n, sat_zen_o]
-            longname: [slstr_sensor_zenith_angle_nadir, slstr_sensor_zenith_angle_oblique]
+            file: geodetic_in.nc
+            variable: longitude_in
+    
+    lon_oblique:
+        datatype: 
+            geo
+        input_parameter:
+            file: geodetic_io.nc
+            variable: longitude_io
 
-    sat_azi:
-        datatype:
-            auxiliary
+    lon_tiepoint:
+        datatype: 
+            geo
         input_parameter:
-            file: [geometry_tn.nc, geometry_to.nc]
-            orientation: [nadir, oblique]
-            gridtype: [tiepoints, tiepoints]
-            variable: [sat_azimuth_tn, sat_azimuth_to]
-        grid_parameter:
-            longitude: [longitude_tx ,longitude_tx]
-            latitude: [latitude_tx, latitude_tx] 
-        output_parameter:
-            group: misc
-            variable: [sat_azi_n, sat_azi_o]
-            longname: [slstr_sensor_azimuth_angle_nadir, slstr_sensor_azimuth_angle_oblique]        
+            file: geodetic_tx.nc
+            variable: longitude_tx
 
-    sol_zen:
+    sat_zen_nadir:
         datatype:
             auxiliary
         input_parameter:
-            file: [geometry_tn.nc, geometry_to.nc]
-            orientation: [nadir, oblique]
-            gridtype: [tiepoints, tiepoints]
-            variable: [solar_zenith_tn, solar_zenith_to]
+            file: geometry_tn.nc
+            variable: sat_zenith_tn
         grid_parameter:
-            longitude: [longitude_tx ,longitude_tx]
-            latitude: [latitude_tx, latitude_tx] 
+            longitude: lon_tiepoint
+            latitude: lat_tiepoint
         output_parameter:
             group: misc
-            variable: [sol_zen_n, sol_zen_o]
-            longname: [slstr_solar_zenith_angle_nadir, slstr_solar_zenith_angle_oblique]
+            variable: sat_zen_nadir
+            longname: slstr_sensor_zenith_angle_nadir
 
-    sol_azi:
+    sat_zen_oblique:
         datatype:
             auxiliary
         input_parameter:
-            file: [geometry_tn.nc, geometry_to.nc]
-            orientation: [nadir, oblique]
-            gridtype: [tiepoints, tiepoints]
-            variable: [solar_azimuth_tn, solar_azimuth_to]
+            file: geometry_to.nc
+            variable: sat_zenith_to
         grid_parameter:
-            longitude: [longitude_tx ,longitude_tx]
-            latitude: [latitude_tx, latitude_tx] 
+            longitude: lon_tiepoint
+            latitude: lat_tiepoint
         output_parameter:
             group: misc
-            variable: [sol_azi_n, sol_azi_o]
-            longname: [slstr_solar_azimuth_angle_nadir, slstr_solar_azimuth_angle_oblique]
+            variable: sat_zen_oblique
+            longname: slstr_sensor_zenith_angle_oblique            
 
-    bayes:
+    sat_azi_nadir:
         datatype:
             auxiliary
         input_parameter:
-            file: [flags_in.nc, flags_io.nc]
-            orientation: [nadir, oblique]
-            gridtype: [infrared, infrared]
-            variable: [bayes_in, bayes_io]
+            file: geometry_tn.nc
+            variable: sat_zenith_tn
         grid_parameter:
-            longitude: [longitude_in, longitude_io]
-            latitude: [latitude_in, latitude_io]
+            longitude: lon_tiepoint
+            latitude: lat_tiepoint
         output_parameter:
             group: misc
-            variable: [bayes_n, bayes_o]
-            longname: [slstr_bayes_cls_nadir, slstr_bayes_cls_oblique]
-       
-    cloud:
+            variable: sat_azi_nadir
+            longname: slstr_sensor_azimuth_angle_nadir
+
+    sat_azi_oblique:
         datatype:
             auxiliary
         input_parameter:
-            file: [flags_in.nc, flags_io.nc]
-            orientation: [nadir, oblique]
-            gridtype: [infrared, infrared]
-            variable: [cloud_in, cloud_io]
+            file: geometry_to.nc
+            variable: sat_zenith_to
         grid_parameter:
-            longitude: [longitude_in, longitude_io]
-            latitude: [latitude_in, latitude_io]
+            longitude: lon_tiepoint
+            latitude: lat_tiepoint
         output_parameter:
             group: misc
-            variable: [cloud_n, cloud_o]
-            longname: [slstr_cloud_cls_nadir, slstr_cloud_cls_oblique]        
-        
-    s7:
+            variable: sat_azi_oblique
+            longname: slstr_sensor_azimuth_angle_oblique  
+
+    sol_zen_nadir:
+        datatype:
+            auxiliary
+        input_parameter:
+            file: geometry_tn.nc
+            variable: solar_zenith_tn
+        grid_parameter:
+            longitude: lon_tiepoint
+            latitude: lat_tiepoint
+        output_parameter:
+            group: misc
+            variable: sol_zen_nadir
+            longname: slstr_solar_zenith_angle_nadir
+
+    sol_zen_oblique:
+        datatype:
+            auxiliary
+        input_parameter:
+            file: geometry_to.nc
+            variable: solar_zenith_to
+        grid_parameter:
+            longitude: lon_tiepoint
+            latitude: lat_tiepoint
+        output_parameter:
+            group: misc
+            variable: sol_zen_oblique
+            longname: slstr_solar_zenith_angle_oblique            
+
+    sol_azi_nadir:
+        datatype:
+            auxiliary
+        input_parameter:
+            file: geometry_tn.nc
+            variable: solar_zenith_tn
+        grid_parameter:
+            longitude: lon_tiepoint
+            latitude: lat_tiepoint
+        output_parameter:
+            group: misc
+            variable: sol_azi_nadir
+            longname: slstr_solar_azimuth_angle_nadir
+
+    sol_azi_oblique:
+        datatype:
+            auxiliary
+        input_parameter:
+            file: geometry_to.nc
+            variable: solar_zenith_to
+        grid_parameter:
+            longitude: lon_tiepoint
+            latitude: lat_tiepoint
+        output_parameter:
+            group: misc
+            variable: sol_azi_oblique
+            longname: slstr_solar_azimuth_angle_oblique        
+
+    bayes_nadir:
+        datatype:
+            auxiliary
+        input_parameter:
+            file: flags_in.nc
+            variable: bayes_in
+        grid_parameter:
+            longitude: lon_nadir
+            latitude: lat_nadir
+        output_parameter:
+            group: misc
+            variable: bayes_nadir
+            longname: slstr_bayes_cls_nadir
+    
+    bayes_oblique:
+        datatype:
+            auxiliary
+        input_parameter:
+            file: flags_io.nc
+            variable: bayes_io
+        grid_parameter:
+            longitude: lon_oblique
+            latitude: lat_oblique
+        output_parameter:
+            group: misc
+            variable: bayes_oblique
+            longname: slstr_bayes_cls_oblique
+
+    cloud_nadir:
+        datatype:
+            auxiliary
+        input_parameter:
+            file: flags_in.nc
+            variable: cloud_in
+        grid_parameter:
+            longitude: lon_nadir
+            latitude: lat_nadir
+        output_parameter:
+            group: misc
+            variable: cloud_nadir
+            longname: slstr_cloud_cls_nadir
+    
+    cloud_oblique:
+        datatype:
+            auxiliary
+        input_parameter:
+            file: flags_io.nc
+            variable: cloud_io
+        grid_parameter:
+            longitude: lon_oblique
+            latitude: lat_oblique
+        output_parameter:
+            group: misc
+            variable: cloud_oblique
+            longname: slstr_cloud_cls_oblique      
+
+    s7_nadir:
         datatype:
             radiance
         input_parameter:
-            file: [S7_BT_in.nc, S7_BT_io.nc]
-            orientation: [nadir, oblique]
-            gridtype: [infrared, infrared]
-            variable: [S7_BT_in, S7_BT_io]
+            file: S7_BT_in.nc
+            variable: S7_BT_in
         grid_parameter:
-            longitude: [longitude_in, longitude_io]
-            latitude: [latitude_in, latitude_io]
+            longitude: lon_nadir
+            latitude: lat_nadir
         process_parameter:
-            exclusion_variable: [S7_exception_in, S7_exception_io] 
+            exclusion_variable: S7_exception_in
         output_parameter:
             group: bt
-            variable: [s7_n, s7_o]
-            longname: [slstr_ch7_nadir, slstr_ch7_oblique]
+            variable: s7_nadir
+            longname: slstr_ch7_brightness-temperature_nadir
             
-    s8:
+    s7_oblique:
         datatype:
             radiance
         input_parameter:
-            file: [S8_BT_in.nc, S8_BT_io.nc]
-            orientation: [nadir, oblique]
-            gridtype: [infrared, infrared]
-            variable: [S8_BT_in, S8_BT_io]
+            file: S7_BT_io.nc
+            variable: S7_BT_io
         grid_parameter:
-            longitude: [longitude_in, longitude_io]
-            latitude: [latitude_in, latitude_io]
+            longitude: lon_oblique
+            latitude: lat_oblique
         process_parameter:
-            exclusion_variable: [S8_exception_in, S8_exception_io] 
+            exclusion_variable: S7_exception_io
         output_parameter:
             group: bt
-            variable: [s8_n, s8_o]
-            longname: [slstr_ch8_nadir, slstr_ch8_oblique]
+            variable: s7_oblique
+            longname: slstr_ch7_brightness-temperature_oblique
 
-    s9:
+    s8_nadir:
         datatype:
             radiance
         input_parameter:
-            file: [S9_BT_in.nc, S9_BT_io.nc]
-            orientation: [nadir, oblique]
-            gridtype: [infrared, infrared]
-            variable: [S9_BT_in, S9_BT_io]
+            file: S8_BT_in.nc
+            variable: S8_BT_in
         grid_parameter:
-            longitude: [longitude_in, longitude_io]
-            latitude: [latitude_in, latitude_io]
+            longitude: lon_nadir
+            latitude: lat_nadir
         process_parameter:
-            exclusion_variable: [S9_exception_in, S9_exception_io] 
+            exclusion_variable: S8_exception_in
         output_parameter:
             group: bt
-            variable: [s9_n, s9_o]
-            longname: [slstr_ch9_nadir, slstr_ch9_oblique]           
+            variable: s8_nadir
+            longname: slstr_ch8_brightness-temperature_nadir
             
+    s8_oblique:
+        datatype:
+            radiance
+        input_parameter:
+            file: S8_BT_io.nc
+            variable: S8_BT_io
+        grid_parameter:
+            longitude: lon_oblique
+            latitude: lat_oblique
+        process_parameter:
+            exclusion_variable: S8_exception_io
+        output_parameter:
+            group: bt
+            variable: s8_oblique
+            longname: slstr_ch8_brightness-temperature_oblique
+
+    s9_nadir:
+        datatype:
+            radiance
+        input_parameter:
+            file: S9_BT_in.nc
+            variable: S9_BT_in
+        grid_parameter:
+            longitude: lon_nadir
+            latitude: lat_nadir
+        process_parameter:
+            exclusion_variable: S9_exception_in
+        output_parameter:
+            group: bt
+            variable: s9_nadir
+            longname: slstr_ch9_brightness-temperature_nadir
+            
+    s9_oblique:
+        datatype:
+            radiance
+        input_parameter:
+            file: S9_BT_io.nc
+            variable: S9_BT_io
+        grid_parameter:
+            longitude: lon_oblique
+            latitude: lat_oblique
+        process_parameter:
+            exclusion_variable: S9_exception_io
+        output_parameter:
+            group: bt
+            variable: s9_oblique
+            longname: slstr_ch9_brightness-temperature_oblique
+  
