@@ -65,27 +65,18 @@ class SwathInput(ABC):
         pass
     
     @abstractmethod
-    def get_var(self, name: str, datatype: str, variable: str, 
-                idx: str = None, **kwargs) -> SwathVariable:
+    def get_var(self, metavar: MetaVariable) -> SwathVariable:
         """
         Parameters
         ----------
-        name : str
-            DESCRIPTION.
-        datatype : str
-            DESCRIPTION.
-        variable : str
-            DESCRIPTION.
-        idx : str, optional
-            DESCRIPTION. The default is None.
-        **kwargs : dict, optional
-            additional key-word arguments from the MetaDataVariable 
-            dataclass's input_parameter field
+        metavar : MetaVariable
+            MetaVariable dataclass corresponding to the variable to retrieve 
+            from the swath file
 
         Returns
         -------
         SwathDataVariable
-            Returns a SwathDataVariable dataclass or it child with the 
+            Returns a swath DataVariable dataclass or it child class with the 
             corresponding data
         """
         pass
@@ -125,13 +116,14 @@ class SwathOutput(ABC):
         Parameters
         ----------
         data : np.array
-            DESCRIPTION.
+            Variable data to be set in the output file
         group : str
-            DESCRIPTION.
+            Group name to be used in the output file
         variable : str
-            DESCRIPTION.
+            Variable name to be used in the output file
         longname : str
-            DESCRIPTION.
+            Attribute long name to better explain the variable name in the 
+            output file
 
         Returns
         -------
@@ -196,17 +188,15 @@ class NetCDFSwathInput(SwathInput):
             exclusion_data = self.fh.variables[EXCLUDE_VAR][:,:]
         else:
             exclusion_data = None
-        GRIDTYPE = metavar.input_parameter['gridtype']
-        ORIENTATION = metavar.input_parameter['orientation']
         DATATYPE = metavar.datatype
         if DATATYPE != 'geo':
-            DATATYPE = f'{DATATYPE}_{ORIENTATION}_{GRIDTYPE}'
+            DATATYPE = f'{DATATYPE}_{GRID["longitude"]}_{GRID["latitude"]}'
         OUT = metavar.output_parameter
         META = {'grid': GRID,
                 'out': OUT,
                 }
         #initialize swath variable data class
-        DATA = {'name': VAR,
+        DATA = {'name': metavar.name,
                 'datatype': DATATYPE,
                 'meta': META,
                 'data': data,
