@@ -4,48 +4,155 @@
 """
 
 # In[]
+from __future__ import annotations
+
+from meta import MetaVariable
+
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import List, Dict
  
 import pandas as pd
 import numpy as np
 
 # In[] 
 
-class SwathData(object):
-    """
-    Container for all data-related tasks and its handling through other 
-    classes, i.e., swath data, resampled data
-    """
-    def __init__(self):
-        self.id = None
-        #will store all loaded data from the swaths
-        self.data = {}
-        #will store the finalized data per specified aoi
-        self.resampled_data = None
+@dataclass
+class SwathVariable(ABC):
+    name: str
+    datatype: str
+    meta: Dict[str, str]
+
+@dataclass
+class DataVariable(SwathVariable):
+    """ Databaseclass to keep track of and process a loaded variable """
+    data: np.array
+    
+    @property
+    def shape(self) -> tuple:
+        return self.data.shape
+    
+    def process(self, metavar: MetaVariable) -> None:
+        if metavar.process_parameter is not None:
+            self._process(metavar)
+    
+    @abstractmethod
+    def _process(self, metavar: MetaVariable) -> None:
+        pass
+    
+@dataclass
+class HDF4DataVariable(DataVariable):
+    attributes: dict
+    
+    def _process(self, metavar: MetaVariable) -> None:
+        #limit data
+        FILL_VALUE = self.attributes['_FillValue'][0]
+        VALID_MIN = self.attributes['valid_range'][0][0]
+        VALID_MAX = self.attributes['valid_range'][0][1]
+        DATA = self.data        
+        #mask invalid entries
+        INVALID = np.logical_or(DATA > VALID_MAX, 
+                                DATA < VALID_MIN, 
+                                DATA == FILL_VALUE)
+        DATA[INVALID] = np.nan
+        #apply offset if available
+        PROCESS_SPECS = metavar.process_parameter
+        IDX = metavar.stack_index
+        if 'offset' in PROCESS_SPECS.keys():
+            OFFSET = self.attributes[PROCESS_SPECS['offset']][0]
+            DATA -= OFFSET[IDX]
+        #apply scale if available
+        if 'scale' in PROCESS_SPECS.keys() and IDX is None:
+            SCALE = self.attributes[PROCESS_SPECS['scale']][0]
+            DATA *= SCALE
+        if 'scale' in PROCESS_SPECS.keys() and IDX is not None:
+            SCALE = self.attributes[PROCESS_SPECS['scale']][0]
+            DATA *= SCALE[IDX]
+        #compute brightness temperature where applicable
+        if 'wavelength' in PROCESS_SPECS.keys():
+            #mask values below 0 that sometimes appear
+            non_nan = ~np.isnan(DATA)
+            non_nan[non_nan] = np.less(DATA[non_nan],0)
+            DATA[non_nan] = np.nan
+            DATA = self._calculate_Tb(DATA, PROCESS_SPECS['wavelength'])
+        #override it
+        self.data = DATA
         
-    def set_swath_id(self, fn: str) -> None:
-        self.id = fn
+    def _calculate_Tb(self, var, wavelength):
+        #define constants
+        H_PLANCK = 6.62607004 * 10**-34  #[Js]
+        C_SOL    = 2.99792458 * 10**8  #[m/s]
+        K_BOLTZ  = 1.38064852 * 10**-23  #[J/K]
         
-    def get_swath_id(self) -> str:
-        return self.id
+        #calculate and return brightness temperature
+        Tb = H_PLANCK * C_SOL / (K_BOLTZ * wavelength * 
+             np.log((2.0 * H_PLANCK * C_SOL**2 * wavelength**(-5)) / 
+                    (var * 10**6) + 1.0))
+        return Tb
+
+@dataclass
+class NetCDFDataVariable(DataVariable):
+    exclude: np.array = None
+
+    def _process(self, metavar: MetaVariable) -> None:
+        #set all unsigned 8bit binary values in the exclusion variable to NaN
+        #1UB, 2UB, 4UB, 8UB, 16UB, 32UB, 64UB, 128UB
+        self.data[np.where(self.exclude)] = np.nan
         
-    def add_to_data(self, var_key: str, var: np.array) -> None:
-        self.data[var_key] = var 
-        
-    def get_data(self, var_key: str):
-        return self.data[var_key]
-        
-    def add_to_resampled_data(self, resampled_data: dict) -> None:
-        self.resampled_data = resampled_data 
-        
-    def get_aois(self) -> list:
-        if self.resampled_data is not None:
-            return self.resampled_data.keys()
-        else: 
+@dataclass
+class HDF5DataVariable(DataVariable):
+
+    def _process(self, metavar: MetaVariable) -> None:
+        pass
+
+    
+@dataclass
+class DataStack:
+    """ Container class to store and handle individual swath variables """
+    variables: List[SwathVariable]
+    
+    def __len__(self) -> int:
+        return len(self.variables)
+    
+    def __iter__(self):
+        return iter(self.variables)
+    
+    def __getitem__(self, item) -> SwathVariable:
+        if type(item) == str and item in self.names:
+            return [var for var in self.variables if item == var.name][0]
+        elif type(item) == int:
+            return self.variables[item]
+        else:
             return None
     
-    def get_resampled_data(self, aoi_key: str, var_key: str) -> dict:
-        return self.resampled_data[aoi_key][var_key]
+    @property
+    def names(self) -> List[str]:
+        return [var.name for var in self.variables]
     
-    def cleanup(self) -> None:
-        self.data = {}
-        self.resampled_data = None
+    @property
+    def datatypes(self) -> List[str]:
+        return [var.datatype for var in self.variables]
+    
+    @property
+    def aois(self) -> Dict[str, np.array]:
+        aoi_dict = {}
+        aoi_list = [var.aoi for var in self.variables if hasattr(var, 'aoi')]
+        aoi_array = np.array(aoi_list)
+        unique_aois = np.unique(aoi_array)
+        for aoi in unique_aois:
+            aoi_dict[aoi] = np.where(aoi_array==aoi)[0]
+        return aoi_dict
+    
+    @property
+    def size(self) -> int:
+        return self.__len__()
+    
+    def subset_by_datatype(self, datatype: str) -> DataStack:
+        datatypes = self.datatypes
+        if datatype in datatypes:
+            idx = [idx for idx, dt in enumerate(datatypes) if dt == datatype]
+            subset_vars = [self.variables[i] for i in idx]
+            return DataStack(subset_vars)
+        else:
+            return None
+        
