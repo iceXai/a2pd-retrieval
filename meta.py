@@ -35,7 +35,7 @@ class MetaVariable:
     filetype: str
     datatype: str
     input_parameter: dict
-    output_parameter: dict
+    output_parameter: dict = None
     grid_parameter: dict = None
     process_parameter: dict = None
     
