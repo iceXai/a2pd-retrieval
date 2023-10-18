@@ -32,7 +32,6 @@ class MetaVariable:
     of the data
     """
     name: str
-    filetype: str
     datatype: str
     input_parameter: dict
     output_parameter: dict = None
@@ -47,42 +46,6 @@ class MetaVariable:
     def stack_index(self):
         if 'index' in self.input_parameter.keys():
             return self.input_parameter['index']
-        else: 
-            return None
-        
-    def splitup(self) -> List[MetaVariable]:
-        if type(self.input_file) == list:
-            split_vars = []
-            INPUT_PAR = self.input_parameter
-            PROCESS_PAR = self.process_parameter
-            GRID_PAR = self.grid_parameter
-            OUTPUT_PAR = self.output_parameter
-            #transform to dataframe
-            input_df = pd.DataFrame(INPUT_PAR)
-            process_df = pd.DataFrame(PROCESS_PAR)
-            grid_df = pd.DataFrame(GRID_PAR)
-            df = pd.concat([input_df,process_df,grid_df], axis=1)
-            output_df = pd.DataFrame(OUTPUT_PAR, index=range(len(df)))
-            #loop over rows
-            for index, row in df.iterrows():
-                submeta = {}
-                columns = INPUT_PAR.keys()
-                submeta['input_parameter'] = row[columns].to_dict() 
-                submeta['output_parameter'] = output_df.loc[index].to_dict()
-                if PROCESS_PAR is not None:
-                    columns = PROCESS_PAR.keys()
-                    submeta['process_parameter'] = row[columns].to_dict()    
-                if GRID_PAR is not None:
-                    columns = GRID_PAR.keys()
-                    submeta['grid_parameter'] = row[columns].to_dict()
-                #append meta variable
-                metavar = MetaVariable(self.name, 
-                                       self.filetype, 
-                                       self.datatype,
-                                       **submeta)
-                split_vars.append(metavar)
-            #return to caller
-            return split_vars
         else: 
             return None
 
@@ -150,10 +113,9 @@ class Meta(ABC):
         
     def _import_variables(self) -> None:
         variables = []
-        filetype = self.meta['filetype']
         for var in self.meta['variables'].keys():
             var_meta = self.meta['variables'][var]
-            data = MetaVariable(var, filetype, **var_meta)
+            data = MetaVariable(var, **var_meta)
             variables.append(data)
         self.metadata = MetaStack(variables)
 
@@ -246,8 +208,8 @@ class SlstrSwathMeta(Meta):
         #loop through meta data and update the paths
         for var in self.metadata:
             FILENAME = var.input_file
-            FILENAME = [fn.split('/')[-1] for fn in FILENAME]
-            FILENAME = [os.path.join(zippath, fn) for fn in FILENAME]
+            FILENAME = FILENAME.split('/')[-1]
+            FILENAME = os.path.join(zippath, FILENAME)
             var.input_parameter['file'] = FILENAME
 
 
@@ -260,6 +222,6 @@ class OlciSwathMeta(Meta):
         #loop through meta data and update the paths
         for var in self.metadata:
             FILENAME = var.input_file
-            FILENAME = [fn.split('/')[-1] for fn in FILENAME]
-            FILENAME = [os.path.join(zippath, fn) for fn in FILENAME]
+            FILENAME = FILENAME.split('/')[-1]
+            FILENAME = os.path.join(zippath, FILENAME)
             var.input_parameter['file'] = FILENAME
