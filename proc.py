@@ -11,15 +11,13 @@ from typing import List, Dict
 
 from iotools import ListingIO
 from data import ListingData
-from data import SwathData
-from resampling import ResampleHandler
+from data import SwathVariable
+from data import DataVariable
+from data import DataStack
 from meta import MetaVariable
 from meta import MetaStack
-from iotools import SwathVariable
-from iotools import DataVariable
-from iotools import DataStack
-from iotools import ResampledVariable
-from iotools import ResampleStack
+from resampling import ResampledVariable
+from resampling import ResampleStack
 
 import pandas as pd
 import numpy as np
@@ -625,11 +623,6 @@ class RetrievalProcessor(object):
         #initialize base/sensor-specific modules
         self.initialize_base_modules()
         
-        #initialize resampling if necessary
-        APPLY_RESAMPLING = self.cfg.apply_resampling
-        if APPLY_RESAMPLING:
-            self.initialize_resample_module()
-        
         #global variables
         self.overlapping_aois = None
         
@@ -642,13 +635,9 @@ class RetrievalProcessor(object):
         #modules
         self._set_aoi_handler()
         self._set_swath_meta()
-        self._set_swath_data()
         self._set_swath_io()
         self._set_error_handler()
         self._set_zip_handler()
-        
-    def initialize_resample_module(self) -> None:
-        self.resampling = ResampleHandler(self)
         
     """ Internal Getters/Setters for Processor Setup """        
     def _set_carrier(self) -> None:
@@ -683,17 +672,10 @@ class RetrievalProcessor(object):
         #initiate meta data handler
         self.meta = self.cfg.get_meta_module()
         
-    def _set_swath_data(self) -> None:
-        #initiate swath data container
-        self.data = SwathData()
-        
     def _set_swath_io(self) -> None:
         #initiate i/o handler
         # TODO move to swath hndler instead of the main class?
         self.io = self.cfg.setup_swath_io()
-        # SENSOR = self.cfg.sensor.capitalize()
-        # IO_CLASS = self.cfg.get_class('iotools', f'{SENSOR}SwathIO') 
-        # self.io = IO_CLASS(self.out)
         
     def _set_error_handler(self) -> None:
         #initiate download error handler
@@ -925,11 +907,11 @@ class SwathHandler(ABC):
     @abstractmethod
     def set_swath_id(self, entry: pd.Series) -> None:
         SWATH = entry[0]
-        self.ref.data.set_swath_id(SWATH)
+        self.id = SWATH
 
     @abstractmethod
     def get_swath_id(self, swath_only: bool) -> str:
-        SWATH = self.ref.data.get_swath_id()
+        SWATH = self.id
         if swath_only:
             SWATH = SWATH.split('/')[-1]
         return SWATH
@@ -1108,20 +1090,15 @@ class SwathHandler(ABC):
             logger.info(f'Removal successful!')
         else:
             logger.error(f'Removal of {SWATH} failed!')
-        #clear data container
-        self._cleanup_data_container()
         
     def _remove_swath(self, swath: str) -> bool:
         FILENAME = swath
         FILEPATH = os.path.join(self.ref.rawout, FILENAME)
         try:
-            self.ref.io.cleanup(FILEPATH)
+            #self.ref.io.cleanup(FILEPATH)
             return True
         except:
-            return False
-        
-    def _cleanup_data_container(self) -> None:
-        self.ref.data.cleanup()      
+            return False    
 
 
 class SlstrSwathHandler(SwathHandler):
@@ -1219,16 +1196,17 @@ class OlciSwathHandler(SwathHandler):
 class ModisSwathHandler(SwathHandler):
     def set_swath_id(self, entry: pd.Series) -> None:
         SWATHS = {'mxd03': entry[0],'mxd02': entry[1]}
-        self.ref.data.set_swath_id(SWATHS)
+        self.id = SWATHS
     
     def get_swath_id(self, swath_only: bool) -> tuple:
-        URLS = self.ref.data.get_swath_id()
+        URLS = self.id
         if swath_only:
             SWATHS = {}
             SWATHS['mxd03'] = URLS['mxd03'].split('/')[-1]
             SWATHS['mxd02'] = URLS['mxd02'].split('/')[-1]
             return SWATHS
-        return URLS
+        else:
+            return URLS
     
     def load_and_process_swath(self, metastack: MetaStack) -> None:
         #update meta variable on input files
@@ -1272,8 +1250,6 @@ class ModisSwathHandler(SwathHandler):
         MXD02 = SWATHS['mxd02']
         logger.info(f'Removing downloaded file: {MXD02}')
         self._remove_swath(MXD02)
-        #clear data container
-        self._cleanup_data_container()
         
     def identify_resample_aois(self) -> None:
         SWATH = self.get_swath_id(swath_only=True)['mxd03']
@@ -1492,15 +1468,15 @@ class ModisRetrievalHandler(RetrievalHandler):
         #only download in case do not already exist
         MXD03_EXISTS = SWATHS['mxd03'] in downloaded_files
         if not MXD03_EXISTS:
-            status_mxd03 = self.download_swath(URLS['mxd03'])
+            MXD03_SUCCESS = self.download_swath(URLS['mxd03'])
         else:
-            status_mxd03 = True
+            MXD03_SUCCESS = True
         MXD02_EXISTS = SWATHS['mxd02'] in downloaded_files
-        if not MXD02_EXISTS:
-            status_mxd02 = self.download_swath(URLS['mxd02'])
+        if not MXD02_EXISTS and MXD03_SUCCESS:
+            MXD02_SUCCESS = self.download_swath(URLS['mxd02'])
         else:
-            status_mxd02 = True
+            MXD02_SUCCESS = True
             
-        return all((status_mxd03, status_mxd02))
+        return all((MXD03_SUCCESS, MXD02_SUCCESS))
 
 
