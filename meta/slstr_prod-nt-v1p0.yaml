@@ -233,7 +233,7 @@ variables:
         output_parameter:
             group: bt
             variable: s7_nadir
-            longname: slstr_ch7_brightness-temperature_nadir
+            longname: slstr_ch7_brightness_temperature_nadir
             
     s7_oblique:
         datatype:
@@ -249,7 +249,7 @@ variables:
         output_parameter:
             group: bt
             variable: s7_oblique
-            longname: slstr_ch7_brightness-temperature_oblique
+            longname: slstr_ch7_brightness_temperature_oblique
 
     s8_nadir:
         datatype:
@@ -265,7 +265,7 @@ variables:
         output_parameter:
             group: bt
             variable: s8_nadir
-            longname: slstr_ch8_brightness-temperature_nadir
+            longname: slstr_ch8_brightness_temperature_nadir
             
     s8_oblique:
         datatype:
@@ -281,7 +281,7 @@ variables:
         output_parameter:
             group: bt
             variable: s8_oblique
-            longname: slstr_ch8_brightness-temperature_oblique
+            longname: slstr_ch8_brightness_temperature_oblique
 
     s9_nadir:
         datatype:
@@ -297,7 +297,7 @@ variables:
         output_parameter:
             group: bt
             variable: s9_nadir
-            longname: slstr_ch9_brightness-temperature_nadir
+            longname: slstr_ch9_brightness_temperature_nadir
             
     s9_oblique:
         datatype:
@@ -313,5 +313,5 @@ variables:
         output_parameter:
             group: bt
             variable: s9_oblique
-            longname: slstr_ch9_brightness-temperature_oblique
+            longname: slstr_ch9_brightness_temperature_oblique
   
