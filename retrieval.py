@@ -64,7 +64,6 @@ class Retrieval(object):
 
             #download the swath files
             DOWNLOAD_COMPLETED = self.proc.get_swath_file()
-
             #continue with next entry in case something went wrong
             if not DOWNLOAD_COMPLETED:
                 continue
