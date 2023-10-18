@@ -922,43 +922,21 @@ class SwathHandler(ABC):
         loaded_data = []
         #loop over all meta variables in meta data
         for metavar in metastack:
-            #check filetype
-            FILETYPE = metavar.filetype
-            if FILETYPE == 'stack':
-                #load variable
-                datavar_list = self._load_stacked_var(metavar)
-                #store it
-                loaded_data.extend(datavar_list)
-            else:
-                #load variable
-                datavar = self._load_single_var(metavar)
-                #store it
-                loaded_data.append(datavar)
+            #open file connection
+            FILENAME = metavar.input_file
+            FILEPATH = os.path.join(self.ref.rawout, FILENAME)
+            self.ref.io.open_input_swath(FILEPATH)
+            #get variable and export to DataVariable
+            datavar = self.ref.io.get_variable(metavar)
+            #close file connection
+            self.ref.io.close_input_swath()
+            #process it
+            datavar.process(metavar)
+            #store it
+            loaded_data.append(datavar)
         #store data
         self.ref.swathstack = DataStack(loaded_data)    
-        
-    def _load_single_var(self, metavar: MetaVariable) -> DataVariable:
-        #open file connection
-        FILENAME = metavar.input_file
-        FILEPATH = os.path.join(self.ref.rawout, FILENAME)
-        self.ref.io.open_input_swath(FILEPATH)
-        #get variable and export to DataVariable
-        datavar = self.ref.io.get_variable(metavar)
-        #close file connection
-        self.ref.io.close_input_swath()
-        #process it
-        datavar.process(metavar)
-        #return to caller
-        return datavar
-    
-    def _load_stacked_var(self, metavar: MetaVariable) -> List[DataVariable]:
-        #split up stacked meta variable
-        metavar_list = metavar.splitup()
-        datavar_list = []
-        for var in metavar_list:
-            datavar = self._load_single_var(var)
-            datavar_list.append(datavar)
-        return datavar_list
+
 
     @abstractmethod
     def identify_resample_aois(self) -> None:
@@ -982,10 +960,18 @@ class SwathHandler(ABC):
             #return reference-grid latitude/longitude
             ref_grid_lon, ref_grid_lat = aoi_grid.get_lonlats()
             geo_vars = datastack.subset_by_datatype('geo')
-            lon_var_meta = [var.meta for var in geo_vars 
-                            if var.meta['out']['variable'] == 'lon'][0]
-            lat_var_meta = [var.meta for var in geo_vars 
-                            if var.meta['out']['variable'] == 'lat'][0]
+            OUT_PAR = {'group': 'geo',
+                       'variable': 'lon',
+                       'longname': 'reference_grid_longitude',
+                       }
+            lon_var_meta = {'out': OUT_PAR,
+                            }
+            OUT_PAR = {'group': 'geo',
+                       'variable': 'lat',
+                       'longname': 'reference_grid_latitude',
+                       }
+            lat_var_meta = {'out': OUT_PAR,
+                            }
             resampled_lon = {'name': 'lon',
                              'datatype': 'resampled',
                              'meta': lon_var_meta,
