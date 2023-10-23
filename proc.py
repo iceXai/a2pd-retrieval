@@ -1037,6 +1037,8 @@ class SwathHandler(ABC):
                 """
                 pass
             self.ref.io.create_output_swath(FILEPATH)
+        else:
+            self.ref.io.open_output_swath(FILEPATH)
 
     def _set_variable(self, 
                      data: np.array = None, 
