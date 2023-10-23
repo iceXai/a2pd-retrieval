@@ -1027,8 +1027,6 @@ class SwathHandler(ABC):
         FILENAME = self._compile_output_swath_name(AOI)
         FILEPATH = os.path.join(self.ref.out, FILENAME)
         if not os.path.isfile(FILEPATH):
-            #status
-            logger.info(f'Saving to file: {FILENAME}')
             try:
                 self.ref.io.close_output_swath()
             except AttributeError:
@@ -1036,6 +1034,8 @@ class SwathHandler(ABC):
                 In case no file is present but also none was yet created 
                 """
                 pass
+            #status
+            logger.info(f'Saving to file: {FILENAME}')
             self.ref.io.create_output_swath(FILEPATH)
         else:
             self.ref.io.open_output_swath(FILEPATH)
@@ -1319,6 +1319,8 @@ class RetrievalHandler(ABC):
         if not SWATH_EXISTS:
             status = self.download_swath(URL)
         else:
+            #status
+            logger.info(f'Swath file: {SWATH} already exists!')
             status = True
         
         #return
