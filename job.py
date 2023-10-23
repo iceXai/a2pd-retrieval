@@ -35,8 +35,12 @@ class RetrievalJob(object):
         None.
 
         """
+        #status
+        logger.info('Initialize job processor...')
         #parse arguments
-        self.args = args      
+        self.args = args
+        #status
+        logger.info('Complete.')
 
     
     def validate(self) -> None:
@@ -48,7 +52,10 @@ class RetrievalJob(object):
         -------
         None.
         
-        """      
+        """
+        #status
+        logger.info('Validate user arguments and setting files...')
+        
         #validate configuration file existence
         CFG_FILE = self.args['cfg']
         CFG_PATH = os.path.join(os.getcwd(), 'cfg', CFG_FILE)
@@ -61,6 +68,8 @@ class RetrievalJob(object):
         validator = CFGValidator(self.cfg)
         #make initial sanity checks
         validator.validate()
+        #status
+        logger.info('Complete.')
     
     def setup(self) -> None:
         """
@@ -82,7 +91,9 @@ class RetrievalJob(object):
         APPLY_RETRIEVAL = self.cfg.apply_swath_download
         if APPLY_RETRIEVAL:
             #initialize the correct retrieval module/processor
-            self.ret = self.cfg.setup_retrieval_module()            
+            self.ret = self.cfg.setup_retrieval_module()
+        #status
+        logger.info('Complete.')
         
     def run(self) -> None:
         """
