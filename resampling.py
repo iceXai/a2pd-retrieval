@@ -96,9 +96,10 @@ class ResampleStack:
                 for idx, name in enumerate(NAMES)]
     
     def _kd_tree_neighbours(self, swath_def, aoi_grid) -> tuple:
+        ROI = 5000
         in_idx, out_idx, idx, _ = get_neighbour_info(swath_def,
                                                      aoi_grid,
-                                                     radius_of_influence=5000,
+                                                     radius_of_influence=ROI,
                                                      neighbours=1)
         return in_idx, out_idx, idx
     
