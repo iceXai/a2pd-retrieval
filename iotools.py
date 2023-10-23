@@ -220,6 +220,10 @@ class HDF5SwathInput(SwathInput):
         
 
 class HDF5SwathOutput(SwathOutput):
+    def load(self, path: str) -> None:
+        #open file handle
+        self.fh = h5py.File(path,'r+')
+        
     def create(self, path: str) -> None:
         #create file and open file handle
         self.fh = h5py.File(path,'w')
@@ -233,14 +237,19 @@ class HDF5SwathOutput(SwathOutput):
     
     def set_var(self, data: np.array, group: str, variable: str,
                 longname: str) -> None:
-        #create dataset in file
-        h5ds = self.fh.create_dataset(f'{group}/{variable}',
-                                      data=data,
-                                      compression="gzip",
-                                      compression_opts=9)
-        #set data attributes
-        h5ds.attrs.create("long_name", longname)
-        h5ds.attrs.create("valid_range", [np.nanmin(data),np.nanmax(data)])
+        try:
+            #create dataset in file
+            h5ds = self.fh.create_dataset(f'{group}/{variable}',
+                                          data=data,
+                                          compression="gzip",
+                                          compression_opts=9)
+            #set data attributes
+            h5ds.attrs.create("long_name", longname)
+            h5ds.attrs.create("valid_range", [np.nanmin(data),
+                                              np.nanmax(data)])
+        except OSError:
+            logger.info(f'Variable {group}/{variable} exists already'+
+                        f' in output file')
     
     def close(self) -> None:
         self.fh.close()
@@ -260,6 +269,9 @@ class SwathIO(object):
         
     def close_input_swath(self) -> None:
         self.swath_in.close()
+        
+    def open_output_swath(self, path: str) -> None:
+        self.swath_out.load(path)
         
     def create_output_swath(self, path: str) -> None:
         self.swath_out.create(path)
