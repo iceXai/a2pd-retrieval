@@ -954,6 +954,9 @@ class SwathHandler(ABC):
         #keep track of resampled variables
         resampled_variables = []
         for AOI in AOIS:
+            #status
+            logger.info(f'Resampling variables to grid: {AOI}...')
+
             #retrieve aoi grid to resample to
             aoi_grid = self.ref.aoi.get_aoi(AOI).get_grid()    
         
@@ -1083,7 +1086,7 @@ class SwathHandler(ABC):
         FILENAME = swath
         FILEPATH = os.path.join(self.ref.rawout, FILENAME)
         try:
-            #self.ref.io.cleanup(FILEPATH)
+            self.ref.io.cleanup(FILEPATH)
             return True
         except:
             return False    
