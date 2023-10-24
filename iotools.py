@@ -22,9 +22,10 @@ from typing import List, Dict
 import h5py
 import os
 
-import netCDF4 as nc
+#import netCDF4 as nc
 import numpy as np
 import pandas as pd
+import xarray as xr
 
 
 """ Listing """
@@ -177,28 +178,68 @@ class HDF4SwathInput(SwathInput):
 
 class NetCDFSwathInput(SwathInput):
     def load(self, path: str) -> None:
-        self.fh = nc.Dataset(path, 'r')
+        self.fh = xr.open_dataset(path)
+        #self.fh = nc.Dataset(path, 'r')
     
     def get_var(self, metavar: MetaVariable) -> NetCDFDataVariable:
         VAR = metavar.input_parameter['variable']
-        data = self.fh.variables[VAR][:,:]
-        GRID = metavar.grid_parameter
+        #get data
+        data = self.fh[VAR].values
+        attributes = {}
+        attributes['data'] = self.fh[VAR].attrs
+        #retrieve exclusion data 
         if metavar.process_parameter is not None:
             EXCLUDE_VAR = metavar.process_parameter['exclusion_variable']
-            exclusion_data = self.fh.variables[EXCLUDE_VAR][:,:]
+            exclusion_data = self.fh.variables[EXCLUDE_VAR].values
+            attributes['exclusion'] = self.fh.variables[EXCLUDE_VAR].attrs
         else:
-            exclusion_data = None
-        DATATYPE = metavar.datatype
-        if DATATYPE != 'geo':
-            DATATYPE = f'{DATATYPE}_{GRID["longitude"]}_{GRID["latitude"]}'
+            exclusion_data = None    
+        # #disable auto masking and offset/scale application
+        # self.fh.variables[VAR].set_auto_mask(False)
+        # #retrieve data object
+        # dataobj = self.fh.variables[VAR]
+        # import pdb; pdb.set_trace()
+        # attributes = {'data': {},
+        #               'exclusion': {},
+        #               }
+        # if hasattr(dataobj, 'scale_factor'):
+        #     attributes['data']['scale'] = dataobj.scale_factor
+        # if hasattr(dataobj, 'add_offset'):
+        #     attributes['data']['offset'] = dataobj.add_offset
+        # if hasattr(dataobj, '_FillValue'):
+        #     attributes['data']['fillval'] = dataobj._FillValue
+        # data = dataobj[:,:]
+        # #retrieve exclusion data object
+        # if metavar.process_parameter is not None:
+        #     EXCLUDE_VAR = metavar.process_parameter['exclusion_variable']
+        #     #disable auto masking and offset/scale application
+        #     self.fh.variables[EXCLUDE_VAR].set_auto_mask(False)
+        #     #retrieve data object
+        #     exclusion_dataobj = self.fh.variables[EXCLUDE_VAR]
+        #     flag = exclusion_dataobj.flag_masks
+        #     meaning = exclusion_dataobj.flag_meanings
+        #     attributes['exclusion'] = {'flag': flag,
+        #                                'meaning': meaning,
+        #                                }
+        #     exclusion_data = exclusion_dataobj[:,:]
+        #     # exclusion_data = self.fh.variables[EXCLUDE_VAR][:,:]
+        # else:
+        #     exclusion_data = None
+        #compile meta data
+        GRID = metavar.grid_parameter
         OUT = metavar.output_parameter
         META = {'grid': GRID,
                 'out': OUT,
                 }
+        #check datatype
+        DATATYPE = metavar.datatype
+        if DATATYPE != 'geo':
+            DATATYPE = f'{DATATYPE}_{GRID["longitude"]}_{GRID["latitude"]}'
         #initialize swath variable data class
         DATA = {'name': metavar.name,
                 'datatype': DATATYPE,
                 'meta': META,
+                'attributes': attributes,
                 'data': data,
                 'exclude': exclusion_data,
                 }
