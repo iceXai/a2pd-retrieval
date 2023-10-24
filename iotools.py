@@ -194,37 +194,6 @@ class NetCDFSwathInput(SwathInput):
             attributes['exclusion'] = self.fh.variables[EXCLUDE_VAR].attrs
         else:
             exclusion_data = None    
-        # #disable auto masking and offset/scale application
-        # self.fh.variables[VAR].set_auto_mask(False)
-        # #retrieve data object
-        # dataobj = self.fh.variables[VAR]
-        # import pdb; pdb.set_trace()
-        # attributes = {'data': {},
-        #               'exclusion': {},
-        #               }
-        # if hasattr(dataobj, 'scale_factor'):
-        #     attributes['data']['scale'] = dataobj.scale_factor
-        # if hasattr(dataobj, 'add_offset'):
-        #     attributes['data']['offset'] = dataobj.add_offset
-        # if hasattr(dataobj, '_FillValue'):
-        #     attributes['data']['fillval'] = dataobj._FillValue
-        # data = dataobj[:,:]
-        # #retrieve exclusion data object
-        # if metavar.process_parameter is not None:
-        #     EXCLUDE_VAR = metavar.process_parameter['exclusion_variable']
-        #     #disable auto masking and offset/scale application
-        #     self.fh.variables[EXCLUDE_VAR].set_auto_mask(False)
-        #     #retrieve data object
-        #     exclusion_dataobj = self.fh.variables[EXCLUDE_VAR]
-        #     flag = exclusion_dataobj.flag_masks
-        #     meaning = exclusion_dataobj.flag_meanings
-        #     attributes['exclusion'] = {'flag': flag,
-        #                                'meaning': meaning,
-        #                                }
-        #     exclusion_data = exclusion_dataobj[:,:]
-        #     # exclusion_data = self.fh.variables[EXCLUDE_VAR][:,:]
-        # else:
-        #     exclusion_data = None
         #compile meta data
         GRID = metavar.grid_parameter
         OUT = metavar.output_parameter

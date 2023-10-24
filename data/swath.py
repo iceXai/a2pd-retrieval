@@ -98,16 +98,9 @@ class NetCDFDataVariable(DataVariable):
     def _process(self, metavar: MetaVariable) -> None:
         #set all unsigned 8bit binary values in the exclusion variable to NaN
         #1UB, 2UB, 4UB, 8UB, 16UB, 32UB, 64UB, 128UB
-        #self.data[np.where(self.exclude > 0.0)] = np.nan
-        # import pdb; pdb.set_trace()
-        # get data attributes
-        # data_attrs = self.attributes['data']
         # #limit data
-        # DATA = self.data 
         # if self.exclude is not None:
-        #     DATA[np.where(self.exclude == 128)] = np.nan
-        #override it
-        # self.data = DATA
+        #     self.data[np.where(self.exclude > 0)] = np.nan
         pass
 
         
