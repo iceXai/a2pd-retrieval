@@ -83,7 +83,10 @@ class ResampleStack:
         #resample using kd tree
         AOI_GRID = self.aoi
         self.stack = self._kd_tree_resample(SWATH_DEF, AOI_GRID, STACK)
-        #self.stack[np.where(self.stack == 0.0)] = np.nan
+        f64 = np.dtype('float64')
+        f32 = np.dtype('float32')
+        if self.stack.dtype == f64 or self.stack.dtype == f32:
+            self.stack[np.where(self.stack == 0.0)] = np.nan
         
     def export(self) -> List[ResampledVariable]:
         NAMES = self.names
