@@ -27,7 +27,8 @@ class SwathVariable(ABC):
 class DataVariable(SwathVariable):
     """ Databaseclass to keep track of and process a loaded variable """
     data: np.array
-    
+    attributes: dict
+
     @property
     def shape(self) -> tuple:
         return self.data.shape
@@ -42,8 +43,7 @@ class DataVariable(SwathVariable):
     
 @dataclass
 class HDF4DataVariable(DataVariable):
-    attributes: dict
-    
+    """ HDF4-based data class to handle the individual processing """
     def _process(self, metavar: MetaVariable) -> None:
         #limit data
         FILL_VALUE = self.attributes['_FillValue'][0]
@@ -92,16 +92,28 @@ class HDF4DataVariable(DataVariable):
 
 @dataclass
 class NetCDFDataVariable(DataVariable):
+    """ HDF4-based data class to handle the individual processing """
     exclude: np.array = None
 
     def _process(self, metavar: MetaVariable) -> None:
         #set all unsigned 8bit binary values in the exclusion variable to NaN
         #1UB, 2UB, 4UB, 8UB, 16UB, 32UB, 64UB, 128UB
-        self.data[np.where(self.exclude)] = np.nan
+        #self.data[np.where(self.exclude > 0.0)] = np.nan
+        # import pdb; pdb.set_trace()
+        # get data attributes
+        # data_attrs = self.attributes['data']
+        # #limit data
+        # DATA = self.data 
+        # if self.exclude is not None:
+        #     DATA[np.where(self.exclude == 128)] = np.nan
+        #override it
+        # self.data = DATA
+        pass
+
         
 @dataclass
 class HDF5DataVariable(DataVariable):
-
+    """ HDF5-based data class to handle the individual processing """
     def _process(self, metavar: MetaVariable) -> None:
         pass
 
