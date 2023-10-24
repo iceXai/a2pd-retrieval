@@ -28,12 +28,13 @@ fig, axs = plt.subplots(figsize=(40, 60),nrows=1, ncols=3)
 axs = axs.flatten()
 axs[0].imshow(test1['mod02']['ch20'][:])
 ttt = test2['bt']['s8_nadir'][:]
-ttt[np.where(ttt==0.0)] = np.nan
-ttt[np.where(ttt==-32768.)] = np.nan
+#ttt[np.where(ttt==0.0)] = np.nan
+#ttt[np.where(ttt==-32768.)] = np.nan
 axs[1].imshow(ttt)
 axs[2].imshow(test2['bt']['s8_oblique'][:])
 #plt.tight_layout()
 #plt.imshow(test['mod02']['ch20'][:])
 
-
+test1.close()
+test2.close()
 
