@@ -14,6 +14,8 @@ from typing import List, Dict
  
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+
 
 # In[] 
 
@@ -109,6 +111,12 @@ class HDF5DataVariable(DataVariable):
     """ HDF5-based data class to handle the individual processing """
     def _process(self, metavar: MetaVariable) -> None:
         pass
+    
+    def quicklook(self, ax = None) -> None:
+        if ax is None:
+            plt.imshow(self.data)
+        else:
+            ax.imshow(self.data)
 
     
 @dataclass
