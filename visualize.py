@@ -7,34 +7,34 @@
 
 # In[]
 
-import h5py
-import os
-
-import matplotlib.pyplot as plt
-import numpy as np
+from iotools import HDF5SwathInput
 
 # In[]
 
 path = 'C:/data/testretrieval'
 testfile1 = 'ter_modis_2020245_005000_prod-nt-v1p0_brunt.h5'
 testfile2 = 's3a_slstr_2020247_010751_prod-nt-v1p0_brunt.h5'
-test1 = h5py.File(os.path.join(path,testfile1), "r")
-test2 = h5py.File(os.path.join(path,testfile2), "r")
 
-print(test1['mod02'].keys())
-print(test2['bt'].keys())
+#load input handler
+io = HDF5SwathInput()
 
+#load file to data variable
+io.load(os.path.join(path, testfile1))
+dv_c31 = io.get_var_by_name('ch31', 'mod02')
+io.close()
+
+#load file to data variable
+io.load(os.path.join(path, testfile2))
+dv_s8n = io.get_var_by_name('s8_nadir', 'bt')
+dv_s8o = io.get_var_by_name('s8_oblique', 'bt')
+io.close()
+
+#setup plot figure
 fig, axs = plt.subplots(figsize=(40, 60),nrows=1, ncols=3)
 axs = axs.flatten()
-axs[0].imshow(test1['mod02']['ch20'][:])
-ttt = test2['bt']['s8_nadir'][:]
-#ttt[np.where(ttt==0.0)] = np.nan
-#ttt[np.where(ttt==-32768.)] = np.nan
-axs[1].imshow(ttt)
-axs[2].imshow(test2['bt']['s8_oblique'][:])
-#plt.tight_layout()
-#plt.imshow(test['mod02']['ch20'][:])
+#plot it
+dv_c31.quicklook(axs[0])
+dv_s8n.quicklook(axs[1])
+dv_s8o.quicklook(axs[2])
 
-test1.close()
-test2.close()
 
