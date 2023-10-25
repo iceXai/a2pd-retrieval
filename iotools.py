@@ -22,7 +22,6 @@ from typing import List, Dict
 import h5py
 import os
 
-#import netCDF4 as nc
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -193,7 +192,7 @@ class NetCDFSwathInput(SwathInput):
             exclusion_data = self.fh.variables[EXCLUDE_VAR].values
             attributes['exclusion'] = self.fh.variables[EXCLUDE_VAR].attrs
         else:
-            exclusion_data = None    
+            exclusion_data = None
         #compile meta data
         GRID = metavar.grid_parameter
         OUT = metavar.output_parameter
@@ -220,10 +219,32 @@ class NetCDFSwathInput(SwathInput):
         
 class HDF5SwathInput(SwathInput):
     def load(self, path: str) -> None:
-        pass
+        self.fh = h5py.File(path, "r")
     
     def get_var(self, metavar: MetaVariable) -> HDF5DataVariable:
         pass
+    
+    def get_var_by_name(self, var: str, group: str) -> HDF5DataVariable:
+        grps = self.fh.keys()
+        if group in grps:
+            variables = self.fh[group].keys()
+            if var in variables:
+                data = self.fh[group][var][:]
+                #initialize swath variable data class
+                DATA = {'name': var,
+                        'datatype': group,
+                        'meta': None,
+                        'attributes': None,
+                        'data': data,
+                        }
+                return HDF5DataVariable(**DATA)
+            else:
+                logger.info(f'Specified variable {var} does not exist in'+
+                            f' group {group}')
+                return None
+        else:
+            logger.info(f'Specified group {group} does not exist in file.')
+            return None
 
     def close(self) -> None:
         self.fh.close()
