@@ -178,7 +178,6 @@ class HDF4SwathInput(SwathInput):
 class NetCDFSwathInput(SwathInput):
     def load(self, path: str) -> None:
         self.fh = xr.open_dataset(path)
-        #self.fh = nc.Dataset(path, 'r')
     
     def get_var(self, metavar: MetaVariable) -> NetCDFDataVariable:
         VAR = metavar.input_parameter['variable']
