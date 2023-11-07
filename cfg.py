@@ -242,7 +242,6 @@ Configuration Validator
 class CFGValidator(object):
     def __init__(self, cfg: Configuration) -> None:
         self.cfg = cfg
-        self.validate()
         
     def validate(self) -> None:
         VALID = []
